@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Iterable
 
+from .checkers import classmap
+
 
 @dataclass
 class VersionInfo:
@@ -144,11 +146,13 @@ class ToolRegistry:
             self.logger.info(f"No single tool found with tag `{defined_tag}`.")
         return use_tools
 
-    async def list_tools_local_images(self, defined_tag: str = "", prefix="cincan/", version_var="VERSION") -> Dict[str, ToolInfo]:
+    async def list_tools_local_images(
+        self, defined_tag: str = "", prefix="cincan/", version_var="VERSION"
+    ) -> Dict[str, ToolInfo]:
         """List tools from the locally available docker images"""
         images = self.client.images.list(filters={"dangling": False})
         # images_filtered = []
-        print(images)
+        # print(images)
 
         # images oldest first (tags are listed in proper order)
         images.sort(key=lambda x: parse_json_time(x.attrs["Created"]), reverse=True)
@@ -162,7 +166,10 @@ class ToolRegistry:
             for t in i.tags:
                 version = "undefined"
                 existing_ver = False
-                stripped_tags = [split_tool_tag(tag)[1] if tag.startswith(prefix) else tag for tag in i.tags]
+                stripped_tags = [
+                    split_tool_tag(tag)[1] if tag.startswith(prefix) else tag
+                    for tag in i.tags
+                ]
                 name, tag = split_tool_tag(t)
                 if name.startswith(prefix):
                     if not defined_tag or tag == defined_tag:
@@ -178,20 +185,26 @@ class ToolRegistry:
                                 print(j)
                                 if v.version == version:
                                     existing_ver = True
-                                    self.logger.debug(f"same version for tool {name} with version {version} ")
+                                    self.logger.debug(
+                                        f"same version for tool {name} with version {version} "
+                                    )
                                     ret[name].versions[j].tags.union(set(stripped_tags))
                                     break
                             if not existing_ver:
-                                self.logger.debug(f"Appending new version {version} to existing entry {name} with tag {tag}.")
-                                ret[name].versions.append(VersionInfo(version, set(stripped_tags), updated))
+                                self.logger.debug(
+                                    f"Appending new version {version} to existing entry {name} with tag {tag}."
+                                )
+                                ret[name].versions.append(
+                                    VersionInfo(version, set(stripped_tags), updated)
+                                )
                         else:
                             # ver_info = {}
                             ver_info = VersionInfo(version, set(stripped_tags), updated)
                             # print(ver_info)
-                            ret[name] = ToolInfo(
-                                name, updated, versions=[ver_info]
+                            ret[name] = ToolInfo(name, updated, versions=[ver_info])
+                            self.logger.debug(
+                                f"Added tool {name} based on tag {t} with version {version}"
                             )
-                            self.logger.debug(f"Added tool {name} based on tag {t} with version {version}")
                             continue
                     else:
                         continue
@@ -396,6 +409,18 @@ class ToolRegistry:
                     description=j.get("description", ""),
                 )
         return r
+
+    def check_upstream_versions(self):
+        # from .checkers.github import GithubChecker
+        upstream_status = []
+        # print(pathlib.Path.cwd())
+        for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
+            # if tool_path.stem == "manalyze":
+            with open(tool_path / f"{tool_path.stem}.json") as f:
+                tool_info = json.load(f)
+                print(classmap.get(tool_info.get("provider").lower())(tool_info).get_version())
+
+                # print(tool_path.stem)
 
         # TheHive accepts the following datatypes:
         # domain

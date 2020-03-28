@@ -20,6 +20,7 @@ class color:
     UNDERLINE = "\033[4m"
     END = "\033[0m"
 
+
 def main():
 
     m_parser = argparse.ArgumentParser()
@@ -54,14 +55,18 @@ def main():
         help="Show all tags of selected images.",
     )
     update_parser = subparsers.add_parser(
-        "update", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        "check-updates", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     subsubparsers = list_parser.add_subparsers(dest="list_sub_command")
     list_parser = subsubparsers.add_parser(
-        "local", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="List only local 'cincan' tools."
+        "local",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        help="List only local 'cincan' tools.",
     )
     list_parser = subsubparsers.add_parser(
-        "remote", formatter_class=argparse.ArgumentDefaultsHelpFormatter, help="List remote 'cincan' tools from registry."
+        "remote",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        help="List remote 'cincan' tools from registry.",
     )
 
     if len(sys.argv) > 1:
@@ -134,8 +139,6 @@ def main():
                         version = ver.version
                         print(f"{name:<{MAX_WN}}{version:{MAX_WV}}{tags:<{MAX_WT}}")
 
-
-
         # elif args.list_sub_command == "remote":
         else:
             # tools_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
@@ -162,12 +165,14 @@ def main():
                     )
                 )
 
-    elif sub_command == "update":
-        from .checkers.github import GithubChecker
-        print("Here we go.")
-        # print(pathlib.Path.cwd())
-        for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
-            print(tool_path)
+    elif sub_command == "check-updates":
+        # from .checkers.github import GithubChecker
+        reg = ToolRegistry()
+        reg.check_upstream_versions()
+        # # print(pathlib.Path.cwd())
+        # for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
+        #     print(tool_path.stem)
+        #     print()
         # ghidra = pathlib.Path(pathlib.Path.cwd() / "tools/ghidra-decompiler/ghidra-decompiler.json")
         # checker = GithubChecker(ghidra)
         # print(checker.get_version())

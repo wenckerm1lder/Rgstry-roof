@@ -1,0 +1,7 @@
+{
+  "uri": "https://github.com/cert-lv/pastelyzer/",
+  "author": "cert-lv",
+  "tool": "pastelyzer",
+  "provider": "GitHub",
+  "method": "tag-release"
+}

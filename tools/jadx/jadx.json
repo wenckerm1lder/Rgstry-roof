@@ -1,5 +1,7 @@
 {
-"uri": "https://github.com/skylot/jadx/",
-"provider": "GitHub",
-"method": "release"
+  "uri": "https://github.com/skylot/jadx/",
+  "author": "skylot",
+  "tool": "jadx",
+  "provider": "GitHub",
+  "method": "release"
 }

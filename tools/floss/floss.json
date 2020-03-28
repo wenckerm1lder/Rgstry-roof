@@ -1,0 +1,7 @@
+{
+"uri": "https://github.com/fireeye/flare-floss/",
+"author": "fireeye",
+"tool": "flare-floss",
+"provider": "GitHub",
+"method": "release"
+}

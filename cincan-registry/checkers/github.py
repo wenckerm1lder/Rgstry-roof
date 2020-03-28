@@ -1,6 +1,5 @@
 from ._checker import UpstreamChecker, NO_VERSION
 import requests
-from pprint import pprint
 
 
 class GitHubChecker(UpstreamChecker):
@@ -26,26 +25,42 @@ class GitHubChecker(UpstreamChecker):
             self.version = NO_VERSION
         return self.version
 
+    def _fail(self):
+        self.version = NO_VERSION
+        self.logger.error(f"Failed to fetch version update information for {self.tool}")
+
     def _by_release(self):
         r = self.session.get(
             f"{self.api}/repos/{self.author}/{self.tool}/releases/latest"
         )
-        self.version = r.json().get("tag_name", NO_VERSION)
+        if r.status_code == 200:
+            self.version = r.json().get("tag_name", NO_VERSION)
+        else:
+            self._fail()
 
     def _by_tag(self):
         r = self.session.get(f"{self.api}/repos/{self.author}/{self.tool}/tags")
-        self.version = r.json()[0].get("name", NO_VERSION)
+        if r.status_code == 200:
+            self.version = r.json()[0].get("name", NO_VERSION)
+        else:
+            self._fail()
 
     def _by_commit(self, current_commit: str = ""):
         if current_commit:
             r = self.session.get(
                 f"{self.api}/repos/{self.author}/{self.tool}/compare/master...{current_commit}"
             )
-            self.extra_info = f"{r.json().get('behind_by')} commits behind master."
-            self.version = r.json().get("base_commit").get("sha")
+            if r.status_code == 200:
+                self.extra_info = f"{r.json().get('behind_by')} commits behind master."
+                self.version = r.json().get("base_commit").get("sha")
+            else:
+                self._fail()
         else:
             r = self.session.get(
                 f"{self.api}/repos/{self.author}/{self.tool}/commits/master"
             )
-            self.version = r.json().get("sha")
-            self.extra_info = "Current commit in master."
+            if r.status_code == 200:
+                self.version = r.json().get("sha")
+                self.extra_info = "Current commit in master."
+            else:
+                self._fail()

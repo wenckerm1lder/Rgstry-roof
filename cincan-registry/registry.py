@@ -13,6 +13,8 @@ from typing import List, Dict, Any, Iterable
 
 from .checkers import classmap
 
+VERSION_VARIABLE = "VERSION"
+
 
 @dataclass
 class VersionInfo:
@@ -178,8 +180,6 @@ class ToolRegistry:
                             if "".join(var).split("=")[0] == version_var:
                                 version = "".join(var).split("=")[1]
                                 break
-                        if name == "cincan/tshark":
-                            print(i.tags)
                         if name in ret:
                             for j, v in enumerate(ret[name].versions):
                                 print(j)
@@ -233,7 +233,7 @@ class ToolRegistry:
         version = ""
         try:
             for i in v1_comp.get("config").get("Env"):
-                if "".join(i).split("=")[0] == "VERSION":
+                if "".join(i).split("=")[0] == VERSION_VARIABLE:
                     version = "".join(i).split("=")[1]
                     break
         except IndexError as e:
@@ -415,10 +415,10 @@ class ToolRegistry:
         upstream_status = []
         # print(pathlib.Path.cwd())
         for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
-            # if tool_path.stem == "manalyze":
-            with open(tool_path / f"{tool_path.stem}.json") as f:
-                tool_info = json.load(f)
-                print(classmap.get(tool_info.get("provider").lower())(tool_info).get_version())
+            if tool_path.stem == "apktool":
+                with open(tool_path / f"{tool_path.stem}.json") as f:
+                    tool_info = json.load(f)
+                    print(classmap.get(tool_info.get("provider").lower())(tool_info).get_version())
 
                 # print(tool_path.stem)
 

@@ -5,12 +5,14 @@
 # from importlib import import_module
 # from ._checker import UpstreamChecker
 from .github import GitHubChecker
+from .bitbucket import BitbucketChecker
 
 classmap = {
     "github": GitHubChecker,
+    "bitbucket": BitbucketChecker
 }
 
-__all__ = ["GitHubChecker"]
+__all__ = ["GitHubChecker", "BitbucketChecker"]
 
 # for (_, name, _) in pkgutil.iter_modules([Path(__file__).parent]):
 #     imported_module = import_module("." + name, package=__name__)

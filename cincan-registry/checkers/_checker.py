@@ -6,7 +6,7 @@ NO_VERSION = "undefined"
 
 
 class UpstreamChecker(metaclass=ABCMeta):
-    def __init__(self, tool_info: dict):
+    def __init__(self, tool_info: dict, token: str = ""):
         self.uri: str = tool_info.get("uri", "")
         self.author: str = tool_info.get("author", "")
         self.tool: str = tool_info.get("tool", "")
@@ -14,6 +14,7 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.method: str = tool_info.get("method", "")
         self.version: str = ""
         self.extra_info: str = ""
+        self.token: str = token
         self.logger = logging.getLogger(__name__)
 
         if not self.uri or not (self.author and self.tool and self.provider):

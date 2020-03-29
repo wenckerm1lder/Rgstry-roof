@@ -14,6 +14,7 @@ from typing import List, Dict, Any, Iterable
 from .checkers import classmap
 
 VERSION_VARIABLE = "VERSION"
+REGISTRY_CONF = pathlib.Path.home() / ".cincan/registry.json"
 
 
 @dataclass
@@ -30,20 +31,22 @@ class ToolInfo:
         self,
         name: str,
         updated: datetime.datetime,
-        input: List[str] = None,
-        output: List[str] = None,
+        destination: str,
+        # input: List[str] = None,
+        # output: List[str] = None,
         # tags: List[str] = "",
         # version: str = "",
         versions: List[VersionInfo] = [],
         description: str = "",
     ):
-        self.name = name
-        self.updated = updated
-        self.input = input if input is not None else []
-        self.output = output if output is not None else []
+        self.name: str = name
+        self.updated: str = updated
+        # self.input = input if input is not None else []
+        # self.output = output if output is not None else []
+        self.destination: str = destination
         # self.tags = tags
         # self.version = version
-        self.versions = versions
+        self.versions: List[VersionInfo] = versions
         self.description = description
 
     def __str__(self):
@@ -104,6 +107,14 @@ class ToolRegistry:
         self.hub_url = "https://hub.docker.com/v2"
         self.auth_url = "https://auth.docker.io/token"
         self.registry_url = "https://registry.hub.docker.com/v2"
+        try:
+            with open(REGISTRY_CONF) as f:
+                self.configuration = json.load(f)
+        except IOError:
+            self.logger.warning(
+                f"No configuration file found for registry in location: {REGISTRY_CONF}"
+            )
+            self.configuration = {}
 
     def list_tools(self, defined_tag: str = "", merge=True) -> Dict[str, ToolInfo]:
         """List all tools"""
@@ -182,7 +193,6 @@ class ToolRegistry:
                                 break
                         if name in ret:
                             for j, v in enumerate(ret[name].versions):
-                                print(j)
                                 if v.version == version:
                                     existing_ver = True
                                     self.logger.debug(
@@ -201,7 +211,9 @@ class ToolRegistry:
                             # ver_info = {}
                             ver_info = VersionInfo(version, set(stripped_tags), updated)
                             # print(ver_info)
-                            ret[name] = ToolInfo(name, updated, versions=[ver_info])
+                            ret[name] = ToolInfo(
+                                name, updated, "local", versions=[ver_info]
+                            )
                             self.logger.debug(
                                 f"Added tool {name} based on tag {t} with version {version}"
                             )
@@ -413,12 +425,17 @@ class ToolRegistry:
     def check_upstream_versions(self):
         # from .checkers.github import GithubChecker
         upstream_status = []
+
         # print(pathlib.Path.cwd())
         for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
             # if tool_path.stem == "apktool":
             with open(tool_path / f"{tool_path.stem}.json") as f:
                 tool_info = json.load(f)
-                print(f"{tool_path.stem}: {classmap.get(tool_info.get('provider').lower())(tool_info).get_version()}")
+                provider = tool_info.get("provider").lower()
+                token = self.configuration.get('tokens').get(provider) if self.configuration else ""
+                print(
+                    f"{tool_path.stem}: {classmap.get(provider)(tool_info, token).get_version()}"
+                )
 
                 # print(tool_path.stem)
 

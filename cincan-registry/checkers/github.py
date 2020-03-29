@@ -9,14 +9,16 @@ class GitHubChecker(UpstreamChecker):
     release, tag release or commit.
     Uses GitHub API v3: https://developer.github.com/v3/
 
-    Unauthenticated requests are limited for 60 per hour.
-    Authenticated are limited to 5000 per hour. 
+    Unauthenticated requests are limited to 60 per hour.
+    Authenticated are limited to 5000 per hour.
     """
 
-    def __init__(self, tool_info):
-        super().__init__(tool_info)
+    def __init__(self, tool_info: dict, token: str = ""):
+        super().__init__(tool_info, token)
         self.session = requests.Session()
         self.session.headers.update({"Accept": "application/vnd.github.v3+json"})
+        if token:
+            self.session.headers.update({"Authorization": f"token {self.token}"})
         self.api = "https://api.github.com"
         self.author = self.author.strip("/")
         self.tool = self.tool.strip("/")

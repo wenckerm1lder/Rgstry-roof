@@ -4,6 +4,15 @@ import datetime
 
 
 class GitHubChecker(UpstreamChecker):
+    """
+    Class for checking latests possible releases of given repository by
+    release, tag release or commit.
+    Uses GitHub API v3: https://developer.github.com/v3/
+
+    Unauthenticated requests are limited for 60 per hour.
+    Authenticated are limited to 5000 per hour. 
+    """
+
     def __init__(self, tool_info):
         super().__init__(tool_info)
         self.session = requests.Session()
@@ -27,10 +36,16 @@ class GitHubChecker(UpstreamChecker):
         return self.version
 
     def _fail(self):
+        """
+        Set version for not defined, log error.
+        """
         self.version = NO_VERSION
         self.logger.error(f"Failed to fetch version update information for {self.tool}")
 
-    def _get_date_of_commit(self, sha: str):
+    def _get_date_of_commit(self, sha: str) -> datetime.datetime:
+        """
+        Get date of commit by commit hash.
+        """
         r = self.session.get(
             f"{self.api}/repos/{self.author}/{self.tool}/git/commits/{sha}"
         )
@@ -41,6 +56,10 @@ class GitHubChecker(UpstreamChecker):
         )
 
     def _by_release(self):
+        """
+        Method for finding latest release from repository. Does not
+        include pre-releases.
+        """
         r = self.session.get(
             f"{self.api}/repos/{self.author}/{self.tool}/releases/latest"
         )
@@ -50,6 +69,10 @@ class GitHubChecker(UpstreamChecker):
             self._fail()
 
     def _by_tag(self):
+        """
+        Method for finding latest tag. It uses date of tagged commit for sorting.
+        Consumes more API requests than other methods.
+        """
         r = self.session.get(f"{self.api}/repos/{self.author}/{self.tool}/tags")
         if r.status_code == 200:
             tags = r.json()
@@ -65,6 +88,11 @@ class GitHubChecker(UpstreamChecker):
             self._fail()
 
     def _by_commit(self, current_commit: str = ""):
+        """
+        Get latest commit of repository in master branch.
+        If comparable commit is given, it also tells how many commits
+        given commit is behind master.
+        """
         if current_commit:
             r = self.session.get(
                 f"{self.api}/repos/{self.author}/{self.tool}/compare/master...{current_commit}"

@@ -1,5 +1,6 @@
 from ._checker import UpstreamChecker, NO_VERSION
 import requests
+import datetime
 
 
 class GitHubChecker(UpstreamChecker):
@@ -29,6 +30,16 @@ class GitHubChecker(UpstreamChecker):
         self.version = NO_VERSION
         self.logger.error(f"Failed to fetch version update information for {self.tool}")
 
+    def _get_date_of_commit(self, sha: str):
+        r = self.session.get(
+            f"{self.api}/repos/{self.author}/{self.tool}/git/commits/{sha}"
+        )
+        if r.status_code != 200:
+            self.logger(f"Unable to fetch date time for commit in tool {self.tool}")
+        return datetime.datetime.strptime(
+            r.json().get("author").get("date"), "%Y-%m-%dT%H:%M:%S%z"
+        )
+
     def _by_release(self):
         r = self.session.get(
             f"{self.api}/repos/{self.author}/{self.tool}/releases/latest"
@@ -41,7 +52,15 @@ class GitHubChecker(UpstreamChecker):
     def _by_tag(self):
         r = self.session.get(f"{self.api}/repos/{self.author}/{self.tool}/tags")
         if r.status_code == 200:
-            self.version = r.json()[0].get("name", NO_VERSION)
+            tags = r.json()
+            newest, tag_d = None, None
+            for tag in tags:
+                date = self._get_date_of_commit(tag.get("commit").get("sha"))
+                if not newest:
+                    newest, tag_d = date, tag
+                elif newest < date:
+                    newest, tag_d = date, tag
+            self.version = tag_d.get("name", NO_VERSION)
         else:
             self._fail()
 

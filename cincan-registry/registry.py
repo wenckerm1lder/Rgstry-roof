@@ -415,10 +415,10 @@ class ToolRegistry:
         upstream_status = []
         # print(pathlib.Path.cwd())
         for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
-            if tool_path.stem == "apktool":
-                with open(tool_path / f"{tool_path.stem}.json") as f:
-                    tool_info = json.load(f)
-                    print(classmap.get(tool_info.get("provider").lower())(tool_info).get_version())
+            # if tool_path.stem == "apktool":
+            with open(tool_path / f"{tool_path.stem}.json") as f:
+                tool_info = json.load(f)
+                print(f"{tool_path.stem}: {classmap.get(tool_info.get('provider').lower())(tool_info).get_version()}")
 
                 # print(tool_path.stem)
 

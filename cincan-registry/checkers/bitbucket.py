@@ -16,7 +16,9 @@ class BitbucketChecker(UpstreamChecker):
         elif self.method == "tag-release":
             self._by_tag()
         elif self.method == "commit":
-            raise NotImplementedError(f"Method {self.method} not implemented for {self.provider}")
+            raise NotImplementedError(
+                f"Method {self.method} not implemented for {self.provider}"
+            )
             # self._by_commit(curr_ver)
         else:
             self.logger.error(
@@ -39,8 +41,12 @@ class BitbucketChecker(UpstreamChecker):
             self._fail()
 
     def _by_tag(self):
-        params = {"sort":"-name"}
-        r = self.session.get(f"{self.api}/repositories/{self.author}/{self.tool}/refs/tags", params=params)
+        # Inverse sort by name (alias tag)
+        params = {"sort": "-name"}
+        r = self.session.get(
+            f"{self.api}/repositories/{self.author}/{self.tool}/refs/tags",
+            params=params,
+        )
         if r.status_code == 200:
             self.version = r.json().get("values")[0].get("name", NO_VERSION)
         else:

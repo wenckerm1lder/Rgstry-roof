@@ -4,6 +4,7 @@ import sys
 import logging
 import asyncio
 import pathlib
+from typing import List
 
 DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
 
@@ -19,6 +20,38 @@ class color:
     BOLD = "\033[1m"
     UNDERLINE = "\033[4m"
     END = "\033[0m"
+
+
+def print_tools_by_location(tools: List[dict], location: str):
+
+    PRE_SPACE = 5
+    MAX_WN = 35
+    MAX_WV = 20
+    MAX_WT = 20
+    EXTRA_FILL = 35
+    # if local_tools:
+    print(
+        f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}{f'{location.capitalize()} Version':{MAX_WV}}{f'{location.capitalize()} Tags':<{MAX_WT}}{color.END}\n"
+    )
+    print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
+    for tool in sorted(tools):
+        # print(1)
+        lst = tools[tool]
+        if lst.versions and len(lst.versions) == 1:
+            tags = ",".join(next(iter(lst.versions)).tags)
+            version = next(iter(lst.versions)).version
+            name = lst.name.split(":")[0]
+            print(f"{' ':<{PRE_SPACE}}| {name:<{MAX_WN}}{version:{MAX_WV}}{tags:<{MAX_WT}}")
+        else:
+            tags = ""
+            version = ""
+            for i, ver in enumerate(lst.versions):
+                name = lst.name.split(":")[0] if i == 0 else ""
+                # print(ver.tags)
+                tags = ",".join(lst.versions[i].tags)
+                version = ver.version
+                print(f"{' ':<{PRE_SPACE}}| {name:<{MAX_WN}}{version:{MAX_WV}}{tags:<{MAX_WT}}")
+        print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
 
 
 def main():
@@ -91,10 +124,6 @@ def main():
 
     elif sub_command == "list":
 
-        MAX_WN = 35
-        MAX_WV = 15
-        MAX_WT = 20
-
         reg = ToolRegistry()
         format_str = "{0:<30}"
         if args.with_tags:
@@ -103,43 +132,29 @@ def main():
         format_str += " {2}"
         # print(f"Tag is {args.tag}")
 
-        if args.list_sub_command == "local":
+        if args.list_sub_command == "local" or args.list_sub_command == "remote":
 
             loop = asyncio.get_event_loop()
             try:
-                local_tools = loop.run_until_complete(
-                    reg.list_tools_local_images(
-                        defined_tag=args.tag if not args.all else ""
+                if args.list_sub_command == "local":
+                    tools = loop.run_until_complete(
+                        reg.list_tools_local_images(
+                            defined_tag=args.tag if not args.all else ""
+                        )
                     )
-                )
+                elif args.list_sub_command == "remote":
+                    tools = loop.run_until_complete(
+                        reg.list_tools_registry(
+                            defined_tag=args.tag if not args.all else ""
+                        )
+                    )
+
             finally:
                 loop.close()
-            if not args.all and local_tools:
+            if tools:
                 print(f"\n  Listing all tools with tag '{args.tag}':\n")
+                print_tools_by_location(tools, args.list_sub_command)
 
-            if local_tools:
-                print(
-                    f"\n{color.BOLD}{f'Tool name':<{MAX_WN}}{f'Local Version':{MAX_WV}}{f'Local Tags':<{MAX_WT}}{color.END}\n"
-                )
-            for tool in sorted(local_tools):
-                # print(1)
-                lst = local_tools[tool]
-                if lst.versions and len(lst.versions) == 1:
-                    tags = ",".join(next(iter(lst.versions)).tags)
-                    version = next(iter(lst.versions)).version
-                    name = lst.name.split(":")[0]
-                    print(f"{name:<{MAX_WN}}{version:{MAX_WV}}{tags:<{MAX_WT}}")
-                else:
-                    tags = ""
-                    version = ""
-                    for i, ver in enumerate(lst.versions):
-                        name = lst.name.split(":")[0] if i == 0 else ""
-                        # print(ver.tags)
-                        tags = ",".join(lst.versions[i].tags)
-                        version = ver.version
-                        print(f"{name:<{MAX_WN}}{version:{MAX_WV}}{tags:<{MAX_WT}}")
-
-        # elif args.list_sub_command == "remote":
         else:
             # tools_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
 
@@ -157,7 +172,7 @@ def main():
                 print(
                     format_str.format(
                         lst.name.split(":")[0],
-                        lst.version,
+                        # lst.version,
                         lst.description,
                         ",".join(lst.input),
                         ",".join(lst.output),
@@ -167,8 +182,11 @@ def main():
 
     elif sub_command == "check-updates":
         # from .checkers.github import GithubChecker
+        loop = asyncio.get_event_loop()
         reg = ToolRegistry()
-        reg.check_upstream_versions()
+        loop.run_until_complete(reg.check_upstream_versions())
+        loop.close()
+        # reg.check_upstream_versions()
         # # print(pathlib.Path.cwd())
         # for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
         #     print(tool_path.stem)

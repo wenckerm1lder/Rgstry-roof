@@ -23,6 +23,13 @@ class UpstreamChecker(metaclass=ABCMeta):
             )
         self.logger.debug(f"Instancing tool {self.tool}")
 
+    def _fail(self):
+        """
+        Set version for not defined on fail, log error.
+        """
+        self.version = NO_VERSION
+        self.logger.error(f"Failed to fetch version update information for {self.tool}")
+
     @abstractmethod
     def get_version(self, curr_ver: str = ""):
         pass

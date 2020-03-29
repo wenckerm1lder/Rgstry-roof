@@ -70,15 +70,17 @@ def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
     for t in tools:
         td = {"updated": format_time(t.updated)}
         if t.description != "":
+            td["destination"] = t.destination
+        if t.description != "":
             td["description"] = t.description
-        if t.version != "":
-            td["version"] = t.version
-        if len(t.input) > 0:
-            td["input"] = t.input
-        if len(t.output) > 0:
-            td["output"] = t.output
-        if len(t.tags) > 0:
-            td["tags"] = ",".join(t.tags)  # keep order
+        if t.versions != []:
+            td["versions"] = t.versions
+        # if len(t.input) > 0:
+        #     td["input"] = t.input
+        # if len(t.output) > 0:
+        #     td["output"] = t.output
+        # if len(t.tags) > 0:
+        #     td["tags"] = ",".join(t.tags)  # keep order
         r[t.name] = td
     return r
 
@@ -107,6 +109,7 @@ class ToolRegistry:
         self.hub_url = "https://hub.docker.com/v2"
         self.auth_url = "https://auth.docker.io/token"
         self.registry_url = "https://registry.hub.docker.com/v2"
+        self.max_workers = 30
         try:
             with open(REGISTRY_CONF) as f:
                 self.configuration = json.load(f)
@@ -236,6 +239,7 @@ class ToolRegistry:
         self, session: requests.Session, tool: ToolInfo
     ) -> Dict[str, Any]:
         """Fetch remote data to update a tool info"""
+
         self.logger.info("fetch %s...", tool.name)
         manifest = self.fetch_manifest(session, tool.name)
         v1_comp_string = manifest.get("history", [{}])[0].get("v1Compatibility")
@@ -250,10 +254,10 @@ class ToolRegistry:
                     break
         except IndexError as e:
             self.logger.warning(f"No version information for tool {tool.name}: {e}")
-        labels = v1_comp["container_config"]["Labels"]
-        if labels:
-            tool.input = parse_data_types(labels.get("io.cincan.input", ""))
-            tool.output = parse_data_types(labels.get("io.cincan.output", ""))
+        # labels = v1_comp["container_config"]["Labels"]
+        # if labels:
+        #     tool.input = parse_data_types(labels.get("io.cincan.input", ""))
+        #     tool.output = parse_data_types(labels.get("io.cincan.output", ""))
         tool.version = version
         tool.tags = manifest.get(
             "sorted_tags", None
@@ -289,12 +293,11 @@ class ToolRegistry:
             tool_version = tag_names[0]  # tool version not given, pick newest
 
         # Get bearer token for the image
-        token_req = session.get(
-            self.auth_url
-            + "?service=registry.docker.io&scope=repository:"
-            + tool_name
-            + ":pull"
-        )
+        params = {
+            "service": "registry.docker.io",
+            "scope": f"repository:{tool_name}:pull",
+        }
+        token_req = session.get(self.auth_url, params=params)
         if token_req.status_code != 200:
             self.logger.error(
                 "Error getting token for tool {}, code: {}".format(
@@ -332,18 +335,18 @@ class ToolRegistry:
         # curl - sSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:raulik/test-test-tool:pull" | jq - r.token > bearer - token
         # curl - s H "Authorization: Bearer `cat bearer-token`" "https://registry.hub.docker.com/v2/raulik/test-test-tool/manifests/latest" | python - m json.tool
 
-    async def list_tools_registry(self, tag: str = "") -> Dict[str, ToolInfo]:
+    async def list_tools_registry(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
         """List tools from registry with help of local cache"""
-        MAX_WORKERS = 30
         get_fetch_start = timeit.default_timer()
         fresh_resp = None
         with requests.Session() as session:
-            adapter = requests.adapters.HTTPAdapter(pool_maxsize=MAX_WORKERS)
+            adapter = requests.adapters.HTTPAdapter(pool_maxsize=self.max_workers)
             session.mount("https://", adapter)
             # Get fresh list of tools from remote registry
             try:
+                params = {"page_size": 1000}
                 fresh_resp = session.get(
-                    self.registry_url + "/repositories/cincan/?page_size=1000"
+                    self.registry_url + "/repositories/cincan/", params=params
                 )
             except requests.ConnectionError as e:
                 self.logger.warning(e)
@@ -359,19 +362,20 @@ class ToolRegistry:
                 fresh_json = json.loads(fresh_resp.content)
                 tool_list = {}
                 for t in fresh_json["results"]:
-                    if tag:
-                        name = f"{t['user']}/{t['name']}:{tag}"
+                    if defined_tag:
+                        name = f"{t['user']}/{t['name']}:{defined_tag}"
                     else:
                         name = f"{t['user']}/{t['name']}"
                     tool_list[name] = ToolInfo(
                         name,
-                        updated=parse_json_time(t["last_updated"]),
+                        parse_json_time(t["last_updated"]),
+                        "remote",
                         description=t.get("description", ""),
                     )
                 # update tool info, when required
                 old_tools = self.read_tool_cache()
                 updated = 0
-                with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+                with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                     loop = asyncio.get_event_loop()
                     tasks = []
                     for t in tool_list.values():
@@ -414,30 +418,48 @@ class ToolRegistry:
                 r[name] = ToolInfo(
                     name,
                     updated=parse_json_time(j["updated"]),
-                    input=j.get("input", []),
-                    output=j.get("output"),
-                    tags=j.get("tags", "").split(","),
-                    version=j.get("version", ""),
+                    destination=j.get("destination"),
+                    # input=j.get("input", []),
+                    # output=j.get("output"),
+                    # tags=j.get("tags", "").split(","),
+                    versions=j.get("versions", []),
                     description=j.get("description", ""),
                 )
         return r
 
-    def check_upstream_versions(self):
+    async def check_upstream_versions(self):
         # from .checkers.github import GithubChecker
-        upstream_status = []
+        # upstream_status = []
 
         # print(pathlib.Path.cwd())
-        for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
-            # if tool_path.stem == "apktool":
-            with open(tool_path / f"{tool_path.stem}.json") as f:
-                tool_info = json.load(f)
-                provider = tool_info.get("provider").lower()
-                token = self.configuration.get('tokens').get(provider) if self.configuration else ""
-                print(
-                    f"{tool_path.stem}: {classmap.get(provider)(tool_info, token).get_version()}"
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
+                # if tool_path.stem == "apktool":
+                loop = asyncio.get_event_loop()
+                tasks = []
+                tasks.append(
+                    loop.run_in_executor(
+                        executor, self.check_single_tool_updates, tool_path
+                    )
                 )
 
-                # print(tool_path.stem)
+            for response in await asyncio.gather(*tasks):
+                pass
+
+    def check_single_tool_updates(self, tool_path: str):
+
+        with open(tool_path / f"{tool_path.stem}.json") as f:
+            tool_info = json.load(f)
+            provider = tool_info.get("provider").lower()
+            token = (
+                self.configuration.get("tokens").get(provider)
+                if self.configuration
+                else ""
+            )
+            print(
+                f"{tool_path.stem}: {classmap.get(provider)(tool_info, token).get_version()}"
+            )
+            # print(tool_path.stem)
 
         # TheHive accepts the following datatypes:
         # domain

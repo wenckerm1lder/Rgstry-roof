@@ -37,13 +37,6 @@ class GitHubChecker(UpstreamChecker):
             self.version = NO_VERSION
         return self.version
 
-    def _fail(self):
-        """
-        Set version for not defined, log error.
-        """
-        self.version = NO_VERSION
-        self.logger.error(f"Failed to fetch version update information for {self.tool}")
-
     def _get_date_of_commit(self, sha: str) -> datetime.datetime:
         """
         Get date of commit by commit hash.
@@ -52,7 +45,10 @@ class GitHubChecker(UpstreamChecker):
             f"{self.api}/repos/{self.author}/{self.tool}/git/commits/{sha}"
         )
         if r.status_code != 200:
-            self.logger(f"Unable to fetch date time for commit in tool {self.tool}")
+            self.logger.error(
+                f"Unable to fetch date time for commit in tool {self.tool}"
+            )
+            raise ValueError
         return datetime.datetime.strptime(
             r.json().get("author").get("date"), "%Y-%m-%dT%H:%M:%S%z"
         )
@@ -80,7 +76,11 @@ class GitHubChecker(UpstreamChecker):
             tags = r.json()
             newest, tag_d = None, None
             for tag in tags:
-                date = self._get_date_of_commit(tag.get("commit").get("sha"))
+                try:
+                    date = self._get_date_of_commit(tag.get("commit").get("sha"))
+                except ValueError:
+                    self._fail()
+                    return
                 if not newest:
                     newest, tag_d = date, tag
                 elif newest < date:

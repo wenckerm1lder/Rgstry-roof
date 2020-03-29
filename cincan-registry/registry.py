@@ -69,11 +69,11 @@ def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
     r = {}
     for t in tools:
         td = {"updated": format_time(t.updated)}
-        if t.description != "":
+        if t.description:
             td["destination"] = t.destination
-        if t.description != "":
+        if t.description:
             td["description"] = t.description
-        if t.versions != []:
+        if t.versions:
             td["versions"] = t.versions
         # if len(t.input) > 0:
         #     td["input"] = t.input
@@ -167,9 +167,6 @@ class ToolRegistry:
     ) -> Dict[str, ToolInfo]:
         """List tools from the locally available docker images"""
         images = self.client.images.list(filters={"dangling": False})
-        # images_filtered = []
-        # print(images)
-
         # images oldest first (tags are listed in proper order)
         images.sort(key=lambda x: parse_json_time(x.attrs["Created"]), reverse=True)
         ret = {}
@@ -258,10 +255,12 @@ class ToolRegistry:
         # if labels:
         #     tool.input = parse_data_types(labels.get("io.cincan.input", ""))
         #     tool.output = parse_data_types(labels.get("io.cincan.output", ""))
-        tool.version = version
-        tool.tags = manifest.get(
-            "sorted_tags", None
-        )  # Note: not part of manifest in Docker API
+        ver_info = VersionInfo(version, set(manifest.get("sorted_tags", None)))
+        tool.versions = [ver_info]
+        # tool.version = version
+        # tool.tags = manifest.get(
+        #     "sorted_tags", None
+        # )  # Note: not part of manifest in Docker API
         return manifest
 
     def fetch_manifest(

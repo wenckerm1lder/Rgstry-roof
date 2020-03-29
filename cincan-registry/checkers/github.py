@@ -14,6 +14,10 @@ class GitHubChecker(UpstreamChecker):
     """
 
     def __init__(self, tool_info: dict, token: str = ""):
+        """
+        Please use token, which as zero scopes defined.
+        It is enough to be functional and rise API limit.
+        """
         super().__init__(tool_info, token)
         self.session = requests.Session()
         self.session.headers.update({"Accept": "application/vnd.github.v3+json"})

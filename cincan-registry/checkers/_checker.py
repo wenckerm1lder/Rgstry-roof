@@ -31,10 +31,12 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.version = NO_VERSION
         self.logger.error(f"Failed to fetch version update information for {self.tool}")
 
-    def _sort_latest_tag(self, versions, name: str = ""):
+    def _sort_latest_tag(self, versions: dict, tag_key: str = ""):
         """
-        Removes all letters, hyphens and dashes from list of strings,
+        Removes all letters, hyphens and dashes from list of dictionaries,
         as in attempt of normalizing version numbers.
+        Split versions by dot to generate map, sort.
+        Returns whole dictionary with potentially latest tag.
         """
         return next(
             iter(
@@ -44,7 +46,7 @@ class UpstreamChecker(metaclass=ABCMeta):
                     key=lambda s: list(
                         map(
                             int,
-                            re.sub(r"[a-zA-Z-_]+", "", s.get(name), re.I).split("."),
+                            re.sub(r"[a-zA-Z-_]+", "", s.get(tag_key), re.I).split("."),
                         )
                     ),
                 )

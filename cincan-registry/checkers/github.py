@@ -1,7 +1,6 @@
 from ._checker import UpstreamChecker, NO_VERSION
 import requests
 import datetime
-import re
 
 
 class GitHubChecker(UpstreamChecker):
@@ -64,8 +63,6 @@ class GitHubChecker(UpstreamChecker):
         r = self.session.get(
             f"{self.api}/repos/{self.author}/{self.tool}/git/commits/{sha}"
         )
-        if r.status_code == 403:
-            self._check_api_limit(r.json())
         if r.status_code != 200:
             self.logger.error(
                 f"Unable to fetch date time for commit in tool {self.tool}: {r.json().get('message')}"
@@ -85,8 +82,6 @@ class GitHubChecker(UpstreamChecker):
         )
         if r.status_code == 200:
             self.version = r.json().get("tag_name", NO_VERSION)
-        elif r.status_code == 403:
-            self._check_api_limit(r.json())
         else:
             self._fail(r)
 
@@ -98,28 +93,7 @@ class GitHubChecker(UpstreamChecker):
         r = self.session.get(f"{self.api}/repos/{self.author}/{self.tool}/tags")
         if r.status_code == 200:
             tags = r.json()
-            # print(r.json().items())
-            # Remove possible letters before first digit with regex
-            # Makes sorting more precise. Noe datetime included in response...
             self.version = self._sort_latest_tag(tags, "name").get("name")
-            # print("HAHA")
-            # for tag in tags:
-            #     name = tag.get("name")
-            #     print(tag.items())
-            #     # index = re.search(r"\d", name).start()
-            #     cleaned = re.sub(r"[a-zA-Z-_]+", "", name, re.I)
-            #     tag_names.append(cleaned)
-            # print(self.tool)
-            # print(tag_names)
-            # self.version = next(
-            #     iter(
-            #         sorted(
-            #             tag_names, reverse=True, key=lambda s: list(map(int, s.split(".")))
-            #         )
-            #     )
-            # )
-        elif r.status_code == 403:
-            self._check_api_limit(r.json())
         else:
             self._fail(r)
 
@@ -136,8 +110,6 @@ class GitHubChecker(UpstreamChecker):
             if r.status_code == 200:
                 self.extra_info = f"{r.json().get('behind_by')} commits behind master."
                 self.version = r.json().get("base_commit").get("sha")
-            elif r.status_code == 403:
-                self._check_api_limit(r.json())
             else:
                 self._fail(r)
         else:
@@ -147,7 +119,5 @@ class GitHubChecker(UpstreamChecker):
             if r.status_code == 200:
                 self.version = r.json().get("sha")
                 self.extra_info = "Current commit in master."
-            elif r.status_code == 403:
-                self._check_api_limit(r.json())
             else:
                 self._fail(r)

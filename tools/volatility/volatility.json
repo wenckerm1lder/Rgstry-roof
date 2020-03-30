@@ -1,0 +1,7 @@
+{
+"uri": "https://github.com/volatilityfoundation/volatility/",
+"author": "volatilityfoundation",
+"tool": "volatility",
+"provider": "GitHub",
+"method": "tag-release"
+}

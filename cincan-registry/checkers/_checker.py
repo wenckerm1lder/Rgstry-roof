@@ -1,4 +1,5 @@
 import logging
+import re
 from abc import ABCMeta, abstractmethod
 
 __name__ = "checker"
@@ -29,6 +30,26 @@ class UpstreamChecker(metaclass=ABCMeta):
         """
         self.version = NO_VERSION
         self.logger.error(f"Failed to fetch version update information for {self.tool}")
+
+    def _sort_latest_tag(self, versions, name: str = ""):
+        """
+        Removes all letters, hyphens and dashes from list of strings,
+        as in attempt of normalizing version numbers.
+        """
+        return next(
+            iter(
+                sorted(
+                    versions,
+                    reverse=True,
+                    key=lambda s: list(
+                        map(
+                            int,
+                            re.sub(r"[a-zA-Z-_]+", "", s.get(name), re.I).split("."),
+                        )
+                    ),
+                )
+            )
+        )
 
     @abstractmethod
     def get_version(self, curr_ver: str = ""):

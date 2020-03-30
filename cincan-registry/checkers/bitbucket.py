@@ -27,10 +27,6 @@ class BitbucketChecker(UpstreamChecker):
             self.version = NO_VERSION
         return self.version
 
-    def _fail(self):
-        self.version = NO_VERSION
-        self.logger.error(f"Failed to fetch version update information for {self.tool}")
-
     def _by_release(self):
         r = self.session.get(
             f"{self.api}/repositories/{self.author}/{self.tool}/downloads"

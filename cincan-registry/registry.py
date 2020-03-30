@@ -13,7 +13,7 @@ from typing import List, Dict, Any, Iterable
 
 from .checkers import classmap
 
-VERSION_VARIABLE = "VERSION"
+VERSION_VARIABLE = "TOOL_VERSION"
 REGISTRY_CONF = pathlib.Path.home() / ".cincan/registry.json"
 
 
@@ -74,7 +74,9 @@ def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
         if t.description:
             td["description"] = t.description
         if t.versions:
-            td["versions"] = t.versions
+            td["versions"] = [
+                {"version": ver.version, "tags": [t for t in ver.tags], "updated": ver.updated} for ver in t.versions
+            ]
         # if len(t.input) > 0:
         #     td["input"] = t.input
         # if len(t.output) > 0:
@@ -163,7 +165,7 @@ class ToolRegistry:
         return use_tools
 
     async def list_tools_local_images(
-        self, defined_tag: str = "", prefix="cincan/", version_var="VERSION"
+        self, defined_tag: str = "", prefix="cincan/", version_var=VERSION_VARIABLE
     ) -> Dict[str, ToolInfo]:
         """List tools from the locally available docker images"""
         images = self.client.images.list(filters={"dangling": False})
@@ -196,7 +198,7 @@ class ToolRegistry:
                                 if v.version == version:
                                     existing_ver = True
                                     self.logger.debug(
-                                        f"same version for tool {name} with version {version} "
+                                        f"same version found for tool {name} with version {version} as tag {tag} "
                                     )
                                     ret[name].versions[j].tags.union(set(stripped_tags))
                                     break
@@ -238,11 +240,13 @@ class ToolRegistry:
         """Fetch remote data to update a tool info"""
 
         self.logger.info("fetch %s...", tool.name)
+        # print(tool.name)
         manifest = self.fetch_manifest(session, tool.name)
         v1_comp_string = manifest.get("history", [{}])[0].get("v1Compatibility")
         if v1_comp_string is None:
             return {}
         v1_comp = json.loads(v1_comp_string)
+        updated = v1_comp.get("created")
         version = ""
         try:
             for i in v1_comp.get("config").get("Env"):
@@ -255,7 +259,7 @@ class ToolRegistry:
         # if labels:
         #     tool.input = parse_data_types(labels.get("io.cincan.input", ""))
         #     tool.output = parse_data_types(labels.get("io.cincan.output", ""))
-        ver_info = VersionInfo(version, set(manifest.get("sorted_tags", None)))
+        ver_info = VersionInfo(version, set(manifest.get("sorted_tags", None)), updated)
         tool.versions = [ver_info]
         # tool.version = version
         # tool.tags = manifest.get(
@@ -359,6 +363,7 @@ class ToolRegistry:
             elif fresh_resp:
                 # get a images JSON, form new tool list
                 fresh_json = json.loads(fresh_resp.content)
+                # print(fresh_json)
                 tool_list = {}
                 for t in fresh_json["results"]:
                     if defined_tag:
@@ -421,7 +426,8 @@ class ToolRegistry:
                     # input=j.get("input", []),
                     # output=j.get("output"),
                     # tags=j.get("tags", "").split(","),
-                    versions=j.get("versions", []),
+                    versions=[VersionInfo(ver.get("version"), set(ver.get("tags")), ver.get("updated")) for ver in j.get("versions")] if j.get("versions") else [],
+                    # j.get("versions", []),
                     description=j.get("description", ""),
                 )
         return r
@@ -434,6 +440,7 @@ class ToolRegistry:
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
                 # if tool_path.stem == "apktool":
+                # if tool_path.stem == "tshark":
                 loop = asyncio.get_event_loop()
                 tasks = []
                 tasks.append(

@@ -25,8 +25,11 @@ class color:
 def print_tools_by_location(tools: List[dict], location: str):
 
     PRE_SPACE = 5
+    # Name length
     MAX_WN = 35
-    MAX_WV = 20
+    # Version length # Hash can be 40 characters wide
+    MAX_WV = 41
+    # Tag(s) length
     MAX_WT = 20
     EXTRA_FILL = 35
     # if local_tools:

@@ -75,7 +75,12 @@ def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
             td["description"] = t.description
         if t.versions:
             td["versions"] = [
-                {"version": ver.version, "tags": [t for t in ver.tags], "updated": ver.updated} for ver in t.versions
+                {
+                    "version": ver.version,
+                    "tags": [t for t in ver.tags],
+                    "updated": ver.updated,
+                }
+                for ver in t.versions
             ]
         # if len(t.input) > 0:
         #     td["input"] = t.input
@@ -111,6 +116,7 @@ class ToolRegistry:
         self.hub_url = "https://hub.docker.com/v2"
         self.auth_url = "https://auth.docker.io/token"
         self.registry_url = "https://registry.hub.docker.com/v2"
+        self.registry_service = "registry.docker.io"
         self.max_workers = 30
         try:
             with open(REGISTRY_CONF) as f:
@@ -165,9 +171,18 @@ class ToolRegistry:
         return use_tools
 
     async def list_tools_local_images(
-        self, defined_tag: str = "", prefix="cincan/", version_var=VERSION_VARIABLE
+        self,
+        defined_tag: str = "",
+        prefix: str = "cincan/",
+        version_var: str = VERSION_VARIABLE,
+        default_ver: str = "undefined",
     ) -> Dict[str, ToolInfo]:
-        """List tools from the locally available docker images"""
+        """
+        List tools from the locally available docker images
+        Only tools with starts with 'prefix' are listed.
+        Additionally, if tag is defined, tool must have this tag
+        before it is listed.
+        """
         images = self.client.images.list(filters={"dangling": False})
         # images oldest first (tags are listed in proper order)
         images.sort(key=lambda x: parse_json_time(x.attrs["Created"]), reverse=True)
@@ -179,7 +194,7 @@ class ToolRegistry:
             updated = parse_json_time(i.attrs["Created"])
 
             for t in i.tags:
-                version = "undefined"
+                version = default_ver
                 existing_ver = False
                 stripped_tags = [
                     split_tool_tag(tag)[1] if tag.startswith(prefix) else tag
@@ -267,6 +282,37 @@ class ToolRegistry:
         # )  # Note: not part of manifest in Docker API
         return manifest
 
+    def _docker_registry_API_error(
+        self, r: requests.Response, custom_error_msg: str = ""
+    ):
+        """
+        Logs error response caused by Docker Registry HTTP API V2
+        """
+        if custom_error_msg:
+            self.logger.error(f"{custom_error_msg}:")
+        for error in r.json().get("errors"):
+            self.logger.error(
+                f"{error.get('code')}: {error.get('message')}\n Additional details: {error.get('detail')}"
+            )
+
+    def _get_service_token(self, session: requests.Session, repo: str) -> str:
+        """
+        Gets Bearer token with 'pull' scope for single repository
+        in Docker Registry by default.
+        """
+        params = {
+            "service": self.registry_service,
+            "scope": f"repository:{repo}:pull",
+        }
+        token_req = session.get(self.auth_url, params=params)
+        if token_req.status_code != 200:
+            self._docker_registry_API_error(
+                token_req, f"Error when getting token for repository {repo}"
+            )
+            return ""
+        else:
+            return token_req.json().get("token", "")
+
     def fetch_manifest(
         self, session: requests.Session, tool_tag: str
     ) -> Dict[str, Any]:
@@ -295,21 +341,7 @@ class ToolRegistry:
         if tool_tag.count(":") == 0 and tag_names:
             tool_version = tag_names[0]  # tool version not given, pick newest
 
-        # Get bearer token for the image
-        params = {
-            "service": "registry.docker.io",
-            "scope": f"repository:{tool_name}:pull",
-        }
-        token_req = session.get(self.auth_url, params=params)
-        if token_req.status_code != 200:
-            self.logger.error(
-                "Error getting token for tool {}, code: {}".format(
-                    tool_name, token_req.status_code
-                )
-            )
-            return {}
-        token_json = json.loads(token_req.content)
-        token = token_json["token"]
+        token = self._get_service_token(session, tool_name)
 
         # Get manifest of the image
         # Note, must not request 'v2' metadata as that does not contain what is now in 'v1Compatibility' :O
@@ -426,7 +458,14 @@ class ToolRegistry:
                     # input=j.get("input", []),
                     # output=j.get("output"),
                     # tags=j.get("tags", "").split(","),
-                    versions=[VersionInfo(ver.get("version"), set(ver.get("tags")), ver.get("updated")) for ver in j.get("versions")] if j.get("versions") else [],
+                    versions=[
+                        VersionInfo(
+                            ver.get("version"), set(ver.get("tags")), ver.get("updated")
+                        )
+                        for ver in j.get("versions")
+                    ]
+                    if j.get("versions")
+                    else [],
                     # j.get("versions", []),
                     description=j.get("description", ""),
                 )

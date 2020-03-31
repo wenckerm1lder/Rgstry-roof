@@ -33,7 +33,7 @@ class UpstreamChecker(metaclass=ABCMeta):
 
     def _sort_latest_tag(self, versions: dict, tag_key: str = ""):
         """
-        Removes all letters, hyphens and dashes from list of dictionaries,
+        Removes all letters, hyphens and dashes from value in list of dictionaries,
         as in attempt of normalizing version numbers.
         Split versions by dot to generate map, sort.
         Returns whole dictionary with potentially latest tag.

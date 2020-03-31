@@ -22,7 +22,7 @@ class color:
     END = "\033[0m"
 
 
-def print_tools_by_location(tools: List[dict], location: str):
+def print_tools_by_location(tools: List[dict], location: str, filter_by: str = ""):
 
     PRE_SPACE = 5
     # Name length
@@ -40,21 +40,34 @@ def print_tools_by_location(tools: List[dict], location: str):
     for tool in sorted(tools):
         # print(1)
         lst = tools[tool]
+        first_print = True
         if lst.versions and len(lst.versions) == 1:
             tags = ",".join(next(iter(lst.versions)).tags)
             version = next(iter(lst.versions)).version
             name = lst.name.split(":")[0]
-            print(f"{' ':<{PRE_SPACE}}| {name:<{MAX_WN}}{version:{MAX_WV}}{tags:<{MAX_WT}}")
+            if filter_by and filter_by not in tags:
+                continue
+            print(
+                f"{' ':<{PRE_SPACE}}| {name:<{MAX_WN}}{version:{MAX_WV}}{tags:<{MAX_WT}}"
+            )
+            first_print = False
         else:
             tags = ""
             version = ""
             for i, ver in enumerate(lst.versions):
-                name = lst.name.split(":")[0] if i == 0 else ""
+                name = lst.name.split(":")[0] if first_print else ""
                 # print(ver.tags)
                 tags = ",".join(lst.versions[i].tags)
                 version = ver.version
-                print(f"{' ':<{PRE_SPACE}}| {name:<{MAX_WN}}{version:{MAX_WV}}{tags:<{MAX_WT}}")
-        print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
+                if filter_by and filter_by not in tags:
+                    continue
+                print(
+                    f"{' ':<{PRE_SPACE}}| {name:<{MAX_WN}}{version:{MAX_WV}}{tags:<{MAX_WT}}"
+                )
+                first_print = False
+
+        if lst.versions and not first_print:
+            print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
 
 
 def main():
@@ -155,8 +168,12 @@ def main():
             finally:
                 loop.close()
             if tools:
-                print(f"\n  Listing all tools with tag '{args.tag}':\n")
-                print_tools_by_location(tools, args.list_sub_command)
+                if not args.all:
+                    print(f"\n  Listing all tools with tag '{args.tag}':\n")
+                else:
+                    print(f"\n  Listing all tools :\n")
+
+                print_tools_by_location(tools, args.list_sub_command, args.tag if not args.all else "")
 
         else:
             # tools_list = reg.list_tools(defined_tag=args.tag if not args.all else "")

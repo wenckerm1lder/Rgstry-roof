@@ -40,13 +40,15 @@ def print_local_version_check(local_tools, remote_tools, tag):
 
     for tool in sorted(local_tools):
 
+
         tlo = local_tools[tool]
 
         local_version = tlo.getLatest().version
 
         if tool in remote_tools:
             remote_version = remote_tools[tool].getLatest().version
-
+        else:
+            remote_version = "undefined"
         # local_version = sorted(
         #     tlo.versions,
         #     reverse=True,

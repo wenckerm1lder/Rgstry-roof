@@ -6,7 +6,17 @@ import asyncio
 import pathlib
 from typing import List
 
+# from .checkers._checker import _sort_latest_tag
 DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
+
+PRE_SPACE = 5
+# Name length
+MAX_WN = 35
+# Version length # Hash can be 40 characters wide
+MAX_WV = 41
+# Tag(s) length
+MAX_WT = 20
+EXTRA_FILL = 35
 
 
 class color:
@@ -22,16 +32,37 @@ class color:
     END = "\033[0m"
 
 
+def print_local_version_check(local_tools, remote_tools, tag):
+
+    print(
+        f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}{f'Local Version':{MAX_WV}}{f'Registry Version':{MAX_WV}}{f'Upstream Version':{MAX_WV}}{color.END}\n"
+    )
+
+    for tool in sorted(local_tools):
+
+        tlo = local_tools[tool]
+
+        local_version = tlo.getLatest().version
+
+        if tool in remote_tools:
+            remote_version = remote_tools[tool].getLatest().version
+
+        # local_version = sorted(
+        #     tlo.versions,
+        #     reverse=True,
+        #     key=lambda s: lambda s: list(
+        #         map(int, re.sub(r"[a-zA-Z-_]+", "", s.version, re.I).split("."),)
+        #     ),
+        # )[0].version
+        upstream_version = tlo.upstream_v if tlo.upstream_v else "Not implemented"
+        # remote_version = remote_tools[tool].versions[0].version
+
+        print(
+            f"{' ':<{PRE_SPACE}}| {tool:<{MAX_WN}}{local_version:{MAX_WV}}{remote_version:<{MAX_WV}}{upstream_version:<{MAX_WV}}"
+        )
+
 def print_tools_by_location(tools: List[dict], location: str, filter_by: str = ""):
 
-    PRE_SPACE = 5
-    # Name length
-    MAX_WN = 35
-    # Version length # Hash can be 40 characters wide
-    MAX_WV = 41
-    # Tag(s) length
-    MAX_WT = 20
-    EXTRA_FILL = 35
     # if local_tools:
     print(
         f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}{f'{location.capitalize()} Version':{MAX_WV}}{f'{location.capitalize()} Tags':<{MAX_WT}}{color.END}\n"
@@ -173,7 +204,9 @@ def main():
                 else:
                     print(f"\n  Listing all tools :\n")
 
-                print_tools_by_location(tools, args.list_sub_command, args.tag if not args.all else "")
+                print_tools_by_location(
+                    tools, args.list_sub_command, args.tag if not args.all else ""
+                )
 
         else:
             # tools_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
@@ -201,11 +234,21 @@ def main():
                 )
 
     elif sub_command == "check-updates":
-        # from .checkers.github import GithubChecker
+        # Check updates for local tools
         loop = asyncio.get_event_loop()
         reg = ToolRegistry()
-        loop.run_until_complete(reg.check_upstream_versions())
+        tasks = [
+            # Check local tools for version information, update tools upstram info
+            reg.check_upstream_versions(),
+            reg.list_tools_registry(),
+        ]
+        local_tools, remote_tools = loop.run_until_complete(asyncio.gather(*tasks))
         loop.close()
+        # print(local_tools)
+        print_local_version_check(local_tools, remote_tools, "latest-stable")
+        # for tool in sorted(local_tools):
+        #     tlo = local_tools[tool]
+        #     print(tlo.upstream_v)
         # reg.check_upstream_versions()
         # # print(pathlib.Path.cwd())
         # for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():

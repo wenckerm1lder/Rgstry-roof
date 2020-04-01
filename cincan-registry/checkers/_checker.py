@@ -46,7 +46,7 @@ class UpstreamChecker(metaclass=ABCMeta):
                     key=lambda s: list(
                         map(
                             int,
-                            re.sub(r"[a-zA-Z-_]+", "", s.get(tag_key), re.I).split("."),
+                            re.sub(r"[a-zA-Z-_~]+", "", s.get(tag_key), re.I).split("."),
                         )
                     ),
                 )

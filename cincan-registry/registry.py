@@ -7,6 +7,7 @@ import json
 import datetime
 import timeit
 import asyncio
+import re
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Iterable
@@ -48,7 +49,28 @@ class ToolInfo:
         # self.tags = tags
         # self.version = version
         self.versions: List[VersionInfo] = versions
+        self.upstream_v: str = ""
         self.description = description
+
+    def _map_sub_versions(self, ver: VersionInfo):
+        if any(char.isdigit() for char in ver.version):
+            cleaned = re.sub(r"[^0-9.,]+", "", ver.version).split(".")
+            return list(map(int, cleaned))
+        else:
+            # We are not sorting pure text versions
+            # return (isinstance(ver.version, (float, int)), ver.version)
+            return [0]
+
+    def getLatest(self) -> VersionInfo:
+        return next(
+            iter(
+                sorted(
+                    self.versions,
+                    reverse=True,
+                    key=lambda s: self._map_sub_versions(s),
+                )
+            )
+        )
 
     def __str__(self):
         return "{} {}".format(self.name, self.description)
@@ -83,12 +105,6 @@ def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
                 }
                 for ver in t.versions
             ]
-        # if len(t.input) > 0:
-        #     td["input"] = t.input
-        # if len(t.output) > 0:
-        #     td["output"] = t.output
-        # if len(t.tags) > 0:
-        #     td["tags"] = ",".join(t.tags)  # keep order
         r[t.name] = td
     return r
 
@@ -138,7 +154,7 @@ class ToolRegistry:
         Logs error response caused by Docker Registry HTTP API V2
         """
         if custom_error_msg:
-            self.logger.error(f"{custom_error_msg}:")
+            self.logger.error(f"{custom_error_msg}")
         for error in r.json().get("errors"):
             self.logger.debug(
                 f"{error.get('code')}: {error.get('message')} Additional details: {error.get('detail')}"
@@ -183,6 +199,8 @@ class ToolRegistry:
 
     def list_tools(self, defined_tag: str = "", merge=True) -> Dict[str, ToolInfo]:
         """List all tools"""
+        # TODO rework this method, remote and local listing changed
+
         # Get remote and local tools in parallel to increase performance
         loop = asyncio.get_event_loop()
         tasks = [
@@ -365,7 +383,7 @@ class ToolRegistry:
     def fetch_manifest(
         self, session: requests.Session, name: str, tag: str
     ) -> Dict[str, Any]:
-        """Fetch docker image tag and manifest information"""
+        """Fetch docker image manifest information by tag"""
 
         # Get authentication token for tool with pull scope
         token = self._get_service_token(session, name)
@@ -379,7 +397,8 @@ class ToolRegistry:
         )
         if manifest_req.status_code != 200:
             self._docker_registry_API_error(
-                manifest_req, f"Error when getting manifest for tool {name}. Code {manifest_req.status_code}"
+                manifest_req,
+                f"Error when getting manifest for tool {name}. Code {manifest_req.status_code}",
             )
             return {}
         return manifest_req.json()
@@ -406,10 +425,11 @@ class ToolRegistry:
                 self.logger.warning(e)
 
             if fresh_resp and fresh_resp.status_code != 200:
-                self._docker_registry_API_error(fresh_resp,
+                self._docker_registry_API_error(
+                    fresh_resp,
                     "Error getting list of remote tools, code: {}".format(
                         fresh_resp.status_code
-                    )
+                    ),
                 )
             elif fresh_resp:
                 # get a images JSON, form new tool list
@@ -417,7 +437,7 @@ class ToolRegistry:
                 # print(fresh_json)
                 tool_list = {}
                 for t in fresh_json["results"]:
-                    pprint(t)
+                    # pprint(t)
                     # if defined_tag:
                     #     # name = f"{t['user']}/{t['name']}:{defined_tag}"
                     #     name = f"{t['user']}/{t['name']}"
@@ -478,9 +498,6 @@ class ToolRegistry:
                     name,
                     updated=parse_json_time(j["updated"]),
                     destination=j.get("destination"),
-                    # input=j.get("input", []),
-                    # output=j.get("output"),
-                    # tags=j.get("tags", "").split(","),
                     versions=[
                         VersionInfo(
                             ver.get("version"), set(ver.get("tags")), ver.get("updated")
@@ -489,32 +506,46 @@ class ToolRegistry:
                     ]
                     if j.get("versions")
                     else [],
-                    # j.get("versions", []),
                     description=j.get("description", ""),
                 )
         return r
 
-    async def check_upstream_versions(self):
-        # from .checkers.github import GithubChecker
-        # upstream_status = []
-
-        # print(pathlib.Path.cwd())
-        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-            for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
-                # if tool_path.stem == "apktool":
-                # if tool_path.stem == "tshark":
-                loop = asyncio.get_event_loop()
-                tasks = []
-                tasks.append(
-                    loop.run_in_executor(
-                        executor, self.check_single_tool_updates, tool_path
+    async def check_upstream_versions(self, only_local: bool = True, prefix="cincan/"):
+        """
+        Checks for available versions in upstream
+        """
+        # NOTE currently checks only for those tools which can be found locally
+        able_to_check = [
+            tool_path
+            for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir()
+        ]
+        if only_local:
+            local_tools = await self.list_tools_local_images()
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                for tool_path in able_to_check:
+                    tool = local_tools.get(f"{prefix}{tool_path.stem}")
+                    if tool:
+                        loop = asyncio.get_event_loop()
+                        tasks = []
+                        tasks.append(
+                            loop.run_in_executor(
+                                executor,
+                                self.get_single_tool_version,
+                                *(tool_path, tool),
+                            )
+                        )
+                if tasks:
+                    for response in await asyncio.gather(*tasks):
+                        pass
+                else:
+                    self.logger.warning(
+                        "No known methods to get updates for any of the local tools."
                     )
-                )
+            return local_tools
+        else:
+            raise NotImplementedError
 
-            for response in await asyncio.gather(*tasks):
-                pass
-
-    def check_single_tool_updates(self, tool_path: str):
+    def get_single_tool_version(self, tool_path: str, tool: ToolInfo) -> str:
 
         with open(tool_path / f"{tool_path.stem}.json") as f:
             tool_info = json.load(f)
@@ -524,9 +555,7 @@ class ToolRegistry:
                 if self.configuration
                 else ""
             )
-            print(
-                f"{tool_path.stem}: {classmap.get(provider)(tool_info, token).get_version()}"
-            )
+            tool.upstream_v = classmap.get(provider)(tool_info, token).get_version()
             # print(tool_path.stem)
 
         # TheHive accepts the following datatypes:

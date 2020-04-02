@@ -18,11 +18,14 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.token: str = token
         self.logger = logging.getLogger(__name__)
 
-        if not self.uri or not (self.author and self.tool and self.provider):
+        if not (self.uri or self.author and self.tool and self.provider):
             raise ValueError(
                 f"Either URI or author, tool and provider must be provided for upstream check for tool {self.tool}."
             )
         self.logger.debug(f"Instancing tool {self.tool}")
+
+    def __del__(self):
+        self.logger.debug(f"Tool {self.tool} has updated upstream version information of {self.version}")
 
     def _fail(self):
         """

@@ -8,8 +8,8 @@ class PypiChecker(UpstreamChecker):
     Class for checking latests possible releases of given pypi package.
     """
 
-    def __init__(self, tool_info: dict):
-        super().__init__(tool_info)
+    def __init__(self, tool_info: dict, token: str = ""):
+        super().__init__(tool_info, token)
         self.session = requests.Session()
         self.api = "https://pypi.org/"
         self.author = self.author.strip("/")
@@ -38,10 +38,9 @@ class PypiChecker(UpstreamChecker):
         """
         Method for finding latest release from pypi.
         """
-        r = self.session.get(
-            f"{self.api}/pypi/{self.tool}/json"
-        )
+        r = self.session.get(f"{self.api}/pypi/{self.tool}/json")
         if r.status_code == 200:
             self.version = r.json().get("info").get("version")
+            print(r.json().get("info").get("version"))
         else:
             self._fail(r)

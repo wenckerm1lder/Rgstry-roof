@@ -6,13 +6,15 @@
 # from ._checker import UpstreamChecker
 from .github import GitHubChecker
 from .bitbucket import BitbucketChecker
+from .pypi import PypiChecker
 
 classmap = {
     "github": GitHubChecker,
-    "bitbucket": BitbucketChecker
+    "bitbucket": BitbucketChecker,
+    "pypi" : PypiChecker
 }
 
-__all__ = ["GitHubChecker", "BitbucketChecker"]
+__all__ = ["GitHubChecker", "BitbucketChecker", "PypiChecker"]
 
 # for (_, name, _) in pkgutil.iter_modules([Path(__file__).parent]):
 #     imported_module = import_module("." + name, package=__name__)

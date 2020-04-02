@@ -42,6 +42,6 @@ class PypiChecker(UpstreamChecker):
             f"{self.api}/pypi/{self.tool}/json"
         )
         if r.status_code == 200:
-            self.version = r.json().get("info").get("version", NO_VERSION)
+            self.version = r.json().get("info").get("version")
         else:
             self._fail(r)

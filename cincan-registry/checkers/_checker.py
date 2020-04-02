@@ -1,9 +1,11 @@
 import logging
 import re
 from abc import ABCMeta, abstractmethod
+from ..toolinfo import VersionInfo
+
 
 __name__ = "checker"
-NO_VERSION = "undefined"
+NO_VERSION = "Not found"
 
 
 class UpstreamChecker(metaclass=ABCMeta):
@@ -46,7 +48,9 @@ class UpstreamChecker(metaclass=ABCMeta):
                     key=lambda s: list(
                         map(
                             int,
-                            re.sub(r"[a-zA-Z-_~]+", "", s.get(tag_key), re.I).split("."),
+                            re.sub(r"[a-zA-Z-_~]+", "", s.get(tag_key), re.I).split(
+                                "."
+                            ),
                         )
                     ),
                 )

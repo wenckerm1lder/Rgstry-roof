@@ -13,78 +13,13 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Iterable
 from pprint import pprint
 from .checkers import classmap
+from .toolinfo import ToolInfo, VersionInfo
+from .utils import parse_data_types, parse_json_time, format_time, split_tool_tag
+
 
 VERSION_VARIABLE = "TOOL_VERSION"
 REGISTRY_CONF = pathlib.Path.home() / ".cincan/registry.json"
 VER_UNDEFINED = "undefined"
-
-
-@dataclass
-class VersionInfo:
-    version: str
-    tags: set
-    updated: datetime.datetime
-
-
-class ToolInfo:
-    """A tool in registry"""
-
-    def __init__(
-        self,
-        name: str,
-        updated: datetime.datetime,
-        destination: str,
-        # input: List[str] = None,
-        # output: List[str] = None,
-        # tags: List[str] = "",
-        # version: str = "",
-        versions: List[VersionInfo] = [],
-        description: str = "",
-    ):
-        self.name: str = name
-        self.updated: str = updated
-        # self.input = input if input is not None else []
-        # self.output = output if output is not None else []
-        self.destination: str = destination
-        # self.tags = tags
-        # self.version = version
-        self.versions: List[VersionInfo] = versions
-        self.upstream_v: str = ""
-        self.description = description
-
-    def _map_sub_versions(self, ver: VersionInfo):
-        if any(char.isdigit() for char in ver.version):
-            cleaned = re.sub(r"[^0-9.,]+", "", ver.version).split(".")
-            return list(map(int, cleaned))
-        else:
-            # We are not sorting pure text versions
-            # return (isinstance(ver.version, (float, int)), ver.version)
-            return [0]
-
-    def getLatest(self) -> VersionInfo:
-        return next(
-            iter(
-                sorted(
-                    self.versions,
-                    reverse=True,
-                    key=lambda s: self._map_sub_versions(s),
-                )
-            )
-        )
-
-    def __str__(self):
-        return "{} {}".format(self.name, self.description)
-
-
-def parse_json_time(string: str) -> datetime.datetime:
-    """Parse time from JSON as stored by Docker"""
-    s = string[0:19]
-    return datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S")
-
-
-def format_time(time: datetime.datetime) -> str:
-    """Format time as we would like to see it"""
-    return time.strftime("%Y-%m-%dT%H:%M:%S")
 
 
 def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
@@ -107,20 +42,6 @@ def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
             ]
         r[t.name] = td
     return r
-
-
-def parse_data_types(string: str) -> List[str]:
-    """Parse list of data types into a list"""
-    s = string.strip()
-    if len(s) == 0:
-        return []
-    return list(map(lambda x: x.strip(), s.split(",")))
-
-
-def split_tool_tag(tag: str) -> (str, str):
-    """Split tool tag into tool name and tool version"""
-    tag_split = tag.split(":", maxsplit=2)
-    return tag_split[0], tag_split[1] if len(tag_split) > 1 else "latest"
 
 
 class ToolRegistry:
@@ -515,16 +436,17 @@ class ToolRegistry:
         Checks for available versions in upstream
         """
         # NOTE currently checks only for those tools which can be found locally
-        able_to_check = [
-            tool_path
-            for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir()
-        ]
+        able_to_check = {}
+
+        for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
+            able_to_check[f"{prefix}{tool_path.stem}"] = tool_path
         if only_local:
             local_tools = await self.list_tools_local_images()
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                for tool_path in able_to_check:
-                    tool = local_tools.get(f"{prefix}{tool_path.stem}")
-                    if tool:
+                for l_tool in local_tools:
+                    tool_path = able_to_check.get(l_tool)
+                    if tool_path:
+                        tool = local_tools.get(l_tool)
                         loop = asyncio.get_event_loop()
                         tasks = []
                         tasks.append(
@@ -534,6 +456,11 @@ class ToolRegistry:
                                 *(tool_path, tool),
                             )
                         )
+                    else:
+                        local_tools.get(l_tool).upstream_v = VersionInfo(
+                            "Not implemented", set(), datetime.datetime.now()
+                        )
+                        self.logger.debug(f"Upstream check not implemented for tool {l_tool}")
                 if tasks:
                     for response in await asyncio.gather(*tasks):
                         pass
@@ -555,7 +482,11 @@ class ToolRegistry:
                 if self.configuration
                 else ""
             )
-            tool.upstream_v = classmap.get(provider)(tool_info, token).get_version()
+            tool.upstream_v = VersionInfo(
+                classmap.get(provider)(tool_info, token).get_version(),
+                set({"latest"}),
+                datetime.datetime.now(),
+            )
             # print(tool_path.stem)
 
         # TheHive accepts the following datatypes:

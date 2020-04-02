@@ -1,6 +1,5 @@
 from ._checker import UpstreamChecker, NO_VERSION
 import requests
-import datetime
 
 
 class PypiChecker(UpstreamChecker):

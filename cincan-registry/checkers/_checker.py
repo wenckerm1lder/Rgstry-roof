@@ -2,7 +2,7 @@ import logging
 import re
 from abc import ABCMeta, abstractmethod
 from typing import List, Dict
-
+import sys
 
 __name__ = "checker"
 NO_VERSION = "Not found"
@@ -41,11 +41,12 @@ class UpstreamChecker(metaclass=ABCMeta):
 
     def _sort_latest_tag(self, versions: List[dict], tag_key: str = "") -> Dict:
         """
-        Removes all non-digits and dots from value in list of dictionaries,
+        Removes all non-digits and non-dots from value in list of dictionaries,
         as in attempt of normalizing version numbers.
         Split versions by dot to generate map, sort.
         Returns whole dictionary with potentially latest tag.
         """
+
         return next(
             iter(
                 sorted(
@@ -56,7 +57,9 @@ class UpstreamChecker(metaclass=ABCMeta):
                             int,
                             re.sub(r"[^0-9.]+", "", s.get(tag_key), re.I).split("."),
                         )
-                    ),
+                    )
+                    if "." in s.get(tag_key)
+                    else [-1],
                 )
             )
         )

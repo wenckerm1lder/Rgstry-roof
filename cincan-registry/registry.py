@@ -101,7 +101,9 @@ class ToolRegistry:
         else:
             return token_req.json().get("token", "")
 
-    def _get_version_from_manifest(self, manifest: dict):
+    def _get_version_from_manifest(
+        self, manifest: dict, ver_variable: str = VERSION_VARIABLE
+    ):
         v1_comp_string = manifest.get("history", [{}])[0].get("v1Compatibility")
         if v1_comp_string is None:
             return {}
@@ -110,7 +112,7 @@ class ToolRegistry:
         version = ""
         try:
             for i in v1_comp.get("config").get("Env"):
-                if "".join(i).split("=")[0] == VERSION_VARIABLE:
+                if "".join(i).split("=")[0] == ver_variable:
                     version = "".join(i).split("=")[1]
                     break
         except IndexError as e:

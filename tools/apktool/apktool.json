@@ -1,7 +1,8 @@
 {
   "uri": "https://bitbucket.org/iBotPeaches/apktool/",
-  "author": "iBotPeaches",
+  "repository": "iBotPeaches",
   "tool": "apktool",
   "provider": "Bitbucket",
-  "method": "tag-release"
+  "method": "tag-release",
+  "origin": true
 }

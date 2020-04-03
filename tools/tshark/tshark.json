@@ -1,7 +1,8 @@
 {
   "uri": "https://github.com/wireshark/wireshark/",
-  "author": "wireshark",
+  "repository": "wireshark",
   "tool": "wireshark",
   "provider": "GitHub",
-  "method": "tag-release"
+  "method": "tag-release",
+  "origin": true
 }

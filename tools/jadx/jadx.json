@@ -1,7 +1,8 @@
 {
   "uri": "https://github.com/skylot/jadx/",
-  "author": "skylot",
+  "repository": "skylot",
   "tool": "jadx",
   "provider": "GitHub",
-  "method": "release"
+  "method": "release",
+  "origin": true
 }

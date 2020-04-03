@@ -1,7 +1,8 @@
 {
   "uri": "https://github.com/urule99/jsunpack-n",
-  "author": "urule99",
+  "repository": "urule99",
   "tool": "jsunpack-n",
   "provider": "GitHub",
-  "method": "commit"
+  "method": "commit",
+  "origin": true
 }

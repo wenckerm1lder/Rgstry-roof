@@ -1,7 +1,8 @@
 {
   "uri": "https://github.com/icsharpcode/ILSpy",
-  "author": "icsharpcode",
+  "repository": "icsharpcode",
   "tool": "ILSpy",
   "provider": "GitHub",
-  "method": "release"
+  "method": "release",
+  "origin": true
 }

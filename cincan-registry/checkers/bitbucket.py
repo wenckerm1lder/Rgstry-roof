@@ -7,7 +7,7 @@ class BitbucketChecker(UpstreamChecker):
         super().__init__(tool_info, token)
         self.session = requests.Session()
         self.api = "https://api.bitbucket.org/2.0"
-        self.author = self.author.strip("/")
+        self.repository = self.repository.strip("/")
         self.tool = self.tool.strip("/")
 
     def get_version(self, curr_ver: str = ""):
@@ -29,7 +29,7 @@ class BitbucketChecker(UpstreamChecker):
 
     def _by_release(self):
         r = self.session.get(
-            f"{self.api}/repositories/{self.author}/{self.tool}/downloads"
+            f"{self.api}/repositories/{self.repository}/{self.tool}/downloads"
         )
         if r.status_code == 200:
             self.version = r.json().get("values")[0].get("name", NO_VERSION)
@@ -40,7 +40,7 @@ class BitbucketChecker(UpstreamChecker):
         # Inverse sort by name (alias tag)
         params = {"sort": "-name"}
         r = self.session.get(
-            f"{self.api}/repositories/{self.author}/{self.tool}/refs/tags",
+            f"{self.api}/repositories/{self.repository}/{self.tool}/refs/tags",
             params=params,
         )
         if r.status_code == 200:

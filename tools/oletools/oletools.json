@@ -1,8 +1,9 @@
 {
     "uri": "https://pypi.org/pypi/oletools",
-    "author": "Philippe Lagadec",
+    "repository": "",
     "tool": "oletools",
-    "provider": "pypi",
-    "method": "release"
+    "provider": "PyPi",
+    "method": "release",
+    "origin": false
   }
   

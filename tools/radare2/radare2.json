@@ -1,7 +1,8 @@
 {
   "uri": "https://github.com/radareorg/radare2/",
-  "author": "radareorg",
+  "repository": "radareorg",
   "tool": "radare2",
   "provider": "GitHub",
-  "method": "release"
+  "method": "release",
+  "origin": true
 }

@@ -1,7 +1,8 @@
 {
 "uri": "https://github.com/volatilityfoundation/volatility/",
-"author": "volatilityfoundation",
+"repository": "volatilityfoundation",
 "tool": "volatility",
 "provider": "GitHub",
-"method": "tag-release"
+"method": "tag-release",
+"origin": true
 }

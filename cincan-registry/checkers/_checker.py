@@ -11,18 +11,19 @@ NO_VERSION = "Not found"
 class UpstreamChecker(metaclass=ABCMeta):
     def __init__(self, tool_info: dict, token: str = ""):
         self.uri: str = tool_info.get("uri", "")
-        self.author: str = tool_info.get("author", "")
+        self.repository: str = tool_info.get("repository", "")
         self.tool: str = tool_info.get("tool", "")
         self.provider: str = tool_info.get("provider", "")
         self.method: str = tool_info.get("method", "")
+        self.origin: bool = tool_info.get("origin", "")
         self.version: str = ""
         self.extra_info: str = ""
         self.token: str = token
         self.logger = logging.getLogger(__name__)
 
-        if not (self.uri or self.author and self.tool and self.provider):
+        if not (self.uri or self.repository and self.tool and self.provider):
             raise ValueError(
-                f"Either URI or author, tool and provider must be provided for upstream check for tool {self.tool}."
+                f"Either URI or repository, tool and provider must be provided for upstream check for tool {self.tool}."
             )
         self.logger.debug(f"Instancing tool {self.tool}")
 

@@ -11,7 +11,7 @@ class PypiChecker(UpstreamChecker):
         super().__init__(tool_info, token)
         self.session = requests.Session()
         self.api = "https://pypi.org/"
-        self.author = self.author.strip("/")
+        self.repository = self.repository.strip("/")
         self.tool = self.tool.strip("/")
 
     def get_version(self, curr_ver: str = ""):
@@ -40,6 +40,5 @@ class PypiChecker(UpstreamChecker):
         r = self.session.get(f"{self.api}/pypi/{self.tool}/json")
         if r.status_code == 200:
             self.version = r.json().get("info").get("version")
-            print(r.json().get("info").get("version"))
         else:
             self._fail(r)

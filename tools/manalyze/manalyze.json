@@ -1,7 +1,8 @@
 {
   "uri": "https://github.com/JusticeRage/Manalyze",
-  "author": "JusticeRage",
+  "repository": "JusticeRage",
   "tool": "Manalyze",
   "provider": "GitHub",
-  "method": "commit"
+  "method": "commit",
+  "origin": true
 }

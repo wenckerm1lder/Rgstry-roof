@@ -1,7 +1,8 @@
 {
   "uri": "https://pypi.org/project/pyocr/",
-  "author": "",
+  "repository": "",
   "tool": "pyocr",
-  "provider": "pypi",
-  "method": "release"
+  "provider": "PyPi",
+  "method": "release",
+  "origin": false
 }

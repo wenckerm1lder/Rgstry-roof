@@ -1,7 +1,8 @@
 {
   "uri": "https://github.com/guelfoweb/peframe",
-  "author": "guelfoweb",
+  "repository": "guelfoweb",
   "tool": "peframe",
   "provider": "GitHub",
-  "method": "release"
+  "method": "release",
+  "origin": true
 }

@@ -454,7 +454,7 @@ class ToolRegistry:
             able_to_check[f"{prefix}{tool_path.stem}"] = tool_path
         if not able_to_check:
             self.logger.error(
-                f"No single configuration fo upstream check found. Something is wrong in path {pathlib.Path(pathlib.Path.cwd() / 'tools')}"
+                f"No single configuration for upstream check found. Something is wrong in path {pathlib.Path(pathlib.Path.cwd() / 'tools')}"
             )
         return able_to_check
 

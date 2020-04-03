@@ -1,6 +1,7 @@
 import logging
 import re
 from abc import ABCMeta, abstractmethod
+from typing import List, Dict
 
 
 __name__ = "checker"
@@ -38,9 +39,9 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.version = NO_VERSION
         self.logger.error(f"Failed to fetch version update information for {self.tool}")
 
-    def _sort_latest_tag(self, versions: dict, tag_key: str = ""):
+    def _sort_latest_tag(self, versions: List[dict], tag_key: str = "") -> Dict:
         """
-        Removes all letters, hyphens and dashes from value in list of dictionaries,
+        Removes all non-digits and dots from value in list of dictionaries,
         as in attempt of normalizing version numbers.
         Split versions by dot to generate map, sort.
         Returns whole dictionary with potentially latest tag.
@@ -53,9 +54,7 @@ class UpstreamChecker(metaclass=ABCMeta):
                     key=lambda s: list(
                         map(
                             int,
-                            re.sub(r"[a-zA-Z-_~]+", "", s.get(tag_key), re.I).split(
-                                "."
-                            ),
+                            re.sub(r"[^0-9.]+", "", s.get(tag_key), re.I).split("."),
                         )
                     ),
                 )

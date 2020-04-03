@@ -6,6 +6,7 @@ import logging
 import asyncio
 import pathlib
 from typing import List
+import json
 
 # from .checkers._checker import _sort_latest_tag
 DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
@@ -38,6 +39,12 @@ class color:
     END = "\033[0m"
 
 
+def print_single_tool_version_check(local_tool, remote_tool, tag=""):
+    print(
+        f"{local_tool.name} Local version: {local_tool.getLatest()} Remote version: {remote_tool.getLatest()} Upstream Version: {local_tool.upstream_v}"
+    )
+
+
 def print_local_version_check(local_tools, remote_tools, tag):
 
     print(
@@ -50,6 +57,7 @@ def print_local_version_check(local_tools, remote_tools, tag):
         tlo = local_tools[tool]
 
         local_version = tlo.getLatest()
+        # print(json.dumps(local_version.toJSON()))
 
         if tool in remote_tools:
             remote_version = remote_tools[tool].getLatest()
@@ -156,6 +164,9 @@ def main():
     update_parser = subparsers.add_parser(
         "check-updates", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
+    update_parser.add_argument(
+        "-t", "--tool", help="Check single tool.",
+    )
     subsubparsers = list_parser.add_subparsers(dest="list_sub_command")
     list_parser = subsubparsers.add_parser(
         "local",
@@ -253,18 +264,25 @@ def main():
                 )
 
     elif sub_command == "check-updates":
-        # Check updates for local tools
-        loop = asyncio.get_event_loop()
         reg = ToolRegistry()
-        tasks = [
-            # Check local tools for version information, update tools upstram info
-            reg.check_upstream_versions(),
-            reg.list_tools_registry(),
-        ]
-        local_tools, remote_tools = loop.run_until_complete(asyncio.gather(*tasks))
-        loop.close()
-        # print(local_tools)
-        print_local_version_check(local_tools, remote_tools, "latest-stable")
+        # Check updates for local tools
+        if args.tool:
+            try:
+                l_tool, r_tool = reg.get_versions_single_tool(args.tool)
+                print_single_tool_version_check(l_tool, r_tool)
+            except FileNotFoundError as e:
+                print(e)
+        else:
+            loop = asyncio.get_event_loop()
+            tasks = [
+                # Check local tools for version information, update tools upstram info
+                reg.check_upstream_versions(),
+                reg.list_tools_registry(),
+            ]
+            local_tools, remote_tools = loop.run_until_complete(asyncio.gather(*tasks))
+            loop.close()
+            # print(local_tools)
+            print_local_version_check(local_tools, remote_tools, "latest-stable")
         # for tool in sorted(local_tools):
         #     tlo = local_tools[tool]
         #     print(tlo.upstream_v)

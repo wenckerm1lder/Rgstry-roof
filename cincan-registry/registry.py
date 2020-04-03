@@ -10,7 +10,7 @@ import asyncio
 import re
 from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Dict, Any, Iterable
+from typing import List, Dict, Any, Iterable, Tuple
 from pprint import pprint
 from .checkers import classmap
 from .toolinfo import ToolInfo, VersionInfo
@@ -120,17 +120,24 @@ class ToolRegistry:
 
         return version, updated
 
-    def list_tools(self, defined_tag: str = "", merge=True) -> Dict[str, ToolInfo]:
-        """List all tools"""
-        # TODO rework this method, remote and local listing changed
-
-        # Get remote and local tools in parallel to increase performance
+    def get_local_remote_tools(self, defined_tag: str = "") -> Tuple[Dict, Dict]:
+        """
+        Get remote and local tools in parallel to increase performance
+        """
         loop = asyncio.get_event_loop()
         tasks = [
             self.list_tools_local_images(defined_tag),
             self.list_tools_registry(defined_tag),
         ]
         local_tools, remote_tools = loop.run_until_complete(asyncio.gather(*tasks))
+        loop.close()
+        return local_tools, remote_tools
+
+    def list_tools(self, defined_tag: str = "", merge=True) -> Dict[str, ToolInfo]:
+        """List all tools"""
+        # TODO rework this method, remote and local listing changed
+
+        local_tools, remote_tools = self.get_local_remote_tools(defined_tag)
         use_tools = {}
         merged_tools_dic = {**local_tools, **remote_tools}
         for i in set().union(local_tools.keys(), remote_tools.keys()):
@@ -440,15 +447,23 @@ class ToolRegistry:
                 )
         return r
 
-    async def check_upstream_versions(self, only_local: bool = True, prefix="cincan/"):
-        """
-        Checks for available versions in upstream
-        """
-        # NOTE currently checks only for those tools which can be found locally
+    def get_available_checkers(self, prefix="cincan/") -> Dict:
         able_to_check = {}
 
         for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
             able_to_check[f"{prefix}{tool_path.stem}"] = tool_path
+        if not able_to_check:
+            self.logger.error(
+                f"No single configuration fo upstream check found. Something is wrong in path {pathlib.Path(pathlib.Path.cwd() / 'tools')}"
+            )
+        return able_to_check
+
+    async def check_upstream_versions(self, only_local: bool = True):
+        """
+        Checks for available versions in upstream
+        """
+        # NOTE currently checks only for those tools which can be found locally
+        able_to_check = self.get_available_checkers()
         if only_local:
             local_tools = await self.list_tools_local_images()
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -461,7 +476,7 @@ class ToolRegistry:
                         tasks.append(
                             loop.run_in_executor(
                                 executor,
-                                self.get_single_tool_version,
+                                self.set_single_tool_upstream_versions,
                                 *(tool_path, tool),
                             )
                         )
@@ -483,7 +498,18 @@ class ToolRegistry:
         else:
             raise NotImplementedError
 
-    def get_single_tool_version(self, tool_path: str, tool: ToolInfo) -> str:
+    def get_versions_single_tool(self, tool: str):
+        local_tools, remote_tools = self.get_local_remote_tools()
+        l_tool = local_tools.get(tool)
+        if l_tool:
+            r_tool = remote_tools.get(tool)
+            tool_conf = self.get_available_checkers().get(tool)
+            self.set_single_tool_upstream_versions(tool_conf, l_tool)
+        else:
+            raise FileNotFoundError(f"Given tool {tool} not found locally.")
+        return l_tool, r_tool
+
+    def set_single_tool_upstream_versions(self, tool_path: str, tool: ToolInfo) -> str:
 
         with open(tool_path / f"{tool_path.stem}.json") as f:
             tool_info = json.load(f)

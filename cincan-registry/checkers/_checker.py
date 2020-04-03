@@ -1,7 +1,6 @@
 import logging
 import re
 from abc import ABCMeta, abstractmethod
-from ..toolinfo import VersionInfo
 
 
 __name__ = "checker"
@@ -28,7 +27,9 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.logger.debug(f"Instancing tool {self.tool}")
 
     def __del__(self):
-        self.logger.debug(f"Tool {self.tool} has updated upstream version information of {self.version}")
+        self.logger.debug(
+            f"Tool {self.tool} has updated upstream version information of {self.version}"
+        )
 
     def _fail(self):
         """

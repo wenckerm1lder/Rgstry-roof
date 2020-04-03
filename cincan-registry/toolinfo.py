@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import List
+from collections import Iterable
 import re
+import json
 
 
 class VersionInfo:
@@ -56,6 +58,24 @@ class VersionInfo:
 
     def __format__(self, value):
         return self.version.__format__(value)
+
+    def toJSON(self):
+        """
+        Return JSON representation of object
+        """
+        return json.dumps(
+            self,
+            default=lambda o: o.__dict__
+            if hasattr(o, '__dict__')
+            else (list(o) if isinstance(o, Iterable) else str(o)),
+            sort_keys=True
+        )
+        # return {
+        #     "version": self.version,
+        #     "source": self.source,
+        #     "updated": self.updated,
+        #     "tags": list(self.tags),
+        # }
 
 
 # class UpstreamVersion(VersionInfo):

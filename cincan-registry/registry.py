@@ -504,6 +504,8 @@ class ToolRegistry:
         if l_tool:
             r_tool = remote_tools.get(tool)
             tool_conf = self.get_available_checkers().get(tool)
+            if not tool_conf:
+                raise FileNotFoundError(f"Upstream check not implemented for {tool}.")
             self.set_single_tool_upstream_versions(tool_conf, l_tool)
         else:
             raise FileNotFoundError(f"Given tool {tool} not found locally.")

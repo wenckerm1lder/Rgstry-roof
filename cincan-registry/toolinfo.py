@@ -1,12 +1,12 @@
 from datetime import datetime
-from dataclasses import dataclass
 from typing import List
 import re
 
 
 class VersionInfo:
-    def __init__(self, version: str, tags: set, updated: datetime):
+    def __init__(self, version: str, source: str, tags: set, updated: datetime):
         self._version: str = version
+        self._source: str = source
         self._tags: set = tags
         self._updated: datetime = updated
 
@@ -15,8 +15,16 @@ class VersionInfo:
         return self._version
 
     @property
+    def source(self) -> str:
+        return self._source
+
+    @property
     def tags(self) -> set:
         return self._tags
+
+    @property
+    def updated(self) -> datetime:
+        return self._updated
 
     def get_normalized_ver(self) -> List:
         if any(char.isdigit() for char in self.version):

@@ -15,6 +15,8 @@ PRE_SPACE = 5
 MAX_WN = 35
 # Version length # Hash can be 40 characters wide
 MAX_WV = 41
+# Version length with provider
+MAX_WVP = 61
 # Tag(s) length
 MAX_WT = 20
 EXTRA_FILL = 35
@@ -39,7 +41,7 @@ class color:
 def print_local_version_check(local_tools, remote_tools, tag):
 
     print(
-        f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}{f'Local Ver.':{MAX_WV}}{f'Docker Registry Ver.':{MAX_WV}}{f'Tool Source Ver.':{MAX_WV}}{color.END}\n"
+        f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}{f'Local Version':{MAX_WV}}{f'Docker Registry Version':{MAX_WV}}{f'Origin Version':{MAX_WV}}{f'Origin Provider':{MAX_WVP}}{color.END}\n"
     )
 
     for tool in sorted(local_tools):
@@ -52,7 +54,7 @@ def print_local_version_check(local_tools, remote_tools, tag):
         if tool in remote_tools:
             remote_version = remote_tools[tool].getLatest()
         else:
-            remote_version = VersionInfo("undefined", set(), None)
+            remote_version = VersionInfo("undefined", "", set(), None)
         # local_version = sorted(
         #     tlo.versions,
         #     reverse=True,
@@ -61,7 +63,10 @@ def print_local_version_check(local_tools, remote_tools, tag):
         #     ),
         # )[0].version
         upstream_version = tlo.upstream_v
-        if local_version == remote_version and (remote_version == upstream_version or upstream_version.version == "Not implemented"):
+        if local_version == remote_version and (
+            remote_version == upstream_version
+            or upstream_version.version == "Not implemented"
+        ):
             coloring = color.GREEN
         elif local_version == remote_version and remote_version != upstream_version:
             coloring = color.GRAY
@@ -70,7 +75,7 @@ def print_local_version_check(local_tools, remote_tools, tag):
         # remote_version = remote_tools[tool].versions[0].version
 
         print(
-            f"{coloring}{' ':<{PRE_SPACE}}| {tool:<{MAX_WN}}{local_version:{MAX_WV}}{remote_version:<{MAX_WV}}{upstream_version:<{MAX_WV}}{color.END if coloring else None}"
+            f"{coloring}{' ':<{PRE_SPACE}}| {tool:<{MAX_WN}}{local_version:{MAX_WV}}{remote_version:<{MAX_WV}}{upstream_version:<{MAX_WV}}{upstream_version.source:<{MAX_WVP}}{color.END if coloring else None}"
         )
 
 
@@ -80,7 +85,8 @@ def print_tools_by_location(tools: List[dict], location: str, filter_by: str = "
     print(
         f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}  {f'{location.capitalize()} Version':{MAX_WV}}  {f'{location.capitalize()} Tags':<{MAX_WT}}{color.END}\n"
     )
-    # print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
+    if not filter_by:
+        print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
     for tool in sorted(tools):
         # print(1)
         lst = tools[tool]
@@ -110,8 +116,8 @@ def print_tools_by_location(tools: List[dict], location: str, filter_by: str = "
                 )
                 first_print = False
 
-        # if lst.versions and not first_print:
-        #     print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
+        if lst.versions and not first_print and not filter_by:
+            print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
 
 
 def main():

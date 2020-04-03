@@ -20,6 +20,7 @@ from .utils import parse_data_types, parse_json_time, format_time, split_tool_ta
 VERSION_VARIABLE = "TOOL_VERSION"
 REGISTRY_CONF = pathlib.Path.home() / ".cincan/registry.json"
 VER_UNDEFINED = "undefined"
+REGISTRY = "docker"
 
 
 def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
@@ -35,6 +36,7 @@ def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
             td["versions"] = [
                 {
                     "version": ver.version,
+                    "source": ver.source,
                     "tags": [t for t in ver.tags],
                     "updated": ver.updated,
                 }
@@ -215,11 +217,15 @@ class ToolRegistry:
                                     f"Appending new version {version} to existing entry {name} with tag {tag}."
                                 )
                                 ret[name].versions.append(
-                                    VersionInfo(version, set(stripped_tags), updated)
+                                    VersionInfo(
+                                        version, REGISTRY, set(stripped_tags), updated
+                                    )
                                 )
                         else:
                             # ver_info = {}
-                            ver_info = VersionInfo(version, set(stripped_tags), updated)
+                            ver_info = VersionInfo(
+                                version, REGISTRY, set(stripped_tags), updated
+                            )
                             # print(ver_info)
                             ret[name] = ToolInfo(
                                 name, updated, "local", versions=[ver_info]
@@ -285,14 +291,14 @@ class ToolRegistry:
                     if match:
                         next(iter(match)).tags.add(t)
                     else:
-                        ver_info = VersionInfo(version, {t}, updated)
+                        ver_info = VersionInfo(version, REGISTRY, {t}, updated)
                         available_versions.append(ver_info)
         else:
             manifest = self.fetch_manifest(session, tool_name, tool_tag)
             if manifest:
                 manifest_latest = manifest
                 version, updated = self._get_version_from_manifest(manifest)
-                available_versions.append(VersionInfo(version, {t}, updated))
+                available_versions.append(VersionInfo(version, REGISTRY, {t}, updated))
             else:
                 return {}
 
@@ -421,7 +427,10 @@ class ToolRegistry:
                     destination=j.get("destination"),
                     versions=[
                         VersionInfo(
-                            ver.get("version"), set(ver.get("tags")), ver.get("updated")
+                            ver.get("version"),
+                            ver.get("source"),
+                            set(ver.get("tags")),
+                            ver.get("updated"),
                         )
                         for ver in j.get("versions")
                     ]
@@ -458,9 +467,11 @@ class ToolRegistry:
                         )
                     else:
                         local_tools.get(l_tool).upstream_v = VersionInfo(
-                            "Not implemented", set(), datetime.datetime.now()
+                            "Not implemented", "", set(), datetime.datetime.min
                         )
-                        self.logger.debug(f"Upstream check not implemented for tool {l_tool}")
+                        self.logger.debug(
+                            f"Upstream check not implemented for tool {l_tool}"
+                        )
                 if tasks:
                     for response in await asyncio.gather(*tasks):
                         pass
@@ -482,8 +493,10 @@ class ToolRegistry:
                 if self.configuration
                 else ""
             )
+            upstream_info = classmap.get(provider)(tool_info, token)
             tool.upstream_v = VersionInfo(
-                classmap.get(provider)(tool_info, token).get_version(),
+                upstream_info.get_version(),
+                upstream_info.provider,
                 set({"latest"}),
                 datetime.datetime.now(),
             )

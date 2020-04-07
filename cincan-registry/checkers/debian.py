@@ -29,7 +29,7 @@ class DebianChecker(UpstreamChecker):
         """
         self.version = NO_VERSION
         self.logger.error(
-            f"Failed to fetch version update information for {self.tool}: {r.status_code} : {r.json().get('message')}"
+            f"Failed to fetch version update information for {self.tool}: {r.status_code} : {r.json().get('error')}"
         )
 
     def _by_release(self):
@@ -39,11 +39,13 @@ class DebianChecker(UpstreamChecker):
         r = self.session.get(f"{self.api}/{self.tool}")
         if r.status_code == 200:
             data = r.json().get("versions")
-            #loop trough version list and get wanted version. 
-            #Wanted version is defined in spesific tool json
+            # loop trough version list and get wanted version.
+            # Wanted version is defined in specific tool json
             for x in data:
-                for y in x["suites"]:
-                    if y == self.suite:
-                        self.version=x["version"]
+                if self.suite in x.get("suites", ""):
+                    self.version = x.get("version", "")
+            if not self.version:
+                self.logger.error(f"Selected suite '{self.suite}' not found for Debian tool {self.tool}")
+                self.version = NO_VERSION
         else:
             self._fail(r)

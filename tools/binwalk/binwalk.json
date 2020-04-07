@@ -1,0 +1,8 @@
+{
+    "uri": "https://sources.debian.org/api/src/binwalk/",
+    "tool": "binwalk",
+    "provider": "Debian",
+    "method": "release",
+    "suite": "buster"
+  }
+  

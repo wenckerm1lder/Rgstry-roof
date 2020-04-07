@@ -80,6 +80,7 @@ def print_local_version_check(local_tools, remote_tools, tag):
             coloring = color.GRAY
         else:
             coloring = color.BOLD_RED
+
         # remote_version = remote_tools[tool].versions[0].version
 
         print(

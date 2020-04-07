@@ -231,11 +231,9 @@ class ToolRegistry:
                                     )
                                 )
                         else:
-                            # ver_info = {}
                             ver_info = VersionInfo(
                                 version, REGISTRY, set(stripped_tags), updated
                             )
-                            # print(ver_info)
                             ret[name] = ToolInfo(
                                 name, updated, "local", versions=[ver_info]
                             )
@@ -450,6 +448,9 @@ class ToolRegistry:
         return r
 
     def get_available_checkers(self, prefix="cincan/") -> Dict:
+        """
+        Gets dictionary of tools, whereas upstream/origin check is supported.
+        """
         able_to_check = {}
 
         for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():

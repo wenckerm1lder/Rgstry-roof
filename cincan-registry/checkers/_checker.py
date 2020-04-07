@@ -19,6 +19,7 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.version: str = ""
         self.extra_info: str = ""
         self.token: str = token
+        self.suite: str = tool_info.get("suite", "")
         self.logger = logging.getLogger(__name__)
 
         if not (self.uri or self.repository and self.tool and self.provider):

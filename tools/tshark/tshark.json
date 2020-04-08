@@ -1,8 +1,19 @@
-{
+[
+ {
   "uri": "https://github.com/wireshark/wireshark/",
   "repository": "wireshark",
   "tool": "wireshark",
   "provider": "GitHub",
   "method": "tag-release",
   "origin": true
+},
+ {
+  "uri": "https://github.com/wireshark/wireshark/",
+  "repository": "community",
+  "tool": "wireshark",
+  "provider": "Alpine",
+  "method": "release",
+  "suite": "3.11-stable",
+  "origin": false
 }
+]

@@ -8,8 +8,15 @@ from .github import GitHubChecker
 from .bitbucket import BitbucketChecker
 from .pypi import PypiChecker
 from .debian import DebianChecker
+from .alpine import AlpineChecker
 
-classmap = {"github": GitHubChecker, "bitbucket": BitbucketChecker, "pypi": PypiChecker, "debian": DebianChecker}
+classmap = {
+    "github": GitHubChecker,
+    "bitbucket": BitbucketChecker,
+    "pypi": PypiChecker,
+    "debian": DebianChecker,
+    "alpine": AlpineChecker,
+}
 
 __all__ = ["GitHubChecker", "BitbucketChecker", "PypiChecker", "DebianChecker"]
 

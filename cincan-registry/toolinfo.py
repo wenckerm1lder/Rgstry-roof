@@ -6,9 +6,17 @@ import json
 
 
 class VersionInfo:
-    def __init__(self, version: str, source: str, tags: set, updated: datetime):
+    def __init__(
+        self,
+        version: str,
+        source: str,
+        tags: set,
+        updated: datetime,
+        origin: bool = False,
+    ):
         self._version: str = version
         self._source: str = source
+        self._origin: bool = origin
         self._tags: set = tags
         self._updated: datetime = updated
 
@@ -19,6 +27,10 @@ class VersionInfo:
     @property
     def source(self) -> str:
         return self._source
+
+    @property
+    def origin(self) -> str:
+        return self._origin
 
     @property
     def tags(self) -> set:
@@ -66,9 +78,9 @@ class VersionInfo:
         return json.dumps(
             self,
             default=lambda o: o.__dict__
-            if hasattr(o, '__dict__')
+            if hasattr(o, "__dict__")
             else (list(o) if isinstance(o, Iterable) else str(o)),
-            sort_keys=True
+            sort_keys=True,
         )
         # return {
         #     "version": self.version,
@@ -98,7 +110,7 @@ class ToolInfo:
         self.updated: str = updated
         self.destination: str = destination
         self.versions: List[VersionInfo] = versions
-        self.upstream_v: VersionInfo = None
+        self.upstream_v: List[VersionInfo] = []
         self.description = description
 
     def _map_sub_versions(self, ver: VersionInfo):
@@ -112,9 +124,22 @@ class ToolInfo:
         else:
             return norm_ver
 
+    def getOriginVersion(self) -> VersionInfo:
+        """
+        Returns version from the upstream versions, which is marked
+        as origin of the tool.
+        """
+        if self.upstream_v:
+            for v in self.upstream_v:
+                if v.origin:
+                    return v
+        return VersionInfo("Not implemented", "", set(), datetime.min)
+
     def getLatest(self) -> VersionInfo:
         """
-        Attempts to return latest version from available versions
+        Attempts to return latest version from available versions.
+        getOriginVersion method is expected to return latest, if origin
+        is found.
         """
         return next(
             iter(

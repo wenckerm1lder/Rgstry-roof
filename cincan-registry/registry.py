@@ -103,7 +103,12 @@ class ToolRegistry:
 
     def _get_version_from_manifest(
         self, manifest: dict, ver_variable: str = VERSION_VARIABLE
-    ):
+    ):  
+        """
+        Parses value from defined variable from container's environment variables.
+        In this case, defined variable is expected to contain version information.
+        """
+
         v1_comp_string = manifest.get("history", [{}])[0].get("v1Compatibility")
         if v1_comp_string is None:
             return {}
@@ -484,9 +489,9 @@ class ToolRegistry:
                             )
                         )
                     else:
-                        local_tools.get(l_tool).upstream_v = VersionInfo(
+                        local_tools.get(l_tool).upstream_v.append(VersionInfo(
                             "Not implemented", "", set(), datetime.datetime.min
-                        )
+                        ))
                         self.logger.debug(
                             f"Upstream check not implemented for tool {l_tool}"
                         )
@@ -517,20 +522,24 @@ class ToolRegistry:
     def set_single_tool_upstream_versions(self, tool_path: str, tool: ToolInfo) -> str:
 
         with open(tool_path / f"{tool_path.stem}.json") as f:
-            tool_info = json.load(f)
-            provider = tool_info.get("provider").lower()
-            token = (
-                self.configuration.get("tokens").get(provider)
-                if self.configuration
-                else ""
-            )
-            upstream_info = classmap.get(provider)(tool_info, token)
-            tool.upstream_v = VersionInfo(
-                upstream_info.get_version(),
-                upstream_info.provider,
-                set({"latest"}),
-                datetime.datetime.now(),
-            )
+            conf = json.load(f)
+            for tool_info in (conf if isinstance(conf, List) else [conf]):
+                provider = tool_info.get("provider").lower()
+                token = (
+                    self.configuration.get("tokens").get(provider)
+                    if self.configuration
+                    else ""
+                )
+                upstream_info = classmap.get(provider)(tool_info, token)
+                tool.upstream_v.append(
+                    VersionInfo(
+                        upstream_info.get_version(),
+                        upstream_info.provider,
+                        set({"latest"}),
+                        datetime.datetime.now(),
+                        origin=upstream_info.origin,
+                    )
+                )
             # print(tool_path.stem)
 
         # TheHive accepts the following datatypes:

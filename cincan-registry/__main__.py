@@ -41,8 +41,10 @@ class color:
 
 def print_single_tool_version_check(local_tool, remote_tool, tag=""):
     print(
-        f"{local_tool.name} Local version: {local_tool.getLatest()} Remote version: {remote_tool.getLatest()} Upstream Version: {local_tool.upstream_v}"
+        f"{local_tool.name} Local v. {local_tool.getLatest()} Remote v. {remote_tool.getLatest()} Upstream Versions:"
     )
+    for up_v in local_tool.upstream_v:
+        print(f"Provider: {up_v.source} Version: {up_v} Tool Origin: {up_v.origin}")
 
 
 def print_local_version_check(local_tools, remote_tools, tag):
@@ -70,7 +72,7 @@ def print_local_version_check(local_tools, remote_tools, tag):
         #         map(int, re.sub(r"[a-zA-Z-_]+", "", s.version, re.I).split("."),)
         #     ),
         # )[0].version
-        upstream_version = tlo.upstream_v
+        upstream_version = tlo.getOriginVersion()
         if local_version == remote_version and (
             remote_version == upstream_version
             or upstream_version.version == "Not implemented"

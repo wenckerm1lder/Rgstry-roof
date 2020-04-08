@@ -2,7 +2,6 @@ import logging
 import re
 from abc import ABCMeta, abstractmethod
 from typing import List, Dict
-import sys
 
 __name__ = "checker"
 NO_VERSION = "Not found"
@@ -15,11 +14,11 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.tool: str = tool_info.get("tool", "")
         self.provider: str = tool_info.get("provider", "")
         self.method: str = tool_info.get("method", "")
+        self.suite: str = tool_info.get("suite", "")
         self.origin: bool = tool_info.get("origin", "")
         self.version: str = ""
         self.extra_info: str = ""
         self.token: str = token
-        self.suite: str = tool_info.get("suite", "")
         self.logger = logging.getLogger(__name__)
 
         if not (self.uri or self.repository and self.tool and self.provider):

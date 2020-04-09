@@ -20,7 +20,8 @@ from .utils import parse_data_types, parse_json_time, format_time, split_tool_ta
 VERSION_VARIABLE = "TOOL_VERSION"
 REGISTRY_CONF = pathlib.Path.home() / ".cincan/registry.json"
 VER_UNDEFINED = "undefined"
-REGISTRY = "docker"
+REMOTE_REGISTRY = "Dockerhub"
+LOCAL_REGISTRY = "Docker Server"
 
 
 def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
@@ -28,7 +29,7 @@ def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
     r = {}
     for t in tools:
         td = {"updated": format_time(t.updated)}
-        if t.description:
+        if t.destination:
             td["destination"] = t.destination
         if t.description:
             td["description"] = t.description
@@ -103,7 +104,7 @@ class ToolRegistry:
 
     def _get_version_from_manifest(
         self, manifest: dict, ver_variable: str = VERSION_VARIABLE
-    ):  
+    ):
         """
         Parses value from defined variable from container's environment variables.
         In this case, defined variable is expected to contain version information.
@@ -127,17 +128,15 @@ class ToolRegistry:
 
         return version, updated
 
-    def get_local_remote_tools(self, defined_tag: str = "") -> Tuple[Dict, Dict]:
+    async def get_local_remote_tools(self, defined_tag: str = "") -> Tuple[Dict, Dict]:
         """
         Get remote and local tools in parallel to increase performance
         """
-        loop = asyncio.get_event_loop()
         tasks = [
             self.list_tools_local_images(defined_tag),
             self.list_tools_registry(defined_tag),
         ]
-        local_tools, remote_tools = loop.run_until_complete(asyncio.gather(*tasks))
-        loop.close()
+        local_tools, remote_tools = await asyncio.ensure_future(asyncio.gather(*tasks))
         return local_tools, remote_tools
 
     def list_tools(self, defined_tag: str = "", merge=True) -> Dict[str, ToolInfo]:
@@ -232,12 +231,15 @@ class ToolRegistry:
                                 )
                                 ret[name].versions.append(
                                     VersionInfo(
-                                        version, REGISTRY, set(stripped_tags), updated
+                                        version,
+                                        LOCAL_REGISTRY,
+                                        set(stripped_tags),
+                                        updated,
                                     )
                                 )
                         else:
                             ver_info = VersionInfo(
-                                version, REGISTRY, set(stripped_tags), updated
+                                version, LOCAL_REGISTRY, set(stripped_tags), updated
                             )
                             ret[name] = ToolInfo(
                                 name, updated, "local", versions=[ver_info]
@@ -303,14 +305,16 @@ class ToolRegistry:
                     if match:
                         next(iter(match)).tags.add(t)
                     else:
-                        ver_info = VersionInfo(version, REGISTRY, {t}, updated)
+                        ver_info = VersionInfo(version, REMOTE_REGISTRY, {t}, updated)
                         available_versions.append(ver_info)
         else:
             manifest = self.fetch_manifest(session, tool_name, tool_tag)
             if manifest:
                 manifest_latest = manifest
                 version, updated = self._get_version_from_manifest(manifest)
-                available_versions.append(VersionInfo(version, REGISTRY, {t}, updated))
+                available_versions.append(
+                    VersionInfo(version, REMOTE_REGISTRY, {t}, updated)
+                )
             else:
                 return {}
 
@@ -466,64 +470,27 @@ class ToolRegistry:
             )
         return able_to_check
 
-    async def check_upstream_versions(self, only_local: bool = True):
-        """
-        Checks for available versions in upstream
-        """
-        # NOTE currently checks only for those tools which can be found locally
-        able_to_check = self.get_available_checkers()
-        if only_local:
-            local_tools = await self.list_tools_local_images()
-            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                for l_tool in local_tools:
-                    tool_path = able_to_check.get(l_tool)
-                    if tool_path:
-                        tool = local_tools.get(l_tool)
-                        loop = asyncio.get_event_loop()
-                        tasks = []
-                        tasks.append(
-                            loop.run_in_executor(
-                                executor,
-                                self.set_single_tool_upstream_versions,
-                                *(tool_path, tool),
-                            )
-                        )
-                    else:
-                        local_tools.get(l_tool).upstream_v.append(VersionInfo(
-                            "Not implemented", "", set(), datetime.datetime.min
-                        ))
-                        self.logger.debug(
-                            f"Upstream check not implemented for tool {l_tool}"
-                        )
-                if tasks:
-                    for response in await asyncio.gather(*tasks):
-                        pass
-                else:
-                    self.logger.warning(
-                        "No known methods to get updates for any of the local tools."
-                    )
-            return local_tools
-        else:
-            raise NotImplementedError
-
-    def get_versions_single_tool(self, tool: str):
-        local_tools, remote_tools = self.get_local_remote_tools()
-        l_tool = local_tools.get(tool)
-        if l_tool:
-            r_tool = remote_tools.get(tool)
+    async def get_versions_single_tool(self, tool: str):
+        local_tools, remote_tools = await self.get_local_remote_tools()
+        l_tool = local_tools.get(tool, "")
+        r_tool = remote_tools.get(tool, "")
+        if l_tool or r_tool:
             tool_conf = self.get_available_checkers().get(tool)
             if not tool_conf:
                 raise FileNotFoundError(f"Upstream check not implemented for {tool}.")
-            self.set_single_tool_upstream_versions(tool_conf, l_tool)
+            if r_tool:
+                self._set_single_tool_upstream_versions(tool_conf, r_tool)
+            else:
+                self._set_single_tool_upstream_versions(tool_conf, l_tool)
         else:
-            raise FileNotFoundError(f"Given tool {tool} not found locally.")
+            raise FileNotFoundError(f"Given tool {tool} not found locally or remotely.")
         return l_tool, r_tool
 
-    def set_single_tool_upstream_versions(self, tool_path: str, tool: ToolInfo) -> str:
+    def _set_single_tool_upstream_versions(self, tool_path: str, tool: ToolInfo) -> str:
 
         with open(tool_path / f"{tool_path.stem}.json") as f:
             conf = json.load(f)
-            for tool_info in (conf if isinstance(conf, List) else [conf]):
+            for tool_info in conf if isinstance(conf, List) else [conf]:
                 provider = tool_info.get("provider").lower()
                 token = (
                     self.configuration.get("tokens").get(provider)
@@ -534,26 +501,116 @@ class ToolRegistry:
                 tool.upstream_v.append(
                     VersionInfo(
                         upstream_info.get_version(),
-                        upstream_info.provider,
+                        upstream_info,
                         set({"latest"}),
                         datetime.datetime.now(),
                         origin=upstream_info.origin,
                     )
                 )
-            # print(tool_path.stem)
 
-        # TheHive accepts the following datatypes:
-        # domain
-        # file
-        # filename
-        # fqdn
-        # hash
-        # ip
-        # mail
-        # mail_subject
-        # other
-        # regexp
-        # registry
-        # uri_path
-        # url
-        # user-agent
+    async def _check_upstream_versions(self, only_local: bool = True):
+        """
+        Checks for available versions in upstream
+        """
+        able_to_check = self.get_available_checkers()
+        tools = (
+            await self.list_tools_local_images()
+            if only_local
+            else await self.list_tools_registry()
+        )
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            for t in tools:
+                tool_path = able_to_check.get(t)
+                if tool_path:
+                    tool = tools.get(t)
+                    loop = asyncio.get_event_loop()
+                    tasks = []
+                    tasks.append(
+                        loop.run_in_executor(
+                            executor,
+                            self._set_single_tool_upstream_versions,
+                            *(tool_path, tool),
+                        )
+                    )
+                else:
+                    self.logger.debug(f"Upstream check not implemented for tool {t}")
+            if tasks:
+                for response in await asyncio.gather(*tasks):
+                    pass
+            else:
+                self.logger.warning(
+                    "No known methods to get updates for any of the local tools."
+                )
+        return tools
+
+        # print(tool_path.stem)
+
+    async def _list_versions_single(self, l_tool: ToolInfo, r_tool: ToolInfo) -> dict:
+
+        tool_info = {}
+        tool_info["name"] = r_tool.name if r_tool else l_tool.name
+        tool_info["local_version"] = l_tool.getLatest().version if l_tool else ""
+        tool_info["remote_version"] = r_tool.getLatest().version
+        tool_info["origin_version"] = r_tool.getOriginVersion().version
+        tool_info["origin_details"] = (
+            dict(r_tool.getOriginVersion().source)
+            if r_tool.getOriginVersion().origin
+            else ""
+        )
+        tool_info["other_versions"] = [
+            dict(v.source) if not isinstance(v.source, str) else v.source
+            for v in r_tool.upstream_v
+            if not v.origin and v.source
+        ]
+        tool_info["updates"] = {}
+
+        # Compare all versions, if there are updates available #
+
+        # Compare local to remote at first
+        if l_tool:
+            if l_tool.getLatest() == r_tool.getLatest():
+                tool_info["updates"]["local"] = False
+            else:
+                tool_info["updates"]["local"] = True
+
+        # Remote to upstream
+        r_latest = r_tool.getLatest()
+        r_up_latest = r_tool.getLatest(in_upstream=True)
+        tool_info["updates"]["remote"] = False
+
+        if (r_latest and r_up_latest) and r_latest == r_up_latest:
+            # Up to date with latest upstream version
+            pass
+        elif r_latest.version == "undefined" or (
+            tool_info.get("origin_version") == "Not implemented"
+            and not tool_info.get("other_versions")
+        ):
+            pass
+        elif r_latest in [v for v in r_tool.upstream_v if not v.origin]:
+            pass
+        else:
+            self.logger.debug(
+                f"Tool {r_tool.name} is not up to date with origin/installation upstream."
+            )
+            tool_info["updates"]["remote"] = True
+
+        return tool_info
+
+    async def list_versions(self, tool: str = "", toJSON: bool = False):
+
+        versions = {}
+        if tool:
+            l_tool, r_tool = await self.get_versions_single_tool(tool)
+            versions = await self._list_versions_single(l_tool, r_tool)
+        else:
+            all_tools = await self._check_upstream_versions(only_local=False)
+            local_tools = await self.list_tools_local_images()
+            for t in all_tools:
+                r_tool = all_tools.get(t)  # Contains also upstream version info
+                l_tool = local_tools.get(t, "")
+                versions[t] = await self._list_versions_single(l_tool, r_tool)
+
+        if toJSON:
+            return json.dumps(versions)
+        else:
+            return versions

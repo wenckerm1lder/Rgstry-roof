@@ -39,54 +39,37 @@ class color:
     END = "\033[0m"
 
 
-def print_single_tool_version_check(local_tool, remote_tool, tag=""):
+def print_single_tool_version_check(tool):
     print(
-        f"{local_tool.name} Local v. {local_tool.getLatest()} Remote v. {remote_tool.getLatest()} Upstream Versions:"
+        f"Name: {tool.get('name')}\nLocal version: {tool.get('local_version')}\nRemote version: {tool.get('remote_version')}\nOrigin Version: {tool.get('origin_version')}"
     )
-    for up_v in local_tool.upstream_v:
-        print(f"Provider: {up_v.source} Version: {up_v} Tool Origin: {up_v.origin}")
+    for other in tool.get("other_versions"):
+        print(f"{other.get('provider')} version: {other.get('version')}")
+
+    print("\nUse -j flag to print as JSON with additional details.\n")
 
 
-def print_local_version_check(local_tools, remote_tools, tag):
+def print_version_check(tools, only_local=True):
 
     print(
         f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}{f'Local Version':{MAX_WV}}{f'Docker Registry Version':{MAX_WV}}{f'Origin Version':{MAX_WV}}{f'Origin Provider':{MAX_WVP}}{color.END}\n"
     )
 
-    for tool in sorted(local_tools):
+    for tool_name in sorted(tools):
 
-        coloring = None
-        tlo = local_tools[tool]
+        coloring = color.GREEN
 
-        local_version = tlo.getLatest()
-        # print(json.dumps(local_version.toJSON()))
+        tool = tools[tool_name]
 
-        if tool in remote_tools:
-            remote_version = remote_tools[tool].getLatest()
-        else:
-            remote_version = VersionInfo("undefined", "", set(), None)
-        # local_version = sorted(
-        #     tlo.versions,
-        #     reverse=True,
-        #     key=lambda s: lambda s: list(
-        #         map(int, re.sub(r"[a-zA-Z-_]+", "", s.version, re.I).split("."),)
-        #     ),
-        # )[0].version
-        upstream_version = tlo.getOriginVersion()
-        if local_version == remote_version and (
-            remote_version == upstream_version
-            or upstream_version.version == "Not implemented"
-        ):
-            coloring = color.GREEN
-        elif local_version == remote_version and remote_version != upstream_version:
-            coloring = color.GRAY
-        else:
+        if tool.get("updates").get("local"):
             coloring = color.BOLD_RED
-
-        # remote_version = remote_tools[tool].versions[0].version
-
+        elif tool.get("updates").get("remote"):
+            coloring = color.GRAY
+        if only_local:
+            if not tool.get("local_version"):
+                continue
         print(
-            f"{coloring}{' ':<{PRE_SPACE}}| {tool:<{MAX_WN}}{local_version:{MAX_WV}}{remote_version:<{MAX_WV}}{upstream_version:<{MAX_WV}}{upstream_version.source:<{MAX_WVP}}{color.END if coloring else None}"
+            f"{coloring}{' ':<{PRE_SPACE}}| {tool_name:<{MAX_WN}}{tool.get('local_version'):{MAX_WV}}{tool.get('remote_version'):<{MAX_WV}}{tool.get('origin_version'):<{MAX_WV}}{tool.get('origin_details').get('provider') if tool.get('origin_details') else '':<{MAX_WVP}}{color.END if coloring else None}"
         )
 
 
@@ -164,24 +147,34 @@ def main():
         action="store_true",
         help="Show all tags of selected images.",
     )
+    list_parser.add_argument(
+        "-j", "--json", action="store_true", help="Print output in JSON format."
+    )
     update_parser = subparsers.add_parser(
-        "check-updates", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        "update", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    update_parser.add_argument(
-        "-t", "--tool", help="Check single tool.",
-    )
+    # update_parser.add_argument(
+    #     "-t", "--tool", help="Check single tool.",
+    # )
     subsubparsers = list_parser.add_subparsers(dest="list_sub_command")
-    list_parser = subsubparsers.add_parser(
+    local_parser = subsubparsers.add_parser(
         "local",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         help="List only local 'cincan' tools.",
     )
-    list_parser = subsubparsers.add_parser(
+    remote_parser = subsubparsers.add_parser(
         "remote",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         help="List remote 'cincan' tools from registry.",
     )
-
+    version_parser = subsubparsers.add_parser(
+        "versions",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        help="List all versions of the tools.",
+    )
+    version_parser.add_argument(
+        "-t", "--tool", help="Check single tool.",
+    )
     if len(sys.argv) > 1:
         args = m_parser.parse_args(args=sys.argv[1:])
     else:
@@ -232,14 +225,33 @@ def main():
             finally:
                 loop.close()
             if tools:
-                if not args.all:
+                if not args.all and not args.json:
                     print(f"\n  Listing all tools with tag '{args.tag}':\n")
+                elif not args.all and args.json:
+                    raise NotImplementedError
+                    print(json.dumps(tools))
                 else:
                     print(f"\n  Listing all tools :\n")
 
                 print_tools_by_location(
                     tools, args.list_sub_command, args.tag if not args.all else ""
                 )
+
+        elif args.list_sub_command == "versions":
+            loop = asyncio.get_event_loop()
+            ret = loop.run_until_complete(
+                reg.list_versions(
+                    tool=args.tool if args.tool else "",
+                    toJSON=args.json if args.json else False,
+                )
+            )
+            if args.tool and not args.json:
+                print_single_tool_version_check(ret)
+            elif not args.tool and not args.json:
+                print_version_check(ret)
+            if args.json:
+                print(ret)
+            loop.close()
 
         else:
             # tools_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
@@ -266,26 +278,29 @@ def main():
                     )
                 )
 
-    elif sub_command == "check-updates":
-        reg = ToolRegistry()
-        # Check updates for local tools
-        if args.tool:
-            try:
-                l_tool, r_tool = reg.get_versions_single_tool(args.tool)
-                print_single_tool_version_check(l_tool, r_tool)
-            except FileNotFoundError as e:
-                print(e)
-        else:
-            loop = asyncio.get_event_loop()
-            tasks = [
-                # Check local tools for version information, update tools upstram info
-                reg.check_upstream_versions(),
-                reg.list_tools_registry(),
-            ]
-            local_tools, remote_tools = loop.run_until_complete(asyncio.gather(*tasks))
-            loop.close()
-            # print(local_tools)
-            print_local_version_check(local_tools, remote_tools, "latest-stable")
+    elif sub_command == "update":
+        # loop = asyncio.get_event_loop()
+        # ret = loop.run_until_complete(
+        #     reg.list_versions(
+        #         tool=args.tool if args.tool else "",
+        #         toJSON=args.json if args.json else False,
+        #     )
+        # )
+        # for tool_name in ret:
+        #     tool = ret[tool_name]
+        #     if tool.
+
+
+        # if not args.json:
+        #     print_single_tool_version_check(ret)
+        # else:
+        #     print(ret)
+        # loop.close()
+        pass
+
+
+        # print(local_tools)
+        # print_local_version_check(local_tools, remote_tools, "latest-stable")
         # for tool in sorted(local_tools):
         #     tlo = local_tools[tool]
         #     print(tlo.upstream_v)

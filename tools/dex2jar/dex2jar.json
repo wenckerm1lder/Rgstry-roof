@@ -3,5 +3,6 @@
   "repository": "pxb1988",
   "tool": "dex2jar",
   "provider": "GitHub",
-  "method": "release"
+  "method": "release",
+  "origin": true
 }

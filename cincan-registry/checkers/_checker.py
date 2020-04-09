@@ -27,6 +27,17 @@ class UpstreamChecker(metaclass=ABCMeta):
             )
         self.logger.debug(f"Instancing tool {self.tool}")
 
+    def __iter__(self):
+        yield "uri", self.uri,
+        yield "repository", self.repository,
+        yield "tool", self.tool,
+        yield "provider", self.provider,
+        yield "method", self.method,
+        yield "suite", self.suite,
+        yield "origin", self.origin,
+        yield "version", self.version,
+        yield "extra_info", self.extra_info
+
     def __del__(self):
         self.logger.debug(
             f"Tool {self.tool} has updated upstream version information of {self.version}"

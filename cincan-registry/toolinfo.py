@@ -1,6 +1,7 @@
-from datetime import datetime
-from typing import List
+from datetime import datetime, timedelta
+from typing import List, Union
 from collections import Iterable
+from .checkers._checker import UpstreamChecker
 import re
 import json
 
@@ -9,24 +10,54 @@ class VersionInfo:
     def __init__(
         self,
         version: str,
-        source: str,
+        source: Union[str, UpstreamChecker],
         tags: set,
-        updated: datetime,
+        updated: datetime = None,
         origin: bool = False,
     ):
         self._version: str = version
-        self._source: str = source
+        self._source: Union[str, UpstreamChecker] = source
         self._origin: bool = origin
         self._tags: set = tags
         self._updated: datetime = updated
 
     @property
     def version(self) -> str:
+        """
+        Returns version of the object. If it's containing information
+        about possible upstream version, updates it if it's older than 1 hour.
+        """
+        if isinstance(self._source, UpstreamChecker):
+            now = datetime.now()
+            if not self._updated or not (
+                now - timedelta(hours=1) <= self._updated <= now
+            ):
+                self._version = self._source.get_version()
+                self._updated = now
+                return self._version
         return self._version
 
     @property
-    def source(self) -> str:
+    def provider(self) -> str:
+        if isinstance(self._source, UpstreamChecker):
+            return self._source.provider
+        else:
+            return self._source
+
+    @property
+    def extraInfo(self) -> str:
+        if isinstance(self._source, UpstreamChecker):
+            return self._source.extra_info
+        else:
+            return ""
+
+    @property
+    def source(self) -> UpstreamChecker:
         return self._source
+
+    @source.setter
+    def source(self, checker: Union[str, UpstreamChecker]):
+        self._source = checker
 
     @property
     def origin(self) -> str:
@@ -57,7 +88,7 @@ class VersionInfo:
     def __eq__(self, value) -> bool:
         if not isinstance(value, VersionInfo):
             raise ValueError(
-                f"Unable to compare '=' type {type(value)} and type {self}"
+                f"Unable to compare '=' type {type(value)} and type {type(VersionInfo)}"
             )
         else:
             if self.get_normalized_ver() == value.get_normalized_ver():
@@ -82,17 +113,6 @@ class VersionInfo:
             else (list(o) if isinstance(o, Iterable) else str(o)),
             sort_keys=True,
         )
-        # return {
-        #     "version": self.version,
-        #     "source": self.source,
-        #     "updated": self.updated,
-        #     "tags": list(self.tags),
-        # }
-
-
-# class UpstreamVersion(VersionInfo):
-#     def __init__(self, version):
-#         super().__init__(version, set({'latest'}), datetime.now())
 
 
 class ToolInfo:
@@ -135,7 +155,7 @@ class ToolInfo:
                     return v
         return VersionInfo("Not implemented", "", set(), datetime.min)
 
-    def getLatest(self) -> VersionInfo:
+    def getLatest(self, in_upstream: bool = False) -> VersionInfo:
         """
         Attempts to return latest version from available versions.
         getOriginVersion method is expected to return latest, if origin
@@ -144,11 +164,11 @@ class ToolInfo:
         return next(
             iter(
                 sorted(
-                    self.versions,
+                    self.versions if not in_upstream else (self.upstream_v if self.upstream_v else []),
                     reverse=True,
                     key=lambda s: self._map_sub_versions(s),
                 )
-            )
+            ), None
         )
 
     def __str__(self):

@@ -17,10 +17,9 @@ class GitLabChecker(UpstreamChecker):
         """
         super().__init__(tool_info, token)
         self.session = requests.Session()
-        #"Authorization: token TOKEN"
         if token:
             self.session.headers.update({"Authorization": f"token {self.token}"})
-        self.api = "https://gitlab.com/api/v4/projects/"
+        self.api = "https://gitlab.com/api/v4/projects"
         self.repository = self.repository.strip("/")
         self.tool = self.tool.strip("/")
 
@@ -57,7 +56,7 @@ class GitLabChecker(UpstreamChecker):
         Method for finding latest release from repository.
         """
         r = self.session.get(
-            f"{self.api}/{self.author}%2F{self.tool}/releases"
+            f"{self.api}/{self.repository}%2F{self.tool}/releases"
         )
         if r.status_code == 200:
             self.version = r.json()[0].get("name")
@@ -69,7 +68,7 @@ class GitLabChecker(UpstreamChecker):
         Method for finding latest tag.
         """
         r = self.session.get(
-            f"{self.api}/repos/{self.repository}/{self.tool}/repository/tags"
+            f"{self.api}/{self.repository}%2F{self.tool}/repository/tags"
         )
         if r.status_code == 200:
             self.version = r.json()[0].get("name")

@@ -549,16 +549,24 @@ class ToolRegistry:
 
         tool_info = {}
         tool_info["name"] = r_tool.name if r_tool else l_tool.name
-        tool_info["local_version"] = l_tool.getLatest().version if l_tool else ""
-        tool_info["remote_version"] = r_tool.getLatest().version
-        tool_info["origin_version"] = r_tool.getOriginVersion().version
-        tool_info["origin_details"] = (
+        tool_info["versions"] = {}
+        tool_info["versions"]["local"] = {
+            "version": l_tool.getLatest().version if l_tool else ""
+        }
+        tool_info["versions"]["remote"] = {"version": r_tool.getLatest().version}
+        tool_info["versions"]["origin"] = {"version": r_tool.getOriginVersion().version}
+        tool_info["versions"]["origin"]["details"] = (
             dict(r_tool.getOriginVersion().source)
             if r_tool.getOriginVersion().origin
             else ""
         )
-        tool_info["other_versions"] = [
-            dict(v.source) if not isinstance(v.source, str) else v.source
+        tool_info["versions"]["other"] = [
+            {
+                "version": v.version,
+                "details": dict(v.source)
+                if not isinstance(v.source, str)
+                else v.source,
+            }
             for v in r_tool.upstream_v
             if not v.origin and v.source
         ]
@@ -582,12 +590,12 @@ class ToolRegistry:
             # Up to date with latest upstream version
             pass
         elif r_latest.version == "undefined" or (
-            tool_info.get("origin_version") == "Not implemented"
+            tool_info.get("versions").get("origin").get("version") == "Not implemented"
             and not tool_info.get("other_versions")
         ):
             pass
-        elif r_latest in [v for v in r_tool.upstream_v if not v.origin]:
-            pass
+        # elif r_latest in [v for v in r_tool.upstream_v if not v.origin]:
+        #     pass
         else:
             self.logger.debug(
                 f"Tool {r_tool.name} is not up to date with origin/installation upstream."

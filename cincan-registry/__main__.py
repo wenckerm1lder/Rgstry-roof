@@ -66,10 +66,10 @@ def print_version_check(tools, only_local=True):
         elif tool.get("updates").get("remote"):
             coloring = color.GRAY
         if only_local:
-            if not tool.get("local_version"):
+            if not tool.get("versions").get("local").get("version"):
                 continue
         print(
-            f"{coloring}{' ':<{PRE_SPACE}}| {tool_name:<{MAX_WN}}{tool.get('local_version'):{MAX_WV}}{tool.get('remote_version'):<{MAX_WV}}{tool.get('origin_version'):<{MAX_WV}}{tool.get('origin_details').get('provider') if tool.get('origin_details') else '':<{MAX_WVP}}{color.END if coloring else None}"
+            f"{coloring}{' ':<{PRE_SPACE}}| {tool_name:<{MAX_WN}}{tool.get('versions').get('local').get('version'):{MAX_WV}}{tool.get('versions').get('remote').get('version'):<{MAX_WV}}{tool.get('versions').get('origin').get('version'):<{MAX_WV}}{tool.get('versions').get('origin').get('details').get('provider') if tool.get('versions').get('origin').get('details') else '':<{MAX_WVP}}{color.END if coloring else None}"
         )
 
 
@@ -287,8 +287,7 @@ def main():
         #     )
         # )
         # for tool_name in ret:
-        #     tool = ret[tool_name]
-        #     if tool.
+        #     tool = ret[]
 
 
         # if not args.json:
@@ -297,7 +296,6 @@ def main():
         #     print(ret)
         # loop.close()
         pass
-
 
         # print(local_tools)
         # print_local_version_check(local_tools, remote_tools, "latest-stable")

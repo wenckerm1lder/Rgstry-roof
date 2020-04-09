@@ -1,4 +1,13 @@
-{
+[
+  {
+    "uri": "https://github.com/decalage2/oletools",
+    "repository": "decalage2",
+    "tool": "oletools",
+    "provider": "GitHub",
+    "method": "release",
+    "origin": true
+  },
+  {
     "uri": "https://pypi.org/pypi/oletools",
     "repository": "",
     "tool": "oletools",
@@ -6,4 +15,4 @@
     "method": "release",
     "origin": false
   }
-  
+]

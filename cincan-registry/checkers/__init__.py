@@ -7,10 +7,11 @@
 from .github import GitHubChecker
 from .bitbucket import BitbucketChecker
 from .pypi import PypiChecker
+from .gitlab import GitLabChecker
 
-classmap = {"github": GitHubChecker, "bitbucket": BitbucketChecker, "pypi": PypiChecker}
+classmap = {"github": GitHubChecker, "bitbucket": BitbucketChecker, "pypi": PypiChecker, "gitlab": GitLabChecker}
 
-__all__ = ["GitHubChecker", "BitbucketChecker", "PypiChecker"]
+__all__ = ["GitHubChecker", "BitbucketChecker", "PypiChecker", "GitLabChecker"]
 
 # for (_, name, _) in pkgutil.iter_modules([Path(__file__).parent]):
 #     imported_module = import_module("." + name, package=__name__)

@@ -1,6 +1,6 @@
 from ._checker import UpstreamChecker, NO_VERSION
 import requests
-import datetime
+from urllib.parse import quote_plus
 
 
 class GitLabChecker(UpstreamChecker):
@@ -22,6 +22,10 @@ class GitLabChecker(UpstreamChecker):
         self.api = "https://gitlab.com/api/v4/projects"
         self.repository = self.repository.strip("/")
         self.tool = self.tool.strip("/")
+        if self.repository and self.tool:
+            self.loc = quote_plus(f"{self.repository}/{self.tool}")
+        else:
+            self.loc = quote_plus(self.tool if self.tool else self.repository)
 
     def get_version(self, curr_ver: str = ""):
         if self.method == "release":
@@ -50,14 +54,11 @@ class GitLabChecker(UpstreamChecker):
             return True
         return False
 
-
     def _by_release(self):
         """
         Method for finding latest release from repository.
         """
-        r = self.session.get(
-            f"{self.api}/{self.repository}%2F{self.tool}/releases"
-        )
+        r = self.session.get(f"{self.api}/{self.loc}/releases")
         if r.status_code == 200:
             self.version = r.json()[0].get("name")
         else:
@@ -68,12 +69,14 @@ class GitLabChecker(UpstreamChecker):
         Method for finding latest tag.
         """
         r = self.session.get(
-            f"{self.api}/{self.repository}%2F{self.tool}/repository/tags"
+            f"{self.api}/{self.loc}/repository/tags"
         )
         if r.status_code == 200:
             self.version = r.json()[0].get("name")
         else:
             self._fail(r)
+
+
 '''
     def _by_commit(self, current_commit: str = ""):
         """

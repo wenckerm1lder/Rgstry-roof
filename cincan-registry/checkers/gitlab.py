@@ -1,6 +1,6 @@
 from ._checker import UpstreamChecker, NO_VERSION
 import requests
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 
 
 class GitLabChecker(UpstreamChecker):
@@ -19,7 +19,11 @@ class GitLabChecker(UpstreamChecker):
         self.session = requests.Session()
         if token:
             self.session.headers.update({"Authorization": f"token {self.token}"})
-        self.api = "https://gitlab.com/api/v4/projects"
+        if self.uri:
+            netloc = urlparse(self.uri).netloc
+            self.api = f"https://{netloc}/api/v4/projects"
+        else:
+            self.api = "https://gitlab.com/api/v4/projects"
         self.repository = self.repository.strip("/")
         self.tool = self.tool.strip("/")
         if self.repository and self.tool:
@@ -68,9 +72,7 @@ class GitLabChecker(UpstreamChecker):
         """
         Method for finding latest tag.
         """
-        r = self.session.get(
-            f"{self.api}/{self.loc}/repository/tags"
-        )
+        r = self.session.get(f"{self.api}/{self.loc}/repository/tags")
         if r.status_code == 200:
             self.version = r.json()[0].get("name")
         else:

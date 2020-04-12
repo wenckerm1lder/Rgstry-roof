@@ -5,6 +5,7 @@
 # from importlib import import_module
 # from ._checker import UpstreamChecker
 from .github import GitHubChecker
+from .gitlab import GitLabChecker
 from .bitbucket import BitbucketChecker
 from .pypi import PypiChecker
 from .debian import DebianChecker
@@ -12,13 +13,21 @@ from .alpine import AlpineChecker
 
 classmap = {
     "github": GitHubChecker,
+    "gitlab": GitLabChecker,
     "bitbucket": BitbucketChecker,
     "pypi": PypiChecker,
     "debian": DebianChecker,
     "alpine": AlpineChecker,
 }
 
-__all__ = ["GitHubChecker", "BitbucketChecker", "PypiChecker", "DebianChecker"]
+__all__ = [
+    "GitHubChecker",
+    "GitLabChecker",
+    "BitbucketChecker",
+    "PypiChecker",
+    "DebianChecker",
+    "AlpineChecker",
+]
 
 # for (_, name, _) in pkgutil.iter_modules([Path(__file__).parent]):
 #     imported_module = import_module("." + name, package=__name__)

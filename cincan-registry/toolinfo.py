@@ -161,7 +161,7 @@ class ToolInfo:
         getOriginVersion method is expected to return latest, if origin
         is found.
         """
-        return next(
+        latest = next(
             iter(
                 sorted(
                     self.versions if not in_upstream else (self.upstream_v if self.upstream_v else []),
@@ -170,6 +170,10 @@ class ToolInfo:
                 )
             ), None
         )
+        if not latest:
+            return VersionInfo("undefined", "", set(), datetime.min)
+        else:
+            return latest
 
     def __str__(self):
         return "{} {}".format(self.name, self.description)

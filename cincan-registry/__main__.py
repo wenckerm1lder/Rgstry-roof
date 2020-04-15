@@ -41,9 +41,9 @@ class color:
 
 def print_single_tool_version_check(tool):
     print(
-        f"Name: {tool.get('name')}\nLocal version: {tool.get('local_version')}\nRemote version: {tool.get('remote_version')}\nOrigin Version: {tool.get('origin_version')}"
+        f"Name: {tool.get('name')}\nLocal version: {tool.get('versions').get('local')}\nRemote version: {tool.get('versions').get('local')}\nOrigin Version: {tool.get('versions').get('origin')}"
     )
-    for other in tool.get("other_versions"):
+    for other in tool.get("versions").get("other"):
         print(f"{other.get('provider')} version: {other.get('version')}")
 
     print("\nUse -j flag to print as JSON with additional details.\n")

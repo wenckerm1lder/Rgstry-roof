@@ -1,0 +1,9 @@
+{
+    "uri": "https://gitlab.com/CinCan/scrape-website",
+    "repository": "CinCan",
+    "tool": "scrape-website",
+    "provider": "GitLab",
+    "method": "release",
+    "origin": true
+  }
+  

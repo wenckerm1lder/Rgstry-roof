@@ -1,7 +1,7 @@
 {
-  "uri": "https://github.com/zed-0xff/zsteg/",
-  "repository": "zed-0xff",
-  "tool": "zsteg",
+  "uri": "https://github.com/jesparza/peepdf",
+  "repository": "jesparza",
+  "tool": "peepdf",
   "provider": "GitHub",
   "method": "tag-release",
   "origin": true,

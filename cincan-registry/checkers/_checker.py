@@ -15,7 +15,8 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.provider: str = tool_info.get("provider", "")
         self.method: str = tool_info.get("method", "")
         self.suite: str = tool_info.get("suite", "")
-        self.origin: bool = tool_info.get("origin", "")
+        self.origin: bool = tool_info.get("origin", False)
+        self.docker_origin: bool = tool_info.get("docker_origin", False)
         self.version: str = ""
         self.extra_info: str = ""
         self.token: str = token
@@ -35,6 +36,7 @@ class UpstreamChecker(metaclass=ABCMeta):
         yield "method", self.method,
         yield "suite", self.suite,
         yield "origin", self.origin,
+        yield "docker_origin", self.docker_origin
         yield "version", self.version,
         yield "extra_info", self.extra_info
 

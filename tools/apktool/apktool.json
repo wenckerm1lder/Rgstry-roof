@@ -4,5 +4,6 @@
   "tool": "apktool",
   "provider": "Bitbucket",
   "method": "tag-release",
-  "origin": true
+  "origin": true,
+  "docker_origin": true
 }

@@ -11,13 +11,15 @@ import json
 # from .checkers._checker import _sort_latest_tag
 DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
 
-PRE_SPACE = 5
+PRE_SPACE = 0
 # Name length
 MAX_WN = 35
-# Version length # Hash can be 40 characters wide
-MAX_WV = 41
+# Base version lenght, showing only first 8 chars.
+# Hash can be 40 chars long
+CHARS_TO_SHOW = 20
+MAX_WV = CHARS_TO_SHOW + 1
 # Version length with provider
-MAX_WVP = 61
+MAX_WVP = MAX_WV + 20
 # Tag(s) length
 MAX_WT = 20
 EXTRA_FILL = 35
@@ -29,9 +31,12 @@ class color:
     DARKCYAN = "\033[36m"
     BLUE = "\033[94m"
     GREEN = "\033[92m"
+    GREEN_BACKGROUND = "\033[102m"
     YELLOW = "\033[93m"
     GRAY = "\033[37m"
+    GRAY_BACKGROUND = "\033[47m"
     RED = "\033[31m"
+    RED_BACKGROUND = "\033[41m"
     BOLD_RED = "\033[1m\033[31m"
     BOLD = "\033[1m"
     BOLD_YELLOW = "\033[1m\033[33m"
@@ -51,9 +56,32 @@ def print_single_tool_version_check(tool):
 
 def print_version_check(tools, only_local=True):
 
+    print(f"\n{' ':<{PRE_SPACE}}Color explanations:", end=" ")
+    print(f"{color.GREEN_BACKGROUND}  {color.END} - tool up to date", end=" ")
+    print(f"{color.RED_BACKGROUND}  {color.END} - update available in remote", end=" ")
+    print(f"{color.GRAY_BACKGROUND}  {color.END} - remote differs from tool origin")
+
     print(
-        f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}{f'Local Version':{MAX_WV}}{f'Docker Registry Version':{MAX_WV}}{f'Origin Version':{MAX_WV}}{f'Origin Provider':{MAX_WVP}}{color.END}\n"
+        f"\n{' ':<{PRE_SPACE}}Only first {CHARS_TO_SHOW} characters are showed from version."
     )
+    print(
+        f"\n{' ':<{PRE_SPACE}}(*) means, that origin provider is Dockerfile installation origin, not tool origin."
+    )
+
+    # pre-space and text format
+    print(f"\n{' ':<{PRE_SPACE}}{color.BOLD}  ", end="")
+    # name
+    print(f"{'Tool name':<{MAX_WN}}", end="")
+    # local ver
+    print(f"{f'Local Version':{MAX_WV}}", end="")
+    # registry ver
+    print(f"{f'DockerHub Version':{MAX_WV}}", end="")
+    # origin ver
+    print(f"{f'Origin Version':{MAX_WV}}", end="")
+    # origin provider
+    print(f"{f'Origin Provider':{MAX_WVP}}", end="")
+    # end text format
+    print(f"{color.END}\n")
 
     for tool_name in sorted(tools):
 
@@ -68,13 +96,50 @@ def print_version_check(tools, only_local=True):
         if only_local:
             if not tool.get("versions").get("local").get("version"):
                 continue
+
+        # pre-space and color
+        print(f"{coloring}{' ':<{PRE_SPACE}}| ", end="")
+        # name
+        print(f"{tool_name:<{MAX_WN}}", end="")
+        # local version
+        versions = tool.get("versions")
         print(
-            f"{coloring}{' ':<{PRE_SPACE}}| {tool_name:<{MAX_WN}}{tool.get('versions').get('local').get('version'):{MAX_WV}}{tool.get('versions').get('remote').get('version'):<{MAX_WV}}{tool.get('versions').get('origin').get('version'):<{MAX_WV}}{tool.get('versions').get('origin').get('details').get('provider') if tool.get('versions').get('origin').get('details') else '':<{MAX_WVP}}{color.END if coloring else None}"
+            f"{versions.get('local').get('version')[:CHARS_TO_SHOW]:{MAX_WV}}", end="",
         )
+        # remote version
+        print(
+            f"{versions.get('remote').get('version')[:CHARS_TO_SHOW]:<{MAX_WV}}",
+            end="",
+        )
+
+        ### origin check ####
+        org_details = versions.get("origin").get("details")
+        if (
+            org_details
+            and not org_details.get("origin")
+            and org_details.get("docker_origin")
+        ):
+            mark_as_not_source = "(*)"
+        else:
+            mark_as_not_source = ""
+
+        # origin version
+        print(
+            f"{versions.get('origin').get('version')[:CHARS_TO_SHOW]:<{MAX_WV}}",
+            end="",
+        )
+        # origin provider
+        print(
+            f"{(org_details.get('provider') + mark_as_not_source) if org_details else '':<{MAX_WVP}}",
+            end="",
+        )
+        # end colored section
+        print(f"{color.END if coloring else None}")
 
 
 def print_tools_by_location(tools: List[dict], location: str, filter_by: str = ""):
 
+    MAX_WV = 41
     # if local_tools:
     print(
         f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}  {f'{location.capitalize()} Version':{MAX_WV}}  {f'{location.capitalize()} Tags':<{MAX_WT}}{color.END}\n"
@@ -288,7 +353,6 @@ def main():
         # )
         # for tool_name in ret:
         #     tool = ret[]
-
 
         # if not args.json:
         #     print_single_tool_version_check(ret)

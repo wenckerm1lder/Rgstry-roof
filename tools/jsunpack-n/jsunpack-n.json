@@ -4,5 +4,6 @@
   "tool": "jsunpack-n",
   "provider": "GitHub",
   "method": "commit",
-  "origin": true
+  "origin": true,
+  "docker_origin": true
 }

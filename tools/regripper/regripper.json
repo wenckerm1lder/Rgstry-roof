@@ -4,5 +4,6 @@
   "tool": "RegRipper2.8",
   "provider": "GitHub",
   "method": "commit",
-  "origin": true
+  "origin": true,
+  "docker_origin": true
 }

@@ -13,6 +13,7 @@
     "tool": "pyocr",
     "provider": "PyPi",
     "method": "release",
-    "origin": false
+    "origin": false,
+    "docker_origin": true
   }
 ]

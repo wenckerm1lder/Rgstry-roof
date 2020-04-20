@@ -14,6 +14,7 @@
   "provider": "Alpine",
   "method": "release",
   "suite": "3.11-stable",
-  "origin": false
+  "origin": false,
+  "docker_origin": true
 }
 ]

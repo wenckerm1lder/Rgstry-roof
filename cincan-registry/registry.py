@@ -554,12 +554,18 @@ class ToolRegistry:
             "version": l_tool.getLatest().version if l_tool else ""
         }
         tool_info["versions"]["remote"] = {"version": r_tool.getLatest().version}
-        tool_info["versions"]["origin"] = {"version": r_tool.getOriginVersion().version}
+
+        r_tool_orig = r_tool.getOriginVersion()
+        if not r_tool_orig.provider:
+            r_tool_orig = r_tool.getDockerOriginVersion()
+
+        tool_info["versions"]["origin"] = {"version": r_tool_orig.version}
         tool_info["versions"]["origin"]["details"] = (
-            dict(r_tool.getOriginVersion().source)
-            if r_tool.getOriginVersion().origin
+            dict(r_tool_orig.source)
+            if r_tool_orig.origin or r_tool_orig.docker_origin
             else ""
         )
+
         tool_info["versions"]["other"] = [
             {
                 "version": v.version,

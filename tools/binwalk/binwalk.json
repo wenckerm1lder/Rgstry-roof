@@ -12,6 +12,7 @@
     "tool": "binwalk",
     "provider": "Debian",
     "method": "release",
-    "suite": "buster"
+    "suite": "buster",
+    "docker_origin": true
   }
 ]

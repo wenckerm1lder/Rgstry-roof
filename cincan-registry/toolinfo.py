@@ -39,13 +39,26 @@ class VersionInfo:
 
     @property
     def provider(self) -> str:
+        """Returns provider of upstream source, eg. GitHub """
         if isinstance(self._source, UpstreamChecker):
             return self._source.provider
         else:
             return self._source
 
     @property
+    def docker_origin(self) -> bool:
+        """
+        Returns true if this upsream is used to install tool in
+        corresponding dockerfile.
+        """
+        if isinstance(self._source, UpstreamChecker):
+            return self._source.docker_origin
+        else:
+            return False
+
+    @property
     def extraInfo(self) -> str:
+        """Returns possible added extra information."""
         if isinstance(self._source, UpstreamChecker):
             return self._source.extra_info
         else:
@@ -147,11 +160,22 @@ class ToolInfo:
     def getOriginVersion(self) -> VersionInfo:
         """
         Returns version from the upstream versions, which is marked
-        as origin of the tool.
+        as very origin of the tool.
         """
         if self.upstream_v:
             for v in self.upstream_v:
                 if v.origin:
+                    return v
+        return VersionInfo("Not implemented", "", set(), datetime.min)
+
+    def getDockerOriginVersion(self) -> VersionInfo:
+        """
+        Returns version from the upstream versions, which is marked
+        as install source in dockerfile.
+        """
+        if self.upstream_v:
+            for v in self.upstream_v:
+                if v.docker_origin:
                     return v
         return VersionInfo("Not implemented", "", set(), datetime.min)
 

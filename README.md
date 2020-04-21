@@ -1,4 +1,4 @@
-# CinCan registry
+# cinverman - CinCan Version Manager
 
 CinCan registry is  a tool for listing available CinCan tools, their versions and possible updates. 
 

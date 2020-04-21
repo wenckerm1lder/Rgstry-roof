@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import List, Union
-from collections import Iterable
+from collections.abc import Iterable
 from .checkers._checker import UpstreamChecker
 import re
 import json
@@ -15,7 +15,7 @@ class VersionInfo:
         updated: datetime = None,
         origin: bool = False,
     ):
-        self._version: str = version
+        self._version: str = str(version)
         self._source: Union[str, UpstreamChecker] = source
         self._origin: bool = origin
         self._tags: set = tags
@@ -36,6 +36,12 @@ class VersionInfo:
                 self._updated = now
                 return self._version
         return self._version
+
+    @version.setter
+    def version(self, version: Union[str, int, float]):
+        if not version:
+            raise ValueError("Cannot set empty value for version.")
+        self._version = str(version)
 
     @property
     def provider(self) -> str:
@@ -88,10 +94,10 @@ class VersionInfo:
         if any(char.isdigit() for char in self.version):
             # Git uses SHA-1 hash currently, length 40 characters
             # Commit hash maybe
-            if re.findall("([a-fA-F0-9\d]{40})", self.version):
+            if re.findall(r"(^[a-fA-F0-9]{40}$)", self.version):
                 return self.version
             # In future, SHA-256 will be used for commit hash, length is 64 chars
-            elif re.findall("([a-fA-F0-9\d]{64})", self.version):
+            elif re.findall(r"(^[a-fA-F0-9]{64}$)", self.version):
                 return self.version
             else:
                 return list(map(int, re.sub(r"[^0-9.]+", "", self.version).split(".")))
@@ -110,7 +116,7 @@ class VersionInfo:
                 return False
 
     def __str__(self):
-        return self.version
+        return str(self.version)
 
     def __format__(self, value):
         return self.version.__format__(value)

@@ -43,6 +43,7 @@ class DebianChecker(UpstreamChecker):
             for x in data:
                 if self.suite in x.get("suites", ""):
                     self.version = x.get("version", "")
+                    break
             if not self.version:
                 self.logger.error(f"Selected suite '{self.suite}' not found for Debian tool {self.tool}")
                 self.version = NO_VERSION

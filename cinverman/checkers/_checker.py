@@ -2,7 +2,7 @@ import logging
 import re
 from abc import ABCMeta, abstractmethod
 from typing import List, Dict
-from requests.exceptions import Timeout
+from requests.exceptions import Timeout, ConnectionError
 
 __name__ = "checker"
 NO_VERSION = "Not found"
@@ -83,8 +83,13 @@ class UpstreamChecker(metaclass=ABCMeta):
         try:
             self._get_version(curr_ver)
         except Timeout:
-            self.logger.debug(
+            self.logger.error(
                 f"Connection timed out for tool {self.tool} when checking upstream with {self.provider}."
+            )
+            self.version = NO_VERSION
+        except ConnectionError:
+            self.logger.error(
+                f"Failed to connect provider {self.provider} of tool {self.tool} when checking upstream. Is configuration correct?"
             )
             self.version = NO_VERSION
         return self.version

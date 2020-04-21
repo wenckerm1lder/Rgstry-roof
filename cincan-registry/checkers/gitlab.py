@@ -62,7 +62,7 @@ class GitLabChecker(UpstreamChecker):
         """
         Method for finding latest release from repository.
         """
-        r = self.session.get(f"{self.api}/{self.loc}/releases")
+        r = self.session.get(f"{self.api}/{self.loc}/releases", timeout=self.timeout)
         if r.status_code == 200:
             self.version = r.json()[0].get("name")
         else:
@@ -72,7 +72,7 @@ class GitLabChecker(UpstreamChecker):
         """
         Method for finding latest tag.
         """
-        r = self.session.get(f"{self.api}/{self.loc}/repository/tags")
+        r = self.session.get(f"{self.api}/{self.loc}/repository/tags", timeout=self.timeout)
         if r.status_code == 200:
             self.version = r.json()[0].get("name")
         else:

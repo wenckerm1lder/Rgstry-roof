@@ -8,7 +8,7 @@ NO_VERSION = "Not found"
 
 
 class UpstreamChecker(metaclass=ABCMeta):
-    def __init__(self, tool_info: dict, token: str = ""):
+    def __init__(self, tool_info: dict, token: str = "", timeout=20):
         self.uri: str = tool_info.get("uri", "")
         self.repository: str = tool_info.get("repository", "")
         self.tool: str = tool_info.get("tool", "")
@@ -21,6 +21,7 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.extra_info: str = ""
         self.token: str = token
         self.logger = logging.getLogger(__name__)
+        self.timeout: int = timeout
 
         if not (self.uri or self.repository and self.tool and self.provider):
             raise ValueError(

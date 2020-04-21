@@ -29,7 +29,7 @@ class BitbucketChecker(UpstreamChecker):
 
     def _by_release(self):
         r = self.session.get(
-            f"{self.api}/repositories/{self.repository}/{self.tool}/downloads"
+            f"{self.api}/repositories/{self.repository}/{self.tool}/downloads", timeout=self.timeout
         )
         if r.status_code == 200:
             self.version = r.json().get("values")[0].get("name", NO_VERSION)
@@ -41,7 +41,7 @@ class BitbucketChecker(UpstreamChecker):
         params = {"sort": "-name"}
         r = self.session.get(
             f"{self.api}/repositories/{self.repository}/{self.tool}/refs/tags",
-            params=params,
+            params=params, timeout=self.timeout
         )
         if r.status_code == 200:
             self.version = r.json().get("values")[0].get("name", NO_VERSION)

@@ -36,7 +36,7 @@ class DebianChecker(UpstreamChecker):
         """
         Method for finding latest release from debian sources.
         """
-        r = self.session.get(f"{self.api}/{self.tool}")
+        r = self.session.get(f"{self.api}/{self.tool}", timeout=self.timeout)
         if r.status_code == 200:
             data = r.json().get("versions")
             # loop trough version list and get wanted version.

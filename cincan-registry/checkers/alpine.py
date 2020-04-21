@@ -41,7 +41,7 @@ class AlpineChecker(UpstreamChecker):
         # Select branch
         params = {"h": self.suite}
         r = self.session.get(
-            f"{self.api}/{self.repository}/{self.tool}/APKBUILD", params=params
+            f"{self.api}/{self.repository}/{self.tool}/APKBUILD", params=params, timeout=self.timeout
         )
         # print(r.content)
         if r.status_code == 200:

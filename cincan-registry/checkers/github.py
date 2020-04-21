@@ -61,7 +61,7 @@ class GitHubChecker(UpstreamChecker):
         Get date of commit by commit hash.
         """
         r = self.session.get(
-            f"{self.api}/repos/{self.repository}/{self.tool}/git/commits/{sha}"
+            f"{self.api}/repos/{self.repository}/{self.tool}/git/commits/{sha}", timeout=self.timeout
         )
         if r.status_code != 200:
             self.logger.error(
@@ -78,7 +78,7 @@ class GitHubChecker(UpstreamChecker):
         include pre-releases.
         """
         r = self.session.get(
-            f"{self.api}/repos/{self.repository}/{self.tool}/releases/latest"
+            f"{self.api}/repos/{self.repository}/{self.tool}/releases/latest", timeout=self.timeout
         )
         if r.status_code == 200:
             self.version = r.json().get("tag_name", NO_VERSION)
@@ -90,7 +90,7 @@ class GitHubChecker(UpstreamChecker):
         Method for finding latest tag. It uses date of tagged commit for sorting.
         Consumes more API requests than other methods.
         """
-        r = self.session.get(f"{self.api}/repos/{self.repository}/{self.tool}/tags")
+        r = self.session.get(f"{self.api}/repos/{self.repository}/{self.tool}/tags", timeout=self.timeout)
         if r.status_code == 200:
             tags = r.json()
             self.version = self._sort_latest_tag(tags, "name").get("name")
@@ -105,7 +105,7 @@ class GitHubChecker(UpstreamChecker):
         """
         if current_commit:
             r = self.session.get(
-                f"{self.api}/repos/{self.repository}/{self.tool}/compare/master...{current_commit}"
+                f"{self.api}/repos/{self.repository}/{self.tool}/compare/master...{current_commit}", timeout=self.timeout
             )
             if r.status_code == 200:
                 self.extra_info = f"{r.json().get('behind_by')} commits behind master."
@@ -114,7 +114,7 @@ class GitHubChecker(UpstreamChecker):
                 self._fail(r)
         else:
             r = self.session.get(
-                f"{self.api}/repos/{self.repository}/{self.tool}/commits/master"
+                f"{self.api}/repos/{self.repository}/{self.tool}/commits/master", timeout=self.timeout
             )
             if r.status_code == 200:
                 self.version = r.json().get("sha")

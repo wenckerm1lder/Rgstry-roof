@@ -37,7 +37,7 @@ class PypiChecker(UpstreamChecker):
         """
         Method for finding latest release from pypi.
         """
-        r = self.session.get(f"{self.api}/pypi/{self.tool}/json")
+        r = self.session.get(f"{self.api}/pypi/{self.tool}/json", timeout=self.timeout)
         if r.status_code == 200:
             self.version = r.json().get("info").get("version")
         else:

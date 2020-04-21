@@ -31,7 +31,7 @@ class GitLabChecker(UpstreamChecker):
         else:
             self.loc = quote_plus(self.tool if self.tool else self.repository)
 
-    def get_version(self, curr_ver: str = ""):
+    def _get_version(self, curr_ver: str = ""):
         if self.method == "release":
             self._by_release()
         elif self.method == "tag-release":
@@ -41,7 +41,6 @@ class GitLabChecker(UpstreamChecker):
                 f"Invalid query method for {self.provider} in tool {self.tool}."
             )
             self.version = NO_VERSION
-        return self.version
 
     def _fail(self, r: requests.Response):
         """

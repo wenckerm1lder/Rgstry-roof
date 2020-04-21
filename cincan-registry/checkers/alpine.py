@@ -15,7 +15,7 @@ class AlpineChecker(UpstreamChecker):
         self.repository = self.repository.strip("/")
         self.version_variable = "pkgver"
 
-    def get_version(self, curr_ver: str = ""):
+    def _get_version(self, curr_ver: str = ""):
         if self.method == "release":
             self._by_release()
         else:
@@ -23,7 +23,6 @@ class AlpineChecker(UpstreamChecker):
                 f"Invalid query method for {self.provider} in tool {self.tool}."
             )
             self.version = NO_VERSION
-        return self.version
 
     def _fail(self, r: requests.Response):
         """

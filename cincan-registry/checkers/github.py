@@ -27,7 +27,7 @@ class GitHubChecker(UpstreamChecker):
         self.repository = self.repository.strip("/")
         self.tool = self.tool.strip("/")
 
-    def get_version(self, curr_ver: str = ""):
+    def _get_version(self, curr_ver: str = ""):
         if self.method == "release":
             self._by_release()
         elif self.method == "tag-release":
@@ -39,7 +39,6 @@ class GitHubChecker(UpstreamChecker):
                 f"Invalid query method for {self.provider} in tool {self.tool}."
             )
             self.version = NO_VERSION
-        return self.version
 
     def _fail(self, r: requests.Response):
         """

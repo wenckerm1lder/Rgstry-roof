@@ -1,8 +1,8 @@
 [![pipeline status](https://gitlab.com/CinCan/cincan-registry/badges/master/pipeline.svg)](https://gitlab.com/CinCan/cincan-registry/commits/master)
 
-# cinverman - CinCan Version Manager
+# CinCan Version Manager
 
-CinCan registry is  a tool for listing available CinCan tools, their versions and possible updates. 
+CinCan Version Manger is  a tool for listing available CinCan tools, their versions and possible updates. 
 
 Tools are available in the CinCan's [tool repository.](https://gitlab.com/CinCan/tools)
 
@@ -46,5 +46,5 @@ cincan-registry list remote -a
 
 ## Upstream checker
 
-This tool has feature check available new versions for tool, if this is configured for selected tool.
+This tool has feature check available new versions for tool, if this feature is configured for selected tool.
 

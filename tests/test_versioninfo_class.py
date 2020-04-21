@@ -51,6 +51,12 @@ def test_setters_version_info_no_checker():
     with pytest.raises(ValueError):
         obj.version = ""
 
+    obj.updated = datetime(2020, 1, 1, 11, 11)
+    obj.updated == datetime(2020, 1, 1, 11, 11)
+    # Test invalid time format
+    with pytest.raises(ValueError):
+        obj.updated = ""
+
 
 @mock.patch.object(
     VersionInfo.__init__, "__defaults__", VersionInfo.__init__.__defaults__
@@ -61,10 +67,17 @@ def test_create_version_info_with_checker():
     """
     obj = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
     assert isinstance(obj._source, UpstreamChecker)
-    assert obj.version == "1.0"
     assert obj.provider == "test_provider"
     assert obj.docker_origin
     assert obj.extraInfo == "Test information"
+    # NOTE 1.1 version used in instansing gets ignored, if there is UpstreamChecker
+    # Note that instanced version in UpstreamChecker is older (0.9) - get_version returns newer
+    assert obj.version == "1.0"
+    obj._source.get_version.assert_called_once()
+    # New attempt with new time - using stored info from UpstreamChecker
+    obj = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
+    obj.updated = datetime.now()
+    assert obj.version == "0.9"
 
 
 def test_version_info_normalization():

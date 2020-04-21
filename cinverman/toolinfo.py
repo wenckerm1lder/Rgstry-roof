@@ -35,6 +35,8 @@ class VersionInfo:
                 self._version = self._source.get_version()
                 self._updated = now
                 return self._version
+            else:
+                self._version = self._source.version
         return self._version
 
     @version.setter
@@ -89,6 +91,12 @@ class VersionInfo:
     @property
     def updated(self) -> datetime:
         return self._updated
+
+    @updated.setter
+    def updated(self, dt: datetime):
+        if not isinstance(dt, datetime):
+            raise ValueError("Given time is not 'datetime' object.")
+        self._updated = dt
 
     def get_normalized_ver(self) -> List:
         if any(char.isdigit() for char in self.version):
@@ -194,11 +202,14 @@ class ToolInfo:
         latest = next(
             iter(
                 sorted(
-                    self.versions if not in_upstream else (self.upstream_v if self.upstream_v else []),
+                    self.versions
+                    if not in_upstream
+                    else (self.upstream_v if self.upstream_v else []),
                     reverse=True,
                     key=lambda s: self._map_sub_versions(s),
                 )
-            ), None
+            ),
+            None,
         )
         if not latest:
             return VersionInfo("undefined", "", set(), datetime.min)

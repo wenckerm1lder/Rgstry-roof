@@ -1,3 +1,5 @@
+[![pipeline status](https://gitlab.com/CinCan/cincan-registry/badges/master/pipeline.svg)](https://gitlab.com/CinCan/cincan-registry/commits/master)
+
 # cinverman - CinCan Version Manager
 
 CinCan registry is  a tool for listing available CinCan tools, their versions and possible updates. 

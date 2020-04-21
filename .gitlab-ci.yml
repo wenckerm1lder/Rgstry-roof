@@ -1,0 +1,11 @@
+stages:
+  - test
+
+unittests:
+  stage: test
+  image: python:3.8-slim-buster
+  before_script:
+    - pip3 install .
+    - pip3 install -r test-requirements.txt
+  script:
+    - pytest

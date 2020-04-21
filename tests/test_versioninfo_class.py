@@ -1,14 +1,13 @@
 from cinverman.toolinfo import VersionInfo
+from cinverman.checkers import UpstreamChecker
 from datetime import datetime
-import pytest
 from unittest import mock
+import pytest
 
-FAKE_VERSION_INFO_NO_CHECKER = {
-    "version": 1.1,
-    "source": "no_checker_case",
-    "tags": set(["latest", "latest-stable"]),
-    "updated": datetime(2020, 3, 3, 13, 37,),
-}
+from .fake_instances import (
+    FAKE_VERSION_INFO_NO_CHECKER,
+    FAKE_VERSION_INFO_WITH_CHECKER,
+)
 
 
 @mock.patch.object(
@@ -52,6 +51,7 @@ def test_setters_version_info_no_checker():
     with pytest.raises(ValueError):
         obj.version = ""
 
+
 @mock.patch.object(
     VersionInfo.__init__, "__defaults__", VersionInfo.__init__.__defaults__
 )
@@ -59,12 +59,12 @@ def test_create_version_info_with_checker():
     """
     Test init and attribute content
     """
-    obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
-    # assert obj._version == "1.1"
-    # assert obj._source == "no_checker_case"
-    # assert obj._tags == set(["latest", "latest-stable"])
-    # assert obj._updated == datetime(2020, 3, 3, 13, 37)
-    # assert obj._origin is False
+    obj = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
+    assert isinstance(obj._source, UpstreamChecker)
+    assert obj.version == "1.0"
+    assert obj.provider == "test_provider"
+    assert obj.docker_origin
+    assert obj.extraInfo == "Test information"
 
 
 def test_version_info_normalization():

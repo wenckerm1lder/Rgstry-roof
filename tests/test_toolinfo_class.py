@@ -89,9 +89,22 @@ def test_tool_info_eq():
     # ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     # ver2 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     # ver2.version =
-    tool_obj3 = ToolInfo(**FAKE_TOOL_INFO)
+    data = {
+        "name": "test_tool",
+        "updated": datetime(2020, 3, 13, 13, 37),
+        "location": "test_location",
+        "description": "test_description",
+    }
+    test = ToolInfo(**data)
+    # test = ToolInfo(
+    #     name="test_tool",
+    #     updated=datetime(2020, 3, 13, 13, 37),
+    #     location="test_location",
+    #     description="test_description",
+    # )
     # tool_obj.versions[0].version = "NOT_SAME"
-    for tool in tool_obj3.versions:
+    for tool in test.versions:
+        print("Should not happen 3 times.")
         print(tool.version)
     # tool_obj.versions.append(ver1)
     # tool_obj2 = ToolInfo(**FAKE_TOOL_INFO)

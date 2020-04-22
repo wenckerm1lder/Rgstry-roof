@@ -1,14 +1,13 @@
 from cinverman import VersionInfo, ToolInfo
 from cinverman.checkers import UpstreamChecker
 from datetime import datetime
-from unittest import mock
 import pytest
-import json
 
 from .fake_instances import (
     FAKE_VERSION_INFO_NO_CHECKER,
     FAKE_VERSION_INFO_WITH_CHECKER,
     FAKE_TOOL_INFO,
+    FAKE_TOOL_INFO2,
 )
 
 
@@ -43,3 +42,70 @@ def test_tool_info_set():
 
     with pytest.raises(ValueError):
         tool_obj.updated = "16062006"
+
+
+def test_tool_info_origin_version():
+    ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
+    ver2 = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
+    tool_obj = ToolInfo(**FAKE_TOOL_INFO)
+    tool_obj.versions.append(ver1)
+
+    assert tool_obj.getOriginVersion() == VersionInfo(
+        "Not implemented", "", set(), datetime.min
+    )
+    assert tool_obj.getDockerOriginVersion() == VersionInfo(
+        "Not implemented", "", set(), datetime.min
+    )
+
+    tool_obj.upstream_v.append(ver2)
+
+    assert tool_obj.getOriginVersion() == "1.2"
+    # Above fetch updated timestamp when getting 1.2 version with 'get_version' method, because
+    # timestamp was older than 1 hour
+    # However, this is mock object, and does not update original object as real UpstreamCheck
+    # Object would do - therefore we are getting version 1.1 in next fetch, because VersionInfo
+    # has timestamp updated
+    assert tool_obj.getDockerOriginVersion() == "1.1"
+
+
+def test_tool_info_latest_version():
+    ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
+    ver2 = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
+    tool_obj = ToolInfo(**FAKE_TOOL_INFO)
+    tool_obj.versions.append(ver1)
+    tool_obj.upstream_v.append(ver2)
+
+    assert tool_obj.getLatest() == "0.9"
+    assert tool_obj.getLatest(in_upstream=True) == "1.1"
+    assert ver2.source.get_version.called
+
+
+def test_tool_info_to_str():
+    tool_obj = ToolInfo(**FAKE_TOOL_INFO)
+    assert str(tool_obj) == "test_tool test_description"
+
+
+def test_tool_info_eq():
+    # ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
+    # ver2 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
+    # ver2.version =
+    tool_obj3 = ToolInfo(**FAKE_TOOL_INFO)
+    # tool_obj.versions[0].version = "NOT_SAME"
+    for tool in tool_obj3.versions:
+        print(tool.version)
+    # tool_obj.versions.append(ver1)
+    # tool_obj2 = ToolInfo(**FAKE_TOOL_INFO)
+    # tool_obj2.versions.append(ver2)
+
+    # # Same name and version
+    # assert tool_obj == tool_obj2
+    # tool_obj.versions[0].version = "NOT_SAME"
+    # for tool in tool_obj.versions:
+    #     print(tool.version)
+    # print(tool_obj.versions)
+    # assert tool_obj != tool_obj2
+
+    # # Test different names
+    # tool_obj = ToolInfo(**FAKE_TOOL_INFO2)
+    # tool_obj.versions.append(ver1)
+    # assert tool_obj != tool_obj2

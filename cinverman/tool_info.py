@@ -74,8 +74,7 @@ class ToolInfo:
     def getLatest(self, in_upstream: bool = False) -> VersionInfo:
         """
         Attempts to return latest version from available versions.
-        getOriginVersion method is expected to return latest, if origin
-        is found.
+        By default, not checking upstream
         """
         latest = next(
             iter(
@@ -95,7 +94,7 @@ class ToolInfo:
             return latest
 
     def __str__(self):
-        return "{} {}".format(self.name, self.description)
+        return f"{self.name} {self.description}"
 
     def __eq__(self, value) -> bool:
         """

@@ -35,6 +35,7 @@ FAKE_UPSTREAM_CHECKER.docker_origin = True
 FAKE_UPSTREAM_CHECKER.version = "1.1"
 FAKE_UPSTREAM_CHECKER.extra_info = "Test information"
 FAKE_UPSTREAM_CHECKER.timeout = 30
+# This value is used, if old value is stored more than 1 hour ago
 FAKE_UPSTREAM_CHECKER.get_version.return_value = "1.2"
 FAKE_UPSTREAM_CHECKER.__iter__ = UpstreamChecker.__iter__
 
@@ -51,4 +52,10 @@ FAKE_TOOL_INFO = {
     "updated": datetime(2020, 3, 13, 13, 37),
     "location": "test_location",
     "description": "test_description",
+}
+FAKE_TOOL_INFO2 = {
+    "name": "test_tool_two",
+    "updated": datetime(2020, 2, 12, 12, 27),
+    "location": "test_location_two",
+    "description": "test_description_two",
 }

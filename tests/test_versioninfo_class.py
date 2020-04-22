@@ -117,6 +117,9 @@ def test_version_info_eq():
     assert obj1 == obj2
     obj1.version = 1.2
     assert obj1 != obj2
+    # We can compare for strings.
+    assert obj1 == "1.2"
+    # But not integers
     with pytest.raises(ValueError):
         assert obj1 != 1
 

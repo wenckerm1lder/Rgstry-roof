@@ -98,22 +98,33 @@ class VersionInfo:
             raise ValueError("Given time is not 'datetime' object.")
         self._updated = dt
 
-    def get_normalized_ver(self) -> List:
-        if any(char.isdigit() for char in self.version):
+    def _normalize(self, value: str) -> Union[str, List]:
+        if any(char.isdigit() for char in value):
             # Git uses SHA-1 hash currently, length 40 characters
             # Commit hash maybe
-            if re.findall(r"(^[a-fA-F0-9]{40}$)", self.version):
-                return self.version
+            if re.findall(r"(^[a-fA-F0-9]{40}$)", value):
+                return value
             # In future, SHA-256 will be used for commit hash, length is 64 chars
-            elif re.findall(r"(^[a-fA-F0-9]{64}$)", self.version):
-                return self.version
+            elif re.findall(r"(^[a-fA-F0-9]{64}$)", value):
+                return value
             else:
-                return list(map(int, re.sub(r"[^0-9.]+", "", self.version).split(".")))
+                return list(map(int, re.sub(r"[^0-9.]+", "", value).split(".")))
         else:
-            return self.version
+            return value
 
-    def __eq__(self, value) -> bool:
-        if not isinstance(value, VersionInfo):
+    def get_normalized_ver(self) -> List:
+        return self._normalize(self.version)
+
+    def __eq__(self, value: Union[str, "VersionInfo"]) -> bool:
+        """
+        Support comparison between strings or other VersionInfo objects
+        """
+        if isinstance(value, str):
+            if self.get_normalized_ver() == self._normalize(value):
+                return True
+            else:
+                return False
+        elif not isinstance(value, VersionInfo):
             raise ValueError(
                 f"Unable to compare '=' type {type(value)} and type {type(VersionInfo)}"
             )
@@ -123,7 +134,7 @@ class VersionInfo:
             else:
                 return False
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.version)
 
     def __format__(self, value):

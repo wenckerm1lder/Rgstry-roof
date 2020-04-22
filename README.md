@@ -2,13 +2,17 @@
 
 # CinCan Version Manager
 
-CinCan Version Manger is  a tool for listing available CinCan tools, their versions and possible updates. 
+CinCan version manger is  a tool for listing available CinCan tools, their versions and possible updates. 
 
-Tools are available in the CinCan's [tool repository.](https://gitlab.com/CinCan/tools)
+Source code for tools' Dockerfiles are available in the CinCan's [tool repository.](https://gitlab.com/CinCan/tools)
 
 Currently, no other tools are supported for version information listing.
 
-Remote tools are stored in Docker Hub, [under CinCan's profile.](https://hub.docker.com/u/cincan)
+Docker images of remote tools are stored in Docker Hub, [under CinCan's profile.](https://hub.docker.com/u/cincan)
+
+This tool takes advantage of Docker Hub's registry API, when listing remote tools and their versions.
+
+When checking versions beyond remote (Docker Hub), tool is using multiple different APIs such as GitHub's or Debian's. See [upstream checking.](#upstream-checker)
 
 ## Installation
 
@@ -16,7 +20,7 @@ Tool can be simply installed by running following command:
 
 `pip install git+https://gitlab.com/cincan/cincan-registry`
 
-Tool is not currently in pip, but might be in future.
+Tool is not currently in pip, but should be in future.
 
 ## Usage
 
@@ -37,7 +41,7 @@ To list only locally available tools with tag "latest-stable":
 cincan-registry list local
 ```
 
-To do same for remote, use `remote` subcommend. By adding flag `-a`, this shows tools with all possible tags.
+To do same for remote, use `remote` subcommand. By adding flag `-a`, this shows tools with all possible tags.
 ```
 cincan-registry list remote -a 
 ```

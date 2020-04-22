@@ -13,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any, Iterable, Tuple
 from pprint import pprint
 from .checkers import classmap
-from .toolinfo import ToolInfo, VersionInfo
+from . import ToolInfo, VersionInfo
 from .utils import parse_data_types, parse_json_time, format_time, split_tool_tag
 
 
@@ -29,8 +29,8 @@ def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
     r = {}
     for t in tools:
         td = {"updated": format_time(t.updated)}
-        if t.destination:
-            td["destination"] = t.destination
+        if t.location:
+            td["location"] = t.location
         if t.description:
             td["description"] = t.description
         if t.versions:
@@ -440,7 +440,7 @@ class ToolRegistry:
                 r[name] = ToolInfo(
                     name,
                     updated=parse_json_time(j["updated"]),
-                    destination=j.get("destination"),
+                    location=j.get("location"),
                     versions=[
                         VersionInfo(
                             ver.get("version"),

@@ -1,5 +1,5 @@
-from .registry import ToolRegistry
-from .toolinfo import VersionInfo
+from . import ToolRegistry
+from . import VersionInfo
 import argparse
 import sys
 import logging

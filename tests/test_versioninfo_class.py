@@ -1,4 +1,4 @@
-from cinverman.toolinfo import VersionInfo
+from cinverman import VersionInfo
 from cinverman.checkers import UpstreamChecker
 from datetime import datetime
 from unittest import mock
@@ -19,7 +19,7 @@ def test_create_version_info_no_checker():
     Test init method and attribute content
     """
     obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
-    assert obj._version == "1.1"
+    assert obj._version == "0.9"
     assert obj._source == "no_checker_case"
     assert obj._tags == set(["latest", "latest-stable"])
     assert obj._updated == datetime(2020, 3, 3, 13, 37)
@@ -30,10 +30,10 @@ def test_getters_version_info_no_checker():
 
     obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
 
-    assert obj.version == "1.1"
+    assert obj.version == "0.9"
     assert obj.provider == "no_checker_case"
     assert not obj.docker_origin
-    assert obj.extraInfo == ""
+    assert obj.extra_info == ""
     assert obj.source == "no_checker_case"
     assert not obj.origin
     assert obj.tags == set(["latest", "latest-stable"])
@@ -46,7 +46,7 @@ def test_setters_version_info_no_checker():
     assert obj.source == "no_checker_case"
     obj.source = "new case"
     assert obj.source == "new case"
-    assert obj.version == "1.1"
+    assert obj.version == "0.9"
     obj.version = 1.2
     assert obj.version == "1.2"
     with pytest.raises(ValueError):
@@ -67,23 +67,25 @@ def test_create_version_info_with_checker():
     Test init and attribute content
     """
     obj = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
+    obj._source.reset_mock()
     assert isinstance(obj._source, UpstreamChecker)
     assert obj.provider == "test_provider"
     assert obj.docker_origin
-    assert obj.extraInfo == "Test information"
+    assert obj.extra_info == "Test information"
     # NOTE 1.1 version used in instansing gets ignored, if there is UpstreamChecker
-    # Note that instanced version in UpstreamChecker is older (0.9) - get_version returns newer
-    assert obj.version == "1.0"
+    # Note that instanced version in UpstreamChecker is newer (1.1) - get_version returns newer
+    assert obj.version == "1.2"
     obj._source.get_version.assert_called_once()
     # New attempt with new time - using stored info from UpstreamChecker
+    # Not checking update
     obj = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
     obj.updated = datetime.now()
-    assert obj.version == "0.9"
+    assert obj.version == "1.1"
 
 
 def test_version_info_normalization():
     obj1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
-    assert obj1.get_normalized_ver() == [1, 1]
+    assert obj1.get_normalized_ver() == [0, 9]
     obj1.version = "1.2.3.4.5.6"
     assert obj1.get_normalized_ver() == [1, 2, 3, 4, 5, 6]
     obj1.version = "release-1.2.3"
@@ -105,7 +107,7 @@ def test_version_info_normalization():
 def test_version_info_str():
 
     obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
-    assert str(obj) == "1.1"
+    assert str(obj) == "0.9"
 
 
 def test_version_info_eq():
@@ -121,14 +123,14 @@ def test_version_info_eq():
 
 def test_version_info_format():
     obj1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
-    assert f"{obj1}" == "1.1"
+    assert f"{obj1}" == "0.9"
 
 
 def test_version_info_iter():
     obj = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
     obj.updated = datetime.now()
     test_dict = {
-        "version": "0.9",
+        "version": "1.1",
         "source": {
             "uri": "https://test.uri",
             "repository": "test_repository",
@@ -138,7 +140,7 @@ def test_version_info_iter():
             "suite": "test_suite",
             "origin": True,
             "docker_origin": True,
-            "version": "0.9",
+            "version": "1.1",
             "extra_info": "Test information",
         },
         "tags": ["latest", "latest-stable"],
@@ -149,7 +151,7 @@ def test_version_info_iter():
     obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     obj.updated = datetime.now()
     test_dict2 = {
-        "version": "1.1",
+        "version": "0.9",
         "source": "no_checker_case",
         "tags": ["latest", "latest-stable"],
         "updated": str(obj.updated),

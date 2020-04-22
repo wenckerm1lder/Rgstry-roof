@@ -82,6 +82,8 @@ class VersionInfo:
 
     @property
     def origin(self) -> str:
+        if isinstance(self._source, UpstreamChecker):
+            self._origin = self._source.origin
         return self._origin
 
     @property
@@ -128,6 +130,15 @@ class VersionInfo:
 
     def __format__(self, value):
         return self.version.__format__(value)
+
+    def __iter__(self):
+        yield "version", self.version,
+        yield "source", self.source if isinstance(self.source, str) else dict(
+            self.source
+        ),
+        yield "tags", sorted(list(self.tags)),
+        yield "updated", str(self.updated),
+        yield "origin", self.origin,
 
     def toJSON(self):
         """

@@ -36,7 +36,7 @@ FAKE_UPSTREAM_CHECKER.version = "0.9"
 FAKE_UPSTREAM_CHECKER.extra_info = "Test information"
 FAKE_UPSTREAM_CHECKER.timeout = 30
 FAKE_UPSTREAM_CHECKER.get_version.return_value = "1.0"
-
+FAKE_UPSTREAM_CHECKER.__iter__ = UpstreamChecker.__iter__
 
 FAKE_VERSION_INFO_WITH_CHECKER = {
     "version": 1.1,

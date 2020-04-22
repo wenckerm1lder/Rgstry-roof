@@ -3,6 +3,7 @@ from cinverman.checkers import UpstreamChecker
 from datetime import datetime
 from unittest import mock
 import pytest
+import json
 
 from .fake_instances import (
     FAKE_VERSION_INFO_NO_CHECKER,
@@ -87,10 +88,10 @@ def test_version_info_normalization():
     assert obj1.get_normalized_ver() == [1, 2, 3, 4, 5, 6]
     obj1.version = "release-1.2.3"
     assert obj1.get_normalized_ver() == [1, 2, 3]
-    # sha1 test
+    # sha1 test - 40 char
     obj1.version = "ee9f16b4b95c28f8f79a39ca6a1840d8a6444c10"
     assert obj1.get_normalized_ver() == "ee9f16b4b95c28f8f79a39ca6a1840d8a6444c10"
-    # sha256 test
+    # sha256 test - 64 char
     obj1.version = "f8b09fba9fda9ffebae86611261cf628bd71022fb4348d876974f7c48ddcc6d5"
     assert (
         obj1.get_normalized_ver()
@@ -121,3 +122,40 @@ def test_version_info_eq():
 def test_version_info_format():
     obj1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     assert f"{obj1}" == "1.1"
+
+
+def test_version_info_iter():
+    obj = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
+    obj.updated = datetime.now()
+    test_dict = {
+        "version": "0.9",
+        "source": {
+            "uri": "https://test.uri",
+            "repository": "test_repository",
+            "tool": "test_tool",
+            "provider": "test_provider",
+            "method": "test_release",
+            "suite": "test_suite",
+            "origin": True,
+            "docker_origin": True,
+            "version": "0.9",
+            "extra_info": "Test information",
+        },
+        "tags": ["latest", "latest-stable"],
+        "updated": str(obj.updated),
+        "origin": True,
+    }
+    assert dict(obj) == test_dict
+    obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
+    obj.updated = datetime.now()
+    test_dict2 = {
+        "version": "1.1",
+        "source": "no_checker_case",
+        "tags": ["latest", "latest-stable"],
+        "updated": str(obj.updated),
+        "origin": False,
+    }
+    assert dict(obj) == test_dict2
+
+    assert json.dumps(test_dict)
+    assert json.dumps(test_dict2)

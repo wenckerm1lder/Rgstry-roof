@@ -17,11 +17,15 @@ MAX_WN = 35
 # Base version lenght, showing only first 8 chars.
 # Hash can be 40 chars long
 CHARS_TO_SHOW = 20
+# Version Length
 MAX_WV = CHARS_TO_SHOW + 1
 # Version length with provider
 MAX_WVP = MAX_WV + 20
 # Tag(s) length
 MAX_WT = 20
+# Description length
+MAX_WD = 30
+
 EXTRA_FILL = 35
 
 
@@ -179,6 +183,20 @@ def print_tools_by_location(tools: List[dict], location: str, filter_by: str = "
             print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
 
 
+def print_combined_local_remote(tools: dict):
+
+    print(
+        f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}  {f'Local Version':{MAX_WV}}  {f'Remote Version':<{MAX_WV}}  {f'Description':<{MAX_WD}}{color.END}\n"
+    )
+    for tool in sorted(tools):
+        l_version = tools[tool].get("local_version")[:CHARS_TO_SHOW]
+        r_version = tools[tool].get("remote_version")[:CHARS_TO_SHOW]
+        description = tools[tool].get("description")
+        print(
+            f"{' ':<{PRE_SPACE}}| {tool:<{MAX_WN}}  {l_version:{MAX_WV}}  {r_version:<{MAX_WT}}   {description:<{MAX_WD}}"
+        )
+
+
 def main():
 
     m_parser = argparse.ArgumentParser()
@@ -319,29 +337,18 @@ def main():
             loop.close()
 
         else:
-            # tools_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
-
             try:
                 tool_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
             except OSError:
                 print(f"Failed to connect to Docker.")
-            if not args.all and tool_list:
+            if not args.all and not args.json and tool_list:
                 print(f"\n  Listing all tools with tag '{args.tag}':\n")
-            for tool in sorted(tool_list):
-                lst = tool_list[tool]
-
-                # print(lst.version)
-                # print(format_str)
-                print(
-                    format_str.format(
-                        lst.name.split(":")[0],
-                        # lst.version,
-                        lst.description,
-                        ",".join(lst.input),
-                        ",".join(lst.output),
-                        ",".join(lst.tags),
-                    )
-                )
+            if not args.json and tool_list:
+                print_combined_local_remote(tool_list)
+            elif tool_list:
+                print(json.dumps(tool_list))
+            else:
+                print("No single tool available for unknown reason.")
 
     elif sub_command == "update":
         # loop = asyncio.get_event_loop()

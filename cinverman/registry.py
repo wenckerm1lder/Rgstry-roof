@@ -143,37 +143,49 @@ class ToolRegistry:
         """List all tools"""
         # TODO rework this method, remote and local listing changed
 
-        local_tools, remote_tools = self.get_local_remote_tools(defined_tag)
+        loop = asyncio.get_event_loop()
+        local_tools, remote_tools = loop.run_until_complete(
+            self.get_local_remote_tools(defined_tag)
+        )
+        loop.close()
         use_tools = {}
-        merged_tools_dic = {**local_tools, **remote_tools}
+        # merged_tools_dic = {**local_tools, **remote_tools}
         for i in set().union(local_tools.keys(), remote_tools.keys()):
-            if not defined_tag or defined_tag in merged_tools_dic[i].tags:
-                pass
+
+            l_version = ""
+            r_version = ""
+            if defined_tag:
+                l_tool = local_tools.get(i, None)
+                r_tool = remote_tools.get(i, None)
+                if l_tool:
+                    for ver in l_tool.versions:
+                        if defined_tag in ver.tags:
+                            l_version = ver.version
+                            break
+                    if not l_version:
+                        f"Provided tag '{defined_tag}' not found for local image {i}."
+                if r_tool:
+                    for ver in r_tool.versions:
+                        if defined_tag in ver.tags:
+                            r_version = ver.version
+                            break
+                    if not r_version:
+                        f"Provided tag '{defined_tag}' not found for remote image {i}."
+                if not r_version and not l_version:
+                    continue
+                if not l_version:
+                    l_version = "Not installed"
             else:
-                self.logger.debug(
-                    f"Provided tag '{defined_tag}' not found for image {i}."
+                l_version = local_tools.get(i).getLatest() if local_tools.get(i) else ""
+                r_version = (
+                    remote_tools.get(i).getLatest() if remote_tools.get(i) else ""
                 )
-                continue
-            if i not in local_tools:
-                use_tools[i] = remote_tools[i]
-                self.logger.debug("using remote image for %s", use_tools[i].name)
-            elif i not in remote_tools:
-                use_tools[i] = local_tools[i]
-                self.logger.debug("using local image for %s", use_tools[i].name)
-            else:
-                local = local_tools[i]
-                remote = remote_tools[i]
-                if local.updated >= remote.updated:
-                    use_tools[i] = local
-                    self.logger.debug("using local image for %s", use_tools[i].name)
-                else:
-                    use_tools[i] = remote
-                    self.logger.debug("using remote image for %s", use_tools[i].name)
-                # assume all unique local tags are newer than remote ones
-                use_tags = [i for i in local.tags if i not in remote.tags] + remote.tags
-                use_tools[i].tags = use_tags
-                # description only in registry, not locally
-                use_tools[i].description = remote_tools[i].description
+            use_tools[i] = {}
+            use_tools[i]["local_version"] = l_version
+            use_tools[i]["remote_version"] = r_version
+            # Local has no description
+            use_tools[i]["description"] = remote_tools.get(i).description if remote_tools.get(i) else ""
+
         if not use_tools:
             self.logger.info(f"No single tool found with tag `{defined_tag}`.")
         return use_tools

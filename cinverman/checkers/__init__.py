@@ -10,7 +10,7 @@ from .bitbucket import BitbucketChecker
 from .pypi import PypiChecker
 from .debian import DebianChecker
 from .alpine import AlpineChecker
-
+from .didierstevens import DidierStevensChecker
 classmap = {
     "github": GitHubChecker,
     "gitlab": GitLabChecker,
@@ -18,6 +18,7 @@ classmap = {
     "pypi": PypiChecker,
     "debian": DebianChecker,
     "alpine": AlpineChecker,
+    "didierstevens/github": DidierStevensChecker
 }
 
 __all__ = [
@@ -27,6 +28,7 @@ __all__ = [
     "PypiChecker",
     "DebianChecker",
     "AlpineChecker",
+    "DidierStevensChecker",
     "UpstreamChecker"
 ]
 

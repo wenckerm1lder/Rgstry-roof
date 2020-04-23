@@ -555,8 +555,6 @@ class ToolRegistry:
                 )
         return tools
 
-        # print(tool_path.stem)
-
     async def _list_versions_single(self, l_tool: ToolInfo, r_tool: ToolInfo) -> dict:
 
         tool_info = {}

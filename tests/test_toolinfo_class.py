@@ -98,6 +98,7 @@ def test_tool_info_eq():
 
     # Same name and version
     assert tool_obj == tool_obj2
+    # Different version
     tool_obj.versions[0].version = "NOT_SAME"
     assert tool_obj != tool_obj2
 

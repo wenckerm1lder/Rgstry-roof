@@ -11,7 +11,7 @@ class ToolInfo:
         name: str,
         updated: datetime,
         location: str,
-        versions: List[VersionInfo] = [],
+        versions: List[VersionInfo] = None,
         description: str = "",
     ):
 
@@ -20,7 +20,7 @@ class ToolInfo:
         self._name: str = name
         self._updated: datetime = updated
         self.location: str = location
-        self.versions: List[VersionInfo] = versions
+        self.versions: List[VersionInfo] = versions or []
         self.upstream_v: List[VersionInfo] = []
         self.description = description
 

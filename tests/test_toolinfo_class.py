@@ -26,6 +26,9 @@ def test_create_tool_info():
     assert next(iter(tool_obj.versions)).version == "0.9"
     assert next(iter(tool_obj.upstream_v)).version == "1.2"
 
+    assert len(tool_obj.versions) == 1
+    assert len(tool_obj.upstream_v) == 1
+
     with pytest.raises(ValueError):
         tool_obj2 = ToolInfo("", datetime.now(), "test-location")
 
@@ -86,39 +89,19 @@ def test_tool_info_to_str():
 
 
 def test_tool_info_eq():
-    # ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
-    # ver2 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
-    # ver2.version =
-    data = {
-        "name": "test_tool",
-        "updated": datetime(2020, 3, 13, 13, 37),
-        "location": "test_location",
-        "description": "test_description",
-    }
-    test = ToolInfo(**data)
-    # test = ToolInfo(
-    #     name="test_tool",
-    #     updated=datetime(2020, 3, 13, 13, 37),
-    #     location="test_location",
-    #     description="test_description",
-    # )
-    # tool_obj.versions[0].version = "NOT_SAME"
-    for tool in test.versions:
-        print("Should not happen 3 times.")
-        print(tool.version)
-    # tool_obj.versions.append(ver1)
-    # tool_obj2 = ToolInfo(**FAKE_TOOL_INFO)
-    # tool_obj2.versions.append(ver2)
+    ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
+    ver2 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
+    tool_obj = ToolInfo(**FAKE_TOOL_INFO)
+    tool_obj.versions.append(ver1)
+    tool_obj2 = ToolInfo(**FAKE_TOOL_INFO)
+    tool_obj2.versions.append(ver2)
 
-    # # Same name and version
-    # assert tool_obj == tool_obj2
-    # tool_obj.versions[0].version = "NOT_SAME"
-    # for tool in tool_obj.versions:
-    #     print(tool.version)
-    # print(tool_obj.versions)
-    # assert tool_obj != tool_obj2
+    # Same name and version
+    assert tool_obj == tool_obj2
+    tool_obj.versions[0].version = "NOT_SAME"
+    assert tool_obj != tool_obj2
 
-    # # Test different names
-    # tool_obj = ToolInfo(**FAKE_TOOL_INFO2)
-    # tool_obj.versions.append(ver1)
-    # assert tool_obj != tool_obj2
+    # Test different names
+    tool_obj = ToolInfo(**FAKE_TOOL_INFO2)
+    tool_obj.versions.append(ver1)
+    assert tool_obj != tool_obj2

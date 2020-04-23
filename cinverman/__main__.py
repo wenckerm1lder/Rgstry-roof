@@ -7,6 +7,7 @@ import asyncio
 import pathlib
 from typing import List
 import json
+import os
 
 # from .checkers._checker import _sort_latest_tag
 DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
@@ -271,7 +272,7 @@ def main():
     if log_level not in {"DEBUG"}:
         sys.tracebacklimit = 0  # avoid track traces unless debugging
     logging.basicConfig(
-        format="%(name)s: %(message)s", level=getattr(logging, log_level)
+        format=f"{' ':<{PRE_SPACE}}%(name)s: %(message)s", level=getattr(logging, log_level)
     )
 
     if sub_command == "help":
@@ -328,6 +329,7 @@ def main():
                     toJSON=args.json if args.json else False,
                 )
             )
+            # os.system("clear")
             if args.tool and not args.json:
                 print_single_tool_version_check(ret)
             elif not args.tool and not args.json:

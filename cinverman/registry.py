@@ -184,7 +184,9 @@ class ToolRegistry:
             use_tools[i]["local_version"] = l_version
             use_tools[i]["remote_version"] = r_version
             # Local has no description
-            use_tools[i]["description"] = remote_tools.get(i).description if remote_tools.get(i) else ""
+            use_tools[i]["description"] = (
+                remote_tools.get(i).description if remote_tools.get(i) else ""
+            )
 
         if not use_tools:
             self.logger.info(f"No single tool found with tag `{defined_tag}`.")
@@ -500,6 +502,9 @@ class ToolRegistry:
 
     def _set_single_tool_upstream_versions(self, tool_path: str, tool: ToolInfo) -> str:
 
+        self.logger.info(
+            f"Updating origin version information for tool {tool.name:<{40}}\r\r"
+        )
         with open(tool_path / f"{tool_path.stem}.json") as f:
             conf = json.load(f)
             for tool_info in conf if isinstance(conf, List) else [conf]:

@@ -2,9 +2,10 @@ from ._checker import UpstreamChecker, NO_VERSION
 import requests
 import base64
 
+
 class DidierStevensChecker(UpstreamChecker):
     """
-    Class for checking latests possible tool releases of given Alpine package.
+    Class for checking latests possible tool releases of Didier Stevens.
     """
 
     def __init__(self, tool_info: dict, token: str = ""):
@@ -33,12 +34,12 @@ class DidierStevensChecker(UpstreamChecker):
         """
         self.version = NO_VERSION
         self.logger.error(
-            f"No version information found for DidierStevens' tool {self.tool} in {self.repository} repository : {r.status_code}"
+            f"Failed to fetch version update information for {self.tool}: {r.status_code} : {r.json().get('message')}"
         )
 
     def _by_release(self):
         """
-        Method for finding latest release for packages from Alpine source (git).
+        Method for finding latest release for single tool from DidierStevens Git repository.
         """
         # Select branch
         r = self.session.get(

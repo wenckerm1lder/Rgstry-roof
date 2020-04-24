@@ -59,3 +59,19 @@ FAKE_TOOL_INFO2 = {
     "location": "test_location_two",
     "description": "test_description_two",
 }
+
+
+FAKE_CHECKER_CONF = {
+    "uri": "https://test.uri",
+    "repository": "test_repository",
+    "tool": "test_tool",
+    "provider": "test_provider",
+    "method": "test_method",
+    "suite": "test_suite",
+    "origin": "test_origin",
+    "docker_origin": "test_docker_origin",
+    "version": "test_version",
+    "extra_info": "test_extra_info",
+}
+
+FAKE_CHECKER_TOKEN = "abcd1234efgh5678"

@@ -272,7 +272,7 @@ def main():
     if log_level not in {"DEBUG"}:
         sys.tracebacklimit = 0  # avoid track traces unless debugging
     logging.basicConfig(
-        format=f"{' ':<{PRE_SPACE}}%(name)s: %(message)s", level=getattr(logging, log_level)
+        format=f"{' ':<{PRE_SPACE}}%(levelname)s - %(name)s: %(message)s", level=getattr(logging, log_level)
     )
 
     if sub_command == "help":

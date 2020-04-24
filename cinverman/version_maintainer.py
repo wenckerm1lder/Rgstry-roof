@@ -71,7 +71,14 @@ class VersionMaintainer:
             for tool_info in conf if isinstance(conf, List) else [conf]:
                 provider = tool_info.get("provider").lower()
                 token_provider = tool_info.get("token_provider") or provider
-                token = self.configuration.get(token_provider) if self.configuration else ""
+                token = (
+                    self.configuration.get(token_provider) if self.configuration else ""
+                )
+                if provider not in classmap.keys():
+                    self.logger.error(
+                        f"No upstream checker implemented for tool '{tool.name}' with provider '{provider}'. Check JSON configuration."
+                    )
+                    continue
                 upstream_info = classmap.get(provider)(tool_info, token)
                 tool.upstream_v.append(
                     VersionInfo(

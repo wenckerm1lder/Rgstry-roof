@@ -19,7 +19,7 @@ classmap = {
     "pypi": PypiChecker,
     "debian": DebianChecker,
     "alpine": AlpineChecker,
-    "didierstevens/github": DidierStevensChecker,
+    "didierstevens@github": DidierStevensChecker,
 }
 
 __all__ = [

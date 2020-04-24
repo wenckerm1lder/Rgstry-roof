@@ -3,7 +3,7 @@
   "repository": "DidierStevens",
   "suite": "DidierStevensSuite",
   "tool": "oledump",
-  "provider": "DidierStevens/GitHub",
+  "provider": "DidierStevens@GitHub",
   "token_provider": "GitHub",
   "method": "release",
   "origin": true,

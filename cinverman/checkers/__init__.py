@@ -11,6 +11,7 @@ from .pypi import PypiChecker
 from .debian import DebianChecker
 from .alpine import AlpineChecker
 from .didierstevens import DidierStevensChecker
+
 classmap = {
     "github": GitHubChecker,
     "gitlab": GitLabChecker,
@@ -18,7 +19,7 @@ classmap = {
     "pypi": PypiChecker,
     "debian": DebianChecker,
     "alpine": AlpineChecker,
-    "didierstevens/github": DidierStevensChecker
+    "didierstevens/github": DidierStevensChecker,
 }
 
 __all__ = [
@@ -29,7 +30,8 @@ __all__ = [
     "DebianChecker",
     "AlpineChecker",
     "DidierStevensChecker",
-    "UpstreamChecker"
+    "UpstreamChecker",
+    "classmap",
 ]
 
 # for (_, name, _) in pkgutil.iter_modules([Path(__file__).parent]):

@@ -31,7 +31,6 @@ def test_upstream_checker_create():
     and values.
     """
     checker = FakeChecker(FAKE_CHECKER_CONF, FAKE_CHECKER_TOKEN)
-
     assert checker.uri == "https://test.uri"
     assert checker.repository == "test_repository"
     assert checker.tool == "test_tool"

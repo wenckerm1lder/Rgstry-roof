@@ -4,7 +4,6 @@ from abc import ABCMeta, abstractmethod
 from typing import List, Dict
 from requests.exceptions import Timeout, ConnectionError
 
-__name__ = "checker"
 NO_VERSION = "Not found"
 
 

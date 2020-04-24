@@ -88,6 +88,10 @@ def test_version_info_normalization():
     assert obj1.get_normalized_ver() == [0, 9]
     obj1.version = "1.2.3.4.5.6"
     assert obj1.get_normalized_ver() == [1, 2, 3, 4, 5, 6]
+    obj1.version = "1_2_3_4"
+    assert obj1.get_normalized_ver() == [1, 2, 3, 4]
+    obj1.version = "ghidra_9.1.2_PUBLIC_20200212"
+    assert obj1.get_normalized_ver() == [9, 1, 2]
     obj1.version = "release-1.2.3"
     assert obj1.get_normalized_ver() == [1, 2, 3]
     # sha1 test - 40 char
@@ -119,6 +123,7 @@ def test_version_info_eq():
     assert obj1 != obj2
     # We can compare for strings.
     assert obj1 == "1.2"
+    assert obj1 != "1.3"
     # But not integers
     with pytest.raises(ValueError):
         assert obj1 != 1

@@ -46,6 +46,9 @@ def test_tool_info_set():
     with pytest.raises(ValueError):
         tool_obj.updated = "16062006"
 
+    tool_obj.updated = datetime(2020, 3, 11, 11, 37)
+    assert tool_obj.updated == datetime(2020, 3, 11, 11, 37)
+
 
 def test_tool_info_origin_version():
     ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
@@ -82,6 +85,10 @@ def test_tool_info_latest_version():
     assert tool_obj.getLatest(in_upstream=True) == "1.1"
     assert ver2.source.get_version.called
 
+    # No versions at all
+    tool_obj = ToolInfo(**FAKE_TOOL_INFO)
+    tool_obj.getLatest() == VersionInfo("undefined", "", set(), datetime.min)
+
 
 def test_tool_info_to_str():
     tool_obj = ToolInfo(**FAKE_TOOL_INFO)
@@ -106,3 +113,7 @@ def test_tool_info_eq():
     tool_obj = ToolInfo(**FAKE_TOOL_INFO2)
     tool_obj.versions.append(ver1)
     assert tool_obj != tool_obj2
+
+    # Invalid type comparison
+    with pytest.raises(ValueError):
+        assert tool_obj == "Heheehe"

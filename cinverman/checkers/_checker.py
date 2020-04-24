@@ -24,7 +24,7 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.logger = logging.getLogger(__name__)
         self.timeout: int = timeout
 
-        if not (self.uri or self.repository and self.tool and self.provider):
+        if not (self.uri or (self.repository and self.tool and self.provider)):
             raise ValueError(
                 f"Either URI or repository, tool and provider must be provided for upstream check for tool {self.tool}."
             )

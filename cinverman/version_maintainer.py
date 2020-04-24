@@ -12,23 +12,31 @@ import asyncio
 
 class VersionMaintainer:
     """
-    Class for handling possible new versions for tools in ToolRegistry
+    Class for getting possible new versions for tools in ToolRegistry
     """
 
-    def __init__(self, tokens: dict = None, prefix: str = "cincan/"):
+    def __init__(
+        self,
+        tokens: dict = None,
+        tools_path: pathlib.Path = None,
+        prefix: str = "cincan/",
+    ):
         self.logger = logging.getLogger("versions")
         self.configuration = tokens or {}
         self.max_workers = 30
         # prefix, mostly meaning the owner of possible Docker image
         self.prefix = prefix
+        self.able_to_check = self.get_available_checkers(tools_path)
 
-    def get_available_checkers(self) -> Dict:
+    def get_available_checkers(self, tools_path: pathlib.Path = None) -> Dict:
         """
         Gets dictionary of tools, whereas upstream/origin check is supported.
-        """
-        able_to_check = {}
 
-        for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
+        """
+        if not tools_path:
+            tools_path = pathlib.Path(pathlib.Path.cwd() / "tools")
+        able_to_check = {}
+        for tool_path in tools_path.iterdir():
             able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path
         if not able_to_check:
             self.logger.error(
@@ -36,12 +44,13 @@ class VersionMaintainer:
             )
         return able_to_check
 
-    async def get_versions_single_tool(self, tool: str):
-        local_tools, remote_tools = await self.get_local_remote_tools()
+    async def get_versions_single_tool(
+        self, tool: str, local_tools: dict, remote_tools: dict
+    ):
         l_tool = local_tools.get(tool, "")
         r_tool = remote_tools.get(tool, "")
         if l_tool or r_tool:
-            tool_conf = self.get_available_checkers().get(tool)
+            tool_conf = self.able_to_check.get(tool)
             if not tool_conf:
                 raise FileNotFoundError(f"Upstream check not implemented for {tool}.")
             if r_tool:
@@ -61,7 +70,8 @@ class VersionMaintainer:
             conf = json.load(f)
             for tool_info in conf if isinstance(conf, List) else [conf]:
                 provider = tool_info.get("provider").lower()
-                token = self.configuration.get(provider) if self.configuration else ""
+                token_provider = tool_info.get("token_provider") or provider
+                token = self.configuration.get(token_provider) if self.configuration else ""
                 upstream_info = classmap.get(provider)(tool_info, token)
                 tool.upstream_v.append(
                     VersionInfo(
@@ -77,10 +87,9 @@ class VersionMaintainer:
         """
         Checks for available versions in upstream
         """
-        able_to_check = self.get_available_checkers()
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             for t in tools:
-                tool_path = able_to_check.get(t)
+                tool_path = self.able_to_check.get(t)
                 if tool_path:
                     tool = tools.get(t)
                     loop = asyncio.get_event_loop()

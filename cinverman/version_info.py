@@ -108,7 +108,23 @@ class VersionInfo:
             elif re.findall(r"(^[a-fA-F0-9]{64}$)", value):
                 return value
             else:
-                return list(map(int, re.sub(r"[^0-9.]+", "", value).split(".")))
+                # Subtract else than numbers and '.' and '_'
+                sub = re.sub(r"[^0-9._]+", "", value)
+                # Replace dash with dot, seems to be commonly used with similar purpose
+                rep = sub.replace("_", ".")
+                split_by_dot = re.split(r'[._]', rep)
+                first = None
+                second = None
+                # Get slice from list, which is expected to contain version information
+                # NOTE not 100% working, but maybe 99%
+                for i, val in enumerate(split_by_dot):
+                    if not val and not first:
+                        first = i + 1
+                        continue
+                    if val == "" and first:
+                        second = i
+                        break
+                return list(map(int, split_by_dot[first:second]))
         else:
             return value
 

@@ -470,7 +470,8 @@ class ToolRegistry:
         maintainer = VersionMaintainer(self.configuration.get("tokens", None))
         versions = {}
         if tool:
-            l_tool, r_tool = await maintainer.get_versions_single_tool(tool)
+            local_tools, remote_tools = await self.get_local_remote_tools()
+            l_tool, r_tool = await maintainer.get_versions_single_tool(tool, local_tools, remote_tools)
             versions = await maintainer._list_versions_single(l_tool, r_tool)
         else:
             remote_tools = await self.list_tools_registry()

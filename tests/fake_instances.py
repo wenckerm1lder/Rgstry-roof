@@ -68,8 +68,8 @@ FAKE_CHECKER_CONF = {
     "provider": "test_provider",
     "method": "test_method",
     "suite": "test_suite",
-    "origin": "test_origin",
-    "docker_origin": "test_docker_origin",
+    "origin": True,
+    "docker_origin": True,
     "version": "test_version",
     "extra_info": "test_extra_info",
 }

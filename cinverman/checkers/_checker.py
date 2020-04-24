@@ -17,7 +17,11 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.method: str = tool_info.get("method", "")
         self.suite: str = tool_info.get("suite", "")
         self.origin: bool = tool_info.get("origin", False)
+        if not isinstance(self.origin, bool):
+            raise ValueError("Origin value is not boolean")
         self.docker_origin: bool = tool_info.get("docker_origin", False)
+        if not isinstance(self.docker_origin, bool):
+            raise ValueError("Docker origin value is not boolean")
         self.version: str = ""
         self.extra_info: str = ""
         self.token: str = token
@@ -43,9 +47,10 @@ class UpstreamChecker(metaclass=ABCMeta):
         yield "extra_info", self.extra_info
 
     def __del__(self):
-        self.logger.debug(
-            f"Tool {self.tool} has updated upstream version information of {self.version}"
-        )
+        if hasattr(self, "logger"):
+            self.logger.debug(
+                f"Tool {self.tool} has updated upstream version information of {self.version}"
+            )
 
     def _fail(self):
         """
@@ -54,7 +59,7 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.version = NO_VERSION
         self.logger.error(f"Failed to fetch version update information for {self.tool}")
 
-    def _sort_latest_tag(self, versions: List[dict], tag_key: str = "") -> Dict:
+    def _sort_latest_tag(self, versions: List[dict], tag_key: str) -> Dict:
         """
         Removes all non-digits and non-dots from value in list of dictionaries,
         as in attempt of normalizing version numbers.

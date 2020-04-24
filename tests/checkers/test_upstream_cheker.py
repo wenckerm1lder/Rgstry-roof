@@ -38,8 +38,8 @@ def test_upstream_checker_create():
     assert checker.provider == "test_provider"
     assert checker.method == "test_method"
     assert checker.suite == "test_suite"
-    assert checker.origin == "test_origin"
-    assert checker.docker_origin == "test_docker_origin"
+    assert checker.origin
+    assert checker.docker_origin
     # Unable to init following two attributes
     assert checker.version == ""
     assert checker.extra_info == ""
@@ -48,8 +48,23 @@ def test_upstream_checker_create():
     # token
     assert checker.token == FAKE_CHECKER_TOKEN
 
-    # Test with missing values
+    # Test with missing or invalid values
     conf_cp = FAKE_CHECKER_CONF.copy()
+
+    # Origin or docker_origin not boolean
+    conf_cp["origin"] = "not_origin"
+    with pytest.raises(ValueError):
+        FakeChecker(conf_cp, FAKE_CHECKER_TOKEN)
+    conf_cp["origin"] = True
+    assert FakeChecker(conf_cp, FAKE_CHECKER_TOKEN)
+
+    conf_cp["docker_origin"] = "not_origin"
+    with pytest.raises(ValueError):
+        FakeChecker(conf_cp, FAKE_CHECKER_TOKEN)
+    conf_cp["docker_origin"] = True
+    assert FakeChecker(conf_cp, FAKE_CHECKER_TOKEN)
+
+    # uri or (tool and provider and repository) must be provided
     conf_cp["uri"] = ""
     conf_cp["provider"] = ""
     with pytest.raises(ValueError):

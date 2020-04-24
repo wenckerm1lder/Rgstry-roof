@@ -1,5 +1,4 @@
 from cinverman import VersionInfo, ToolInfo
-from cinverman.checkers import UpstreamChecker
 from datetime import datetime
 import pytest
 
@@ -30,10 +29,10 @@ def test_create_tool_info():
     assert len(tool_obj.upstream_v) == 1
 
     with pytest.raises(ValueError):
-        tool_obj2 = ToolInfo("", datetime.now(), "test-location")
+        ToolInfo("", datetime.now(), "test-location")
 
     with pytest.raises(ValueError):
-        tool_obj3 = ToolInfo(1234, datetime.now(), "test-location")
+        ToolInfo(1234, datetime.now(), "test-location")
 
 
 def test_tool_info_set():

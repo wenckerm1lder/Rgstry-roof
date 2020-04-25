@@ -94,13 +94,13 @@ class VersionMaintainer:
         """
         Checks for available versions in upstream
         """
+        tasks = []
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             for t in tools:
                 tool_path = self.able_to_check.get(t)
                 if tool_path:
                     tool = tools.get(t)
                     loop = asyncio.get_event_loop()
-                    tasks = []
                     tasks.append(
                         loop.run_in_executor(
                             executor,

@@ -40,7 +40,7 @@ class VersionMaintainer:
             able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path
         if not able_to_check:
             self.logger.error(
-                f"No single configuration for upstream check found. Something is wrong in path {pathlib.Path(pathlib.Path.cwd() / 'tools')}"
+                f"No single configuration for upstream check found. Something is wrong in path {tools_path}"
             )
         return able_to_check
 

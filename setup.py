@@ -7,23 +7,23 @@ with open("VERSION", "r") as ver:
     version_info = ver.read().strip()
 
 setup(
-    name='cinverman',
+    name='cincan-registry',
     version=version_info,
     author="",
     author_email="",
-    description='CinCan Version Manager: a tool for listing available CinCan tools, their versions and possible updates.',
+    description='CinCan Registry: a tool for listing available CinCan tools, their versions and possible updates.',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://gitlab.com/cincan/cincan-registry",
-    packages=['cinverman'],
+    packages=['cincanregistry'],
     install_requires=['docker>=4.1'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+        "Operating System :: MacOS, Linux",
     ],
     entry_points={
-        'console_scripts': ['cinverman=cinverman.__main__:main'],
+        'console_scripts': ['cincan-registry=cincanregistry.__main__:main'],
     },
     python_requires='>=3.6',
 )

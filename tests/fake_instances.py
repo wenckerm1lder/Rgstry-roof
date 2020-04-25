@@ -1,6 +1,6 @@
 # from unittest.mock import Mock
-# from ..cinverman.toolinfo import VersionInfo
-# from ..cinverman.checkers import *
+# from ..cincanregistry.toolinfo import VersionInfo
+# from ..cincanregistry.checkers import *
 
 # def get_fake_VersionInfo():
 
@@ -14,7 +14,7 @@
 #     return
 from datetime import datetime
 from unittest import mock
-from cinverman.checkers import UpstreamChecker
+from cincanregistry.checkers import UpstreamChecker
 
 FAKE_VERSION_INFO_NO_CHECKER = {
     "version": 0.9,

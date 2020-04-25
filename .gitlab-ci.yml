@@ -8,4 +8,4 @@ unittests:
     - pip3 install .
     - pip3 install -r test-requirements.txt
   script:
-    - pytest -sv --cov=cinverman --cov-report term-missing   
+    - pytest -sv --cov=cincanregistry --cov-report term-missing   

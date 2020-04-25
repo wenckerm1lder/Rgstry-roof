@@ -1,4 +1,4 @@
-from cinverman import VersionInfo, ToolInfo
+from cincanregistry import VersionInfo, ToolInfo
 from datetime import datetime
 import pytest
 

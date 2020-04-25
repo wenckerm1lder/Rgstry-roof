@@ -1,5 +1,5 @@
-from cinverman import VersionInfo
-from cinverman.checkers import UpstreamChecker
+from cincanregistry import VersionInfo
+from cincanregistry.checkers import UpstreamChecker
 from datetime import datetime
 from unittest import mock
 import pytest

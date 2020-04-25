@@ -1,4 +1,4 @@
-from cinverman.checkers import UpstreamChecker
+from cincanregistry.checkers import UpstreamChecker
 from ..fake_instances import FAKE_CHECKER_CONF, FAKE_CHECKER_TOKEN
 import pytest
 from unittest import mock

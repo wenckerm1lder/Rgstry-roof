@@ -35,7 +35,7 @@ To list both available local and remote tools, simply write
 cincanegistry list
 
 ```
-<img src="img/cincanreg_list.svg"  width="1100" height="500">
+<img src="img/cincanreg_list.svg"  width="900" height="800">
 
 
 To list only locally available tools with tag "latest-stable":

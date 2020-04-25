@@ -1,4 +1,5 @@
 # ide specific
+.idea
 .vscode
 # renamed venv
 reg 

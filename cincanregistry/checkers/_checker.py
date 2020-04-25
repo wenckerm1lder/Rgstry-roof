@@ -5,6 +5,7 @@ from typing import List, Dict
 from requests.exceptions import Timeout, ConnectionError
 
 NO_VERSION = "Not found"
+__name__ = "checker"
 
 
 class UpstreamChecker(metaclass=ABCMeta):

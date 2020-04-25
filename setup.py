@@ -15,7 +15,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://gitlab.com/cincan/cincan-registry",
-    packages=['cincanregistry'],
+    packages=['cincanregistry', 'cincanregistry.checkers'],
     install_requires=['docker>=4.1'],
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -23,7 +23,7 @@ setup(
         "Operating System :: MacOS, Linux",
     ],
     entry_points={
-        'console_scripts': ['cincan-registry=cincanregistry.__main__:main'],
+        'console_scripts': ['cincanregistry=cincanregistry.__main__:main'],
     },
     python_requires='>=3.6',
 )

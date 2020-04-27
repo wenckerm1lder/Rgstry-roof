@@ -18,31 +18,31 @@ class VersionMaintainer:
     def __init__(
         self,
         tokens: dict = None,
-        tools_path: pathlib.Path = None,
         prefix: str = "cincan/",
-        meta_file: str = "meta.json"
+        meta_filename: str = "meta.json",
+        metafiles_location: str = "",
     ):
         self.logger = logging.getLogger("versions")
         self.configuration = tokens or {}
         self.max_workers = 30
         # prefix, mostly meaning the owner of possible Docker image
         self.prefix = prefix
-        self.meta_file = meta_file
-        self.able_to_check = self.get_available_checkers(tools_path)
+        self.meta_filename = meta_filename
+        self.metafiles_location = metafiles_location or pathlib.Path.home() / ".cincan" / "tools"
+        self.able_to_check = self.get_available_checkers()
 
-    def get_available_checkers(self, tools_path: pathlib.Path = None) -> Dict:
+    def get_available_checkers(self) -> Dict:
         """
         Gets dictionary of tools, whereas upstream/origin check is supported.
 
         """
-        if not tools_path:
-            tools_path = pathlib.Path(pathlib.Path.cwd() / "tools")
+
         able_to_check = {}
-        for tool_path in tools_path.iterdir():
+        for tool_path in self.metafiles_location.iterdir():
             able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path
         if not able_to_check:
             self.logger.error(
-                f"No single configuration for upstream check found. Something is wrong in path {tools_path}"
+                f"No single configuration for upstream check found. Something is wrong in path {self.metafiles_location}"
             )
         return able_to_check
 
@@ -52,13 +52,13 @@ class VersionMaintainer:
         l_tool = local_tools.get(tool, "")
         r_tool = remote_tools.get(tool, "")
         if l_tool or r_tool:
-            tool_conf = self.able_to_check.get(tool)
-            if not tool_conf:
+            tool_path = self.able_to_check.get(tool)
+            if not tool_path:
                 raise FileNotFoundError(f"Upstream check not implemented for {tool}.")
             if r_tool:
-                self._set_single_tool_upstream_versions(tool_conf, r_tool)
+                self._set_single_tool_upstream_versions(tool_path, r_tool)
             else:
-                self._set_single_tool_upstream_versions(tool_conf, l_tool)
+                self._set_single_tool_upstream_versions(tool_path, l_tool)
         else:
             raise FileNotFoundError(f"Given tool {tool} not found locally or remotely.")
         return l_tool, r_tool
@@ -68,11 +68,14 @@ class VersionMaintainer:
         self.logger.info(
             f"Updating origin version information for tool {tool.name:<{40}}\r\r"
         )
-        with open(tool_path / self.meta_file) as f:
+        with open(tool_path / self.meta_filename) as f:
             conf = json.load(f)
-            # Expect list or single object in "upstreams" key
-            for tool_info in conf.get("upstreams") if isinstance(conf.get("upstreams"), List) else [conf.get("upstreams")]:
-                print(tool_info)
+            # Expect list or single object in "upstreams" value
+            for tool_info in (
+                conf.get("upstreams")
+                if isinstance(conf.get("upstreams"), List)
+                else [conf.get("upstreams")]
+            ):
                 provider = tool_info.get("provider").lower()
                 token_provider = tool_info.get("token_provider") or provider
                 token = (

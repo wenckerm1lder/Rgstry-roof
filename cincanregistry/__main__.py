@@ -343,6 +343,7 @@ def main():
                 tool_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
             except OSError:
                 print(f"Failed to connect to Docker.")
+                sys.exit(1)
             if not args.all and not args.json and tool_list:
                 print(f"\n  Listing all tools with tag '{args.tag}':\n")
             if not args.json and tool_list:

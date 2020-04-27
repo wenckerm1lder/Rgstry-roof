@@ -1,9 +1,13 @@
 {
-  "uri": "https://github.com/fireeye/flare-floss/",
-  "repository": "fireeye",
-  "tool": "flare-floss",
-  "provider": "GitHub",
-  "method": "release",
-  "origin": true,
-  "docker_origin": true
+  "upstreams": [
+    {
+      "uri": "https://github.com/fireeye/flare-floss/",
+      "repository": "fireeye",
+      "tool": "flare-floss",
+      "provider": "GitHub",
+      "method": "release",
+      "origin": true,
+      "docker_origin": true
+    }
+  ]
 }

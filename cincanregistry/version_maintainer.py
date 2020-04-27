@@ -70,7 +70,9 @@ class VersionMaintainer:
         )
         with open(tool_path / self.meta_file) as f:
             conf = json.load(f)
-            for tool_info in conf if isinstance(conf, List) else [conf]:
+            # Expect list or single object in "upstreams" key
+            for tool_info in conf.get("upstreams") if isinstance(conf.get("upstreams"), List) else [conf.get("upstreams")]:
+                print(tool_info)
                 provider = tool_info.get("provider").lower()
                 token_provider = tool_info.get("token_provider") or provider
                 token = (

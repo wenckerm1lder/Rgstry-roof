@@ -1,9 +1,13 @@
 {
-  "uri": "https://github.com/urule99/jsunpack-n",
-  "repository": "urule99",
-  "tool": "jsunpack-n",
-  "provider": "GitHub",
-  "method": "commit",
-  "origin": true,
-  "docker_origin": true
+  "upstreams": [
+    {
+      "uri": "https://github.com/urule99/jsunpack-n",
+      "repository": "urule99",
+      "tool": "jsunpack-n",
+      "provider": "GitHub",
+      "method": "commit",
+      "origin": true,
+      "docker_origin": true
+    }
+  ]
 }

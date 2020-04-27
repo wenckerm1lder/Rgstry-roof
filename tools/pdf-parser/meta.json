@@ -1,10 +1,14 @@
 {
-  "uri": "https://github.com/DidierStevens/DidierStevensSuite",
-  "repository": "DidierStevens",
-  "suite": "DidierStevensSuite",
-  "tool": "pdf-parser",
-  "provider": "DidierStevens@GitHub",
-  "method": "release",
-  "origin": true,
-  "docker_origin": false
+  "upstreams": [
+    {
+      "uri": "https://github.com/DidierStevens/DidierStevensSuite",
+      "repository": "DidierStevens",
+      "suite": "DidierStevensSuite",
+      "tool": "pdf-parser",
+      "provider": "DidierStevens@GitHub",
+      "method": "release",
+      "origin": true,
+      "docker_origin": false
+    }
+  ]
 }

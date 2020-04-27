@@ -1,9 +1,13 @@
 {
-  "uri": "https://github.com/mtrojnar/osslsigncode",
-  "repository": "mtrojnar",
-  "tool": "osslsigncode",
-  "provider": "GitHub",
-  "method": "release",
-  "origin": true,
-  "docker_origin": true
+  "upstreams": [
+    {
+      "uri": "https://github.com/mtrojnar/osslsigncode",
+      "repository": "mtrojnar",
+      "tool": "osslsigncode",
+      "provider": "GitHub",
+      "method": "release",
+      "origin": true,
+      "docker_origin": true
+    }
+  ]
 }

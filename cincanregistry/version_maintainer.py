@@ -20,12 +20,14 @@ class VersionMaintainer:
         tokens: dict = None,
         tools_path: pathlib.Path = None,
         prefix: str = "cincan/",
+        meta_file: str = "meta.json"
     ):
         self.logger = logging.getLogger("versions")
         self.configuration = tokens or {}
         self.max_workers = 30
         # prefix, mostly meaning the owner of possible Docker image
         self.prefix = prefix
+        self.meta_file = meta_file
         self.able_to_check = self.get_available_checkers(tools_path)
 
     def get_available_checkers(self, tools_path: pathlib.Path = None) -> Dict:
@@ -66,7 +68,7 @@ class VersionMaintainer:
         self.logger.info(
             f"Updating origin version information for tool {tool.name:<{40}}\r\r"
         )
-        with open(tool_path / f"{tool_path.stem}.json") as f:
+        with open(tool_path / self.meta_file) as f:
             conf = json.load(f)
             for tool_info in conf if isinstance(conf, List) else [conf]:
                 provider = tool_info.get("provider").lower()

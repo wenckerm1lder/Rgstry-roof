@@ -171,9 +171,9 @@ class ToolRegistry:
                 if not l_version:
                     l_version = "Not installed"
             else:
-                l_version = local_tools.get(i).getLatest() if local_tools.get(i) else ""
+                l_version = local_tools.get(i).getLatest().version if local_tools.get(i) else ""
                 r_version = (
-                    remote_tools.get(i).getLatest() if remote_tools.get(i) else ""
+                    remote_tools.get(i).getLatest().version if remote_tools.get(i) else ""
                 )
             use_tools[i] = {}
             use_tools[i]["local_version"] = l_version

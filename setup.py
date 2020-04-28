@@ -9,8 +9,8 @@ with open("VERSION", "r") as ver:
 setup(
     name='cincan-registry',
     version=version_info,
-    author="",
-    author_email="",
+    author="Niklas Saari",
+    author_email="niklas.saari@tutanota.com",
     description='CinCan Registry: a tool for listing available CinCan tools, their versions and possible updates.',
     long_description=long_description,
     long_description_content_type="text/markdown",

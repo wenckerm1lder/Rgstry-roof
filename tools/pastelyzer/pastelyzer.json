@@ -1,9 +1,0 @@
-{
-  "uri": "https://github.com/cert-lv/pastelyzer/",
-  "repository": "cert-lv",
-  "tool": "pastelyzer",
-  "provider": "GitHub",
-  "method": "tag-release",
-  "origin": true,
-  "docker_origin": true
-}

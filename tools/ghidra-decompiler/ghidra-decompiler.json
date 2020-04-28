@@ -1,8 +1,0 @@
-{
-"uri": "https://github.com/NationalSecurityAgency/ghidra/",
-"repository": "NationalSecurityAgency",
-"tool": "ghidra",
-"provider": "GitHub",
-"method": "tag-release",
-"origin": true
-}

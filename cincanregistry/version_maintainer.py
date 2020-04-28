@@ -46,7 +46,7 @@ class VersionMaintainer:
             )
         return able_to_check
 
-    async def get_versions_single_tool(
+    def get_versions_single_tool(
         self, tool: str, local_tools: dict, remote_tools: dict
     ):
         l_tool = local_tools.get(tool, "")

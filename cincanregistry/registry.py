@@ -254,7 +254,7 @@ class ToolRegistry:
                                 name, updated, "local", versions=[ver_info]
                             )
                             self.logger.debug(
-                                f"Added tool {name} based on tag {t} with version {version}"
+                                f"Added local tool {name} based on tag {t} with version {version}"
                             )
                             continue
                     else:
@@ -471,7 +471,7 @@ class ToolRegistry:
         versions = {}
         if tool:
             local_tools, remote_tools = await self.get_local_remote_tools()
-            l_tool, r_tool = await maintainer.get_versions_single_tool(tool, local_tools, remote_tools)
+            l_tool, r_tool = maintainer.get_versions_single_tool(tool, local_tools, remote_tools)
             versions = await maintainer._list_versions_single(l_tool, r_tool)
         else:
             remote_tools = await self.list_tools_registry()

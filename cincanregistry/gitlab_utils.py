@@ -19,9 +19,13 @@ class GitLabAPI:
         project: str = "",
         uri: str = "",
         timeout: int = 20,
+        pool_maxsize: int = 100,
     ):
         self.logger = logging.getLogger("gitlab-api")
         self.session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(pool_maxsize=pool_maxsize)
+        self.session.mount("https://", adapter)
+
         if token:
             self.session.headers.update({"Authorization": f"token {self.token}"})
         # If some uri is provided, except it to be self hosted location
@@ -105,11 +109,15 @@ class GitLabAPI:
                         r = self.session.get(url.get("url"))
                         break
                 if r is None:
-                    raise ValueError(f"Invalid urls in response headers in GitLab API: {urls}")
+                    raise ValueError(
+                        f"Invalid urls in response headers in GitLab API: {urls}"
+                    )
                 if self.successful_response(r):
                     contents = contents + r.json()
                 else:
-                    self.logger.debug("Invalid response when following next page url in GitLab API.")
+                    self.logger.debug(
+                        "Invalid response when following next page url in GitLab API."
+                    )
                     break
         return contents
 

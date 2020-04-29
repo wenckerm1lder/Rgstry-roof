@@ -4,6 +4,7 @@ from .version_info import VersionInfo
 from .checkers import classmap
 from .gitlab_utils import GitLabAPI
 from concurrent.futures import ThreadPoolExecutor
+from threading import Thread
 import pathlib
 import json
 import datetime
@@ -40,7 +41,6 @@ class VersionMaintainer:
         # CinCan GitLab repository details
         self.namespace = "cincan"
         self.project = "tools"
-
         if not self.disable_remote_download:
             self.get_checker_meta_files_from_gitlab()
         self.able_to_check = self.get_available_checkers()
@@ -48,7 +48,7 @@ class VersionMaintainer:
     def get_checker_meta_files_from_gitlab(self):
 
         self.logger.info(
-            f"Downloading upstream information files from GitLab into path '{self.metafiles_location}'"
+            f"Downloading upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project}) into path '{self.metafiles_location}'"
         )
         gitlab_client = GitLabAPI(
             self.tokens.get("gitlab"), self.namespace, self.project
@@ -73,33 +73,43 @@ class VersionMaintainer:
         self.metafiles_location.mkdir(parents=True, exist_ok=True)
 
         # Write each file
+        threads = []
         for path in meta_paths:
-            resp = gitlab_client.get_file_by_path(path, ref="add-meta-files")
-            if resp:
-                file_data = base64.b64decode(resp.get("content"))
-                if path.count("/") > 1:
-                    self.logger.warning(
-                        f"File {path} in wrong place at repository, skipping..."
-                    )
-                    continue
-                file_path = self.metafiles_location / path
-                # Make subdirectory - should be tool name
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(self.metafiles_location / path, "wb") as f:
-                    f.write(file_data)
-                    self.logger.info(
-                        f"File written into {self.metafiles_location / path}"
-                    )
-            else:
-                self.logger.debug(f"No file content found for file {path}")
+            t = Thread(
+                target=self.fetch_write_metafile_by_path, args=(gitlab_client, path)
+            )
+            t.daemon = True
+            threads.append(t)
+            t.start()
+
+        for t in threads:
+            t.join()
+
         self.logger.info("All files generated.")
+
+    def fetch_write_metafile_by_path(self, client, path):
+        resp = client.get_file_by_path(path, ref="add-meta-files")
+        if resp:
+            file_data = base64.b64decode(resp.get("content"))
+            if path.count("/") > 1 or path.startswith("_"):
+                self.logger.warning(
+                    f"File {path} in wrong place at repository, skipping..."
+                )
+                return
+            file_path = self.metafiles_location / path
+            # Make subdirectory - should be tool name
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.metafiles_location / path, "wb") as f:
+                f.write(file_data)
+                self.logger.info(f"File written into {self.metafiles_location / path}")
+        else:
+            self.logger.debug(f"No file content found for file {path}")
 
     def get_available_checkers(self) -> Dict:
         """
         Gets dictionary of tools, whereas upstream/origin check is supported.
 
         """
-
         able_to_check = {}
         for tool_path in self.metafiles_location.iterdir():
             able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path

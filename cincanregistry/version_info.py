@@ -39,6 +39,7 @@ class VersionInfo:
 
     @version.setter
     def version(self, version: Union[str, int, float]):
+        """Sets 'versions' attribute to new value, does not accept empty value"""
         if not version:
             raise ValueError("Cannot set empty value for version.")
         self._version = str(version)
@@ -94,11 +95,17 @@ class VersionInfo:
 
     @updated.setter
     def updated(self, dt: datetime):
+        """Sets 'updated' attribute to new value, only 'datetime' object is valid"""
         if not isinstance(dt, datetime):
             raise ValueError("Given time is not 'datetime' object.")
         self._updated = dt
 
     def _normalize(self, value: str) -> Union[str, List]:
+        """
+        Method for normalizing version strings. It attempts to make map based 
+        on potential version number part of the string, which is comparable.
+        Potential hashes are returned as they are, as well strings without any digits.
+        """
         if any(char.isdigit() for char in value):
             # Git uses SHA-1 hash currently, length 40 characters
             # Commit hash maybe
@@ -129,6 +136,7 @@ class VersionInfo:
             return value
 
     def get_normalized_ver(self) -> List:
+        """Normalize version number of this instance"""
         return self._normalize(self.version)
 
     def __eq__(self, value: Union[str, "VersionInfo"]) -> bool:

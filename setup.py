@@ -19,7 +19,7 @@ setup(
     packages=["cincanregistry", "cincanregistry.checkers"],
     data_files=[
         (str(Path.home() / ".cincan/tools" / f.parent.stem), [str(f)])
-        for f in (Path.cwd() / "tools").glob("**/*.json")
+        for f in (Path(__file__).parent / "tools").glob("**/*.json")
         if f.is_file()
     ],
     install_requires=["docker>=4.1"],

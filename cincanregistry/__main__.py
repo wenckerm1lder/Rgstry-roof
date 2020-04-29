@@ -15,7 +15,7 @@ DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
 PRE_SPACE = 0
 # Name length
 MAX_WN = 35
-# Base version lenght, showing only first 8 chars.
+# Base version length, showing only first 8 chars.
 # Hash can be 40 chars long
 CHARS_TO_SHOW = 20
 # Version Length

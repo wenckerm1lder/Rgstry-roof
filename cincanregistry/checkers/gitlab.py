@@ -36,22 +36,16 @@ class GitLabChecker(UpstreamChecker, GitLabAPI):
         """
         self.version = NO_VERSION
         self.logger.error(
-            f"Failed to fetch version update information for {self.project}: {r.status_code} : {r.json().get('message')}"
+            f"Failed to fetch version update information for {self.project}"
         )
-
-    def _check_api_limit(self, resp: dict) -> bool:
-        if resp.get("message").startswith("API rate limit exceeded"):
-            self.logger.error(resp.get("message"))
-            return True
-        return False
 
     def _by_release(self):
         """
         Method for finding latest release from repository.
         """
         r = self.get_releases()
-        if r.status_code == 200:
-            self.version = r.json()[0].get("name")
+        if r:
+            self.version = r[0].get("name")
         else:
             self._fail(r)
 
@@ -60,8 +54,8 @@ class GitLabChecker(UpstreamChecker, GitLabAPI):
         Method for finding latest tag.
         """
         r = self.get_tags()
-        if r.status_code == 200:
-            self.version = r.json()[0].get("name")
+        if r:
+            self.version = r[0].get("name")
         else:
             self._fail(r)
 

@@ -1,4 +1,5 @@
 from urllib.parse import quote_plus, urlparse
+from typing import List, Union
 import requests
 import logging
 
@@ -36,7 +37,11 @@ class GitLabAPI:
     def _check_rate_limit(self, r: requests.Response):
 
         # Ratelimits might not be applied on self-hosted instances
-        remaining = int(r.headers.get("RateLimit-Remaining")) if r.headers.get("RateLimit-Remaining") else None
+        remaining = (
+            int(r.headers.get("RateLimit-Remaining"))
+            if r.headers.get("RateLimit-Remaining")
+            else None
+        )
         if remaining is None:
             self.logger.debug(f"Rate limit not implemented for {r.url}")
             return
@@ -55,12 +60,27 @@ class GitLabAPI:
         else:
             return
 
+    def successful_response(self, r: requests.Response) -> bool:
+        self._check_rate_limit(r)
+        if r.status_code == 200:
+            return True
+        else:
+            self.logger.error(
+                f"Error on GitLab request ({self.namespace}/{self.project}): {r.status_code} : {r.json().get('message')}"
+            )
+            return False
+
     def get_file_by_path(self, path: str) -> requests.Response:
 
-        uri = f"{self.api}/projects/{self.id}/repository/files/{path}"
+        path = quote_plus(path)
+        r = f"{self.api}/projects/{self.id}/repository/files/{path}"
+        if self.successful_response(r):
+            return r
         # self.session.get()
 
-    def get_tags(self, order_by: str = "", sort: str = "", search: str = ""):
+    def get_tags(
+        self, order_by: str = "", sort: str = "", search: str = ""
+    ) -> Union[dict, List]:
 
         params = {}
         if order_by:
@@ -74,11 +94,16 @@ class GitLabAPI:
             params=(params or None),
             timeout=self.timeout,
         )
-        self._check_rate_limit(r)
-        return r
+        if self.successful_response(r):
+            return r.json()
+        else:
+            return {}
 
-    def get_releases(self) -> requests.Response:
+    def get_releases(self) -> Union[dict, List]:
 
         r = self.session.get(f"{self.api}/{self.id}/releases", timeout=self.timeout)
-        self._check_rate_limit(r)
-        return r
+
+        if self.successful_response(r):
+            return r.json()
+        else:
+            return {}

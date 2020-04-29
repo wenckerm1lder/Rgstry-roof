@@ -28,7 +28,7 @@ class VersionMaintainer:
         # prefix, mostly meaning the owner of possible Docker image
         self.prefix = prefix
         self.meta_filename = meta_filename
-        self.metafiles_location = metafiles_location or pathlib.Path.home() / ".cincan" / "tools"
+        self.metafiles_location = pathlib.Path(metafiles_location) or pathlib.Path.home() / ".cincan" / "tools"
         self.able_to_check = self.get_available_checkers()
 
     def get_available_checkers(self) -> Dict:

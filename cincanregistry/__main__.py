@@ -67,6 +67,9 @@ def print_version_check(tools, only_local=True):
     print(f"{color.GRAY_BACKGROUND}  {color.END} - remote differs from tool origin")
 
     print(
+        f"\n{' ':<{PRE_SPACE}}By default, only versions for available local tools are visible."
+    )
+    print(
         f"\n{' ':<{PRE_SPACE}}Only first {CHARS_TO_SHOW} characters are showed from version."
     )
     print(
@@ -259,6 +262,10 @@ def main():
     version_parser.add_argument(
         "-t", "--tool", help="Check single tool.",
     )
+    version_parser.add_argument(
+        "--metadir-path",
+        help="Override default path for available meta files. (Directory) This directory should contain upstream information for each tool.",
+    )
     if len(sys.argv) > 1:
         args = m_parser.parse_args(args=sys.argv[1:])
     else:
@@ -272,7 +279,8 @@ def main():
     if log_level not in {"DEBUG"}:
         sys.tracebacklimit = 0  # avoid track traces unless debugging
     logging.basicConfig(
-        format=f"{' ':<{PRE_SPACE}}%(levelname)s - %(name)s: %(message)s", level=getattr(logging, log_level)
+        format=f"{' ':<{PRE_SPACE}}%(levelname)s - %(name)s: %(message)s",
+        level=getattr(logging, log_level),
     )
 
     if sub_command == "help":
@@ -325,8 +333,9 @@ def main():
             loop = asyncio.get_event_loop()
             ret = loop.run_until_complete(
                 reg.list_versions(
-                    tool=args.tool if args.tool else "",
-                    toJSON=args.json if args.json else False,
+                    tool=args.tool or "",
+                    toJSON=args.json or False,
+                    metadir_path=args.metadir_path or ""
                 )
             )
             # os.system("clear")

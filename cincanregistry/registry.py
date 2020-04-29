@@ -171,9 +171,13 @@ class ToolRegistry:
                 if not l_version:
                     l_version = "Not installed"
             else:
-                l_version = local_tools.get(i).getLatest().version if local_tools.get(i) else ""
+                l_version = (
+                    local_tools.get(i).getLatest().version if local_tools.get(i) else ""
+                )
                 r_version = (
-                    remote_tools.get(i).getLatest().version if remote_tools.get(i) else ""
+                    remote_tools.get(i).getLatest().version
+                    if remote_tools.get(i)
+                    else ""
                 )
             use_tools[i] = {}
             use_tools[i]["local_version"] = l_version
@@ -465,13 +469,19 @@ class ToolRegistry:
                 )
         return r
 
-    async def list_versions(self, tool: str = "", toJSON: bool = False):
+    async def list_versions(
+        self, tool: str = "", toJSON: bool = False, metadir_path: str = ""
+    ):
 
-        maintainer = VersionMaintainer(self.configuration.get("tokens", None))
+        maintainer = VersionMaintainer(
+            self.configuration.get("tokens", None), metafiles_location=metadir_path
+        )
         versions = {}
         if tool:
             local_tools, remote_tools = await self.get_local_remote_tools()
-            l_tool, r_tool = await maintainer.get_versions_single_tool(tool, local_tools, remote_tools)
+            l_tool, r_tool = await maintainer.get_versions_single_tool(
+                tool, local_tools, remote_tools
+            )
             versions = await maintainer._list_versions_single(l_tool, r_tool)
         else:
             remote_tools = await self.list_tools_registry()

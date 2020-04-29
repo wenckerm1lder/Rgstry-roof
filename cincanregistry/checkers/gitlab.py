@@ -16,7 +16,11 @@ class GitLabChecker(UpstreamChecker, GitLabAPI):
         """
         UpstreamChecker.__init__(self, tool_info=tool_info)
         GitLabAPI.__init__(
-            self, token=token, namespace=self.repository, project=self.tool
+            self,
+            token=token,
+            namespace=self.repository,
+            project=self.tool,
+            uri=self.uri,
         )
 
     def _get_version(self, curr_ver: str = ""):

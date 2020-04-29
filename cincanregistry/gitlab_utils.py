@@ -1,5 +1,5 @@
 from urllib.parse import quote_plus, urlparse
-from typing import List, Union
+from typing import List
 import requests
 import logging
 
@@ -12,27 +12,39 @@ class GitLabAPI:
     As 29.04.2020, it should be noted that GitLab API allows 600 requests per minute.
     """
 
-    def __init__(self, token: str = "", namespace: str = "", project: str = ""):
+    def __init__(
+        self,
+        token: str = "",
+        namespace: str = "",
+        project: str = "",
+        uri: str = "",
+        timeout: int = 20,
+    ):
         self.logger = logging.getLogger("gitlab-api")
         self.session = requests.Session()
         if token:
             self.session.headers.update({"Authorization": f"token {self.token}"})
+        # If some uri is provided, except it to be self hosted location
+        self.uri = uri
+        # Some multi inheritance is applied, which are also using self.uri attr
         if self.uri:
             netloc = urlparse(self.uri).netloc
             self.api = f"https://{netloc}/api/v4/projects"
         else:
             self.api = "https://gitlab.com/api/v4/projects"
-        if namespace:
-            self.namespace = namespace
-        if project:
-            self.project = project
+        self.namespace = namespace
+        self.project = project
         self.namespace = self.namespace.strip("/")
         self.project = self.project.strip("/")
 
         if self.namespace and self.project:
             self.id = quote_plus(f"{self.namespace}/{self.project}")
+        elif self.namespace or self.project:
+            self.id = quote_plus(self.project if self.project else self.namespace)
         else:
-            self.id = quote_plus(self.tool if self.tool else self.repository)
+            raise ValueError("Missing namespace or project for GitLab API")
+
+        self.timeout = timeout
 
     def _check_rate_limit(self, r: requests.Response):
 
@@ -46,7 +58,7 @@ class GitLabAPI:
             self.logger.debug(f"Rate limit not implemented for {r.url}")
             return
         if remaining == 0:
-            self.logger("Rate limit reached. Starting throttling")
+            self.logger.error("Rate limit reached. Starting throttling")
             # TODO ratelimit throttle
         elif remaining < 10:
             self.logger.warning("Less than 10 requests remaining for GitLab API")
@@ -65,30 +77,103 @@ class GitLabAPI:
         if r.status_code == 200:
             return True
         else:
-            self.logger.error(
+            self.logger.debug(
                 f"Error on GitLab request ({self.namespace}/{self.project}): {r.status_code} : {r.json().get('message')}"
             )
             return False
 
-    def get_file_by_path(self, path: str) -> requests.Response:
-
-        path = quote_plus(path)
-        r = f"{self.api}/projects/{self.id}/repository/files/{path}"
+    def get_full_tree(
+        self,
+        path: str = "",
+        ref: str = "master",
+        recursive: bool = False,
+        page: int = 1,
+        per_page: int = 20,
+    ):
+        contents = []
+        r = self._get_tree(path, ref, recursive, page, per_page)
         if self.successful_response(r):
-            return r
-        # self.session.get()
+            contents = contents + r.json()
+            while r.headers.get("X-Next-Page"):
+                # print(r.headers.get("Link"))
+                urls = requests.utils.parse_header_links(
+                    r.headers["Link"].rstrip(">").replace(">,<", ",<")
+                )
+                r = None
+                for url in urls:
+                    if url.get("rel") == "next":
+                        r = self.session.get(url.get("url"))
+                        break
+                if r is None:
+                    raise ValueError(f"Invalid urls in response headers in GitLab API: {urls}")
+                if self.successful_response(r):
+                    contents = contents + r.json()
+                else:
+                    self.logger.debug("Invalid response when following next page url in GitLab API.")
+                    break
+        return contents
 
-    def get_tags(
-        self, order_by: str = "", sort: str = "", search: str = ""
-    ) -> Union[dict, List]:
+    def _get_tree(
+        self,
+        path: str = "",
+        ref: str = "master",
+        recursive: bool = False,
+        page: int = 1,
+        per_page: int = 20,
+    ) -> requests.Response:
+        """ 
+        Listing repository tree: https://docs.gitlab.com/ee/api/repositories.html
+        """
 
         params = {}
+        if path:
+            params["path"] = quote_plus(path)
+        if ref:
+            params["ref"] = quote_plus(ref)
+        if recursive:
+            params["recursive"] = recursive
+        if page:
+            params["page"] = page
+        if per_page:
+            params["per_page"] = per_page
+
+        r = self.session.get(
+            f"{self.api}/{self.id}/repository/tree",
+            params=(params or None),
+            timeout=self.timeout,
+        )
+        self.successful_response(r)
+        return r
+
+    def get_file_by_path(self, path: str, ref: str = "master") -> dict:
+        """
+        Getting files by path: https://docs.gitlab.com/ee/api/repository_files.html
+        """
+
+        params = {"ref": quote_plus(ref)}
+
+        path = quote_plus(path)
+        r = self.session.get(
+            f"{self.api}/{self.id}/repository/files/{path}",
+            params=params,
+            timeout=self.timeout,
+        )
+        if self.successful_response(r):
+            return r.json()
+        else:
+            return {}
+
+    def get_tags(self, order_by: str = "", sort: str = "", search: str = "") -> List:
+        """
+        List tags of repository: https://docs.gitlab.com/ee/api/tags.html
+        """
+        params = {}
         if order_by:
-            params["order_by"] = order_by
+            params["order_by"] = quote_plus(order_by)
         if sort:
-            params["sort"] = sort
+            params["sort"] = quote_plus(sort)
         if search:
-            params["search"] = search
+            params["search"] = quote_plus(search)
         r = self.session.get(
             f"{self.api}/{self.id}/repository/tags",
             params=(params or None),
@@ -97,13 +182,15 @@ class GitLabAPI:
         if self.successful_response(r):
             return r.json()
         else:
-            return {}
+            return []
 
-    def get_releases(self) -> Union[dict, List]:
-
+    def get_releases(self) -> List:
+        """
+        List releases of repository: https://docs.gitlab.com/ee/api/releases/
+        """
         r = self.session.get(f"{self.api}/{self.id}/releases", timeout=self.timeout)
 
         if self.successful_response(r):
             return r.json()
         else:
-            return {}
+            return []

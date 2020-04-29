@@ -2,12 +2,14 @@ from typing import Dict, List
 from .tool_info import ToolInfo
 from .version_info import VersionInfo
 from .checkers import classmap
+from .gitlab_utils import GitLabAPI
 from concurrent.futures import ThreadPoolExecutor
 import pathlib
 import json
 import datetime
 import logging
 import asyncio
+import base64
 
 
 class VersionMaintainer:
@@ -23,13 +25,74 @@ class VersionMaintainer:
         metafiles_location: str = "",
     ):
         self.logger = logging.getLogger("versions")
-        self.configuration = tokens or {}
+        self.tokens = tokens or {}
         self.max_workers = 30
         # prefix, mostly meaning the owner of possible Docker image
         self.prefix = prefix
         self.meta_filename = meta_filename
-        self.metafiles_location = pathlib.Path(metafiles_location) or pathlib.Path.home() / ".cincan" / "tools"
+        if metafiles_location:
+            self.disable_remote_download = True
+            self.metafiles_location = pathlib.Path(metafiles_location)
+        else:
+            self.disable_remote_download = False
+            self.metafiles_location = pathlib.Path.home() / ".cincan" / "tools"
+
+        # CinCan GitLab repository details
+        self.namespace = "cincan"
+        self.project = "tools"
+
+        if not self.disable_remote_download:
+            self.get_checker_meta_files_from_gitlab()
         self.able_to_check = self.get_available_checkers()
+
+    def get_checker_meta_files_from_gitlab(self):
+
+        self.logger.info(
+            f"Downloading upstream information files from GitLab into path '{self.metafiles_location}'"
+        )
+        gitlab_client = GitLabAPI(
+            self.tokens.get("gitlab"), self.namespace, self.project
+        )
+
+        # Get list of all files in repository
+        files = gitlab_client.get_full_tree(
+            per_page=100, recursive=True, ref="add-meta-files"
+        )
+
+        # Get paths of each meta file
+        meta_paths = []
+        for file in files:
+            if file.get("name") == self.meta_filename:
+                meta_paths.append(file.get("path"))
+
+        if not meta_paths:
+            raise FileNotFoundError(
+                f"No single meta file ({self.meta_filename}) found from GitLab ({self.namespace}/{self.project})"
+            )
+        # Create store location directory
+        self.metafiles_location.mkdir(parents=True, exist_ok=True)
+
+        # Write each file
+        for path in meta_paths:
+            resp = gitlab_client.get_file_by_path(path, ref="add-meta-files")
+            if resp:
+                file_data = base64.b64decode(resp.get("content"))
+                if path.count("/") > 1:
+                    self.logger.warning(
+                        f"File {path} in wrong place at repository, skipping..."
+                    )
+                    continue
+                file_path = self.metafiles_location / path
+                # Make subdirectory - should be tool name
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(self.metafiles_location / path, "wb") as f:
+                    f.write(file_data)
+                    self.logger.info(
+                        f"File written into {self.metafiles_location / path}"
+                    )
+            else:
+                self.logger.debug(f"No file content found for file {path}")
+        self.logger.info("All files generated.")
 
     def get_available_checkers(self) -> Dict:
         """
@@ -78,9 +141,7 @@ class VersionMaintainer:
             ):
                 provider = tool_info.get("provider").lower()
                 token_provider = tool_info.get("token_provider") or provider
-                token = (
-                    self.configuration.get(token_provider) if self.configuration else ""
-                )
+                token = self.tokens.get(token_provider) if self.tokens else ""
                 if provider not in classmap.keys():
                     self.logger.error(
                         f"No upstream checker implemented for tool '{tool.name}' with provider '{provider}'. Check JSON configuration."

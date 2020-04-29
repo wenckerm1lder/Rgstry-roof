@@ -290,12 +290,6 @@ def main():
     elif sub_command == "list":
 
         reg = ToolRegistry()
-        format_str = "{0:<30}"
-        if args.with_tags:
-            format_str += " {5:<30}"
-        format_str += " {1:<10}"
-        format_str += " {2}"
-        # print(f"Tag is {args.tag}")
 
         if args.list_sub_command == "local" or args.list_sub_command == "remote":
 

@@ -195,3 +195,4 @@ class VersionInfo:
         yield "tags", sorted(list(self.tags)),
         yield "updated", str(self.updated),
         yield "origin", self.origin,
+        yield "size", self.size

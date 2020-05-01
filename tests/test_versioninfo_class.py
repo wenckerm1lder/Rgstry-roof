@@ -166,6 +166,7 @@ def test_version_info_iter():
         "tags": ["latest", "latest-stable"],
         "updated": str(obj.updated),
         "origin": True,
+        "size": "3.77MB"
     }
     assert dict(obj) == test_dict
     obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
@@ -176,6 +177,7 @@ def test_version_info_iter():
         "tags": ["latest", "latest-stable"],
         "updated": str(obj.updated),
         "origin": False,
+        "size": "37.70MB"
     }
     assert dict(obj) == test_dict2
 

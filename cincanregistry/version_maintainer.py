@@ -76,7 +76,8 @@ class VersionMaintainer:
         threads = []
         for path in meta_paths:
             t = Thread(
-                target=self.fetch_write_metafile_by_path, args=(gitlab_client, path)
+                target=self.fetch_write_metafile_by_path,
+                args=(gitlab_client, path, "add-meta-files"),
             )
             t.daemon = True
             threads.append(t)
@@ -87,8 +88,8 @@ class VersionMaintainer:
 
         self.logger.info("All files generated.")
 
-    def fetch_write_metafile_by_path(self, client, path):
-        resp = client.get_file_by_path(path, ref="add-meta-files")
+    def fetch_write_metafile_by_path(self, client, path, ref):
+        resp = client.get_file_by_path(path, ref=ref)
         if resp:
             file_data = base64.b64decode(resp.get("content"))
             if path.count("/") > 1 or path.startswith("_"):
@@ -101,7 +102,7 @@ class VersionMaintainer:
             file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.metafiles_location / path, "wb") as f:
                 f.write(file_data)
-                self.logger.info(f"File written into {self.metafiles_location / path}")
+                self.logger.debug(f"Meta file written into {self.metafiles_location / path}")
         else:
             self.logger.debug(f"No file content found for file {path}")
 

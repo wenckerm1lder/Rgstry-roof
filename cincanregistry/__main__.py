@@ -237,23 +237,20 @@ def main():
     list_parser.add_argument(
         "-j", "--json", action="store_true", help="Print output in JSON format."
     )
-    update_parser = subparsers.add_parser(
-        "update", formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-    # update_parser.add_argument(
-    #     "-t", "--tool", help="Check single tool.",
-    # )
-    subsubparsers = list_parser.add_subparsers(dest="list_sub_command")
-    local_parser = subsubparsers.add_parser(
-        "local",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        help="List only local 'cincan' tools.",
-    )
-    remote_parser = subsubparsers.add_parser(
-        "remote",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    list_second_exclusive = list_parser.add_mutually_exclusive_group()
+    list_second_exclusive.add_argument(
+        "-r",
+        "--remote",
+        action="store_true",
         help="List remote 'cincan' tools from registry.",
     )
+    list_second_exclusive.add_argument(
+        "-l",
+        "--local",
+        action="store_true",
+        help="List only locally available 'cincan' tools.",
+    )
+    subsubparsers = list_parser.add_subparsers(dest="list_sub_command")
     version_parser = subsubparsers.add_parser(
         "versions",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -261,6 +258,9 @@ def main():
     )
     version_parser.add_argument(
         "-t", "--tool", help="Check single tool.",
+    )
+    version_parser.add_argument(
+        "-u", "--only-updates", help="Lists only available updates.",
     )
     version_parser.add_argument(
         "--metadir-path",
@@ -291,17 +291,17 @@ def main():
 
         reg = ToolRegistry()
 
-        if args.list_sub_command == "local" or args.list_sub_command == "remote":
+        if args.local or args.remote:
 
             loop = asyncio.get_event_loop()
             try:
-                if args.list_sub_command == "local":
+                if args.local:
                     tools = loop.run_until_complete(
                         reg.list_tools_local_images(
                             defined_tag=args.tag if not args.all else ""
                         )
                     )
-                elif args.list_sub_command == "remote":
+                elif args.remote:
                     tools = loop.run_until_complete(
                         reg.list_tools_registry(
                             defined_tag=args.tag if not args.all else ""
@@ -319,8 +319,10 @@ def main():
                 else:
                     print(f"\n  Listing all tools :\n")
 
+                location = "local" if args.local else "remote"
+
                 print_tools_by_location(
-                    tools, args.list_sub_command, args.tag if not args.all else ""
+                    tools, location, args.tag if not args.all else ""
                 )
 
         elif args.list_sub_command == "versions":
@@ -329,7 +331,7 @@ def main():
                 reg.list_versions(
                     tool=args.tool or "",
                     toJSON=args.json or False,
-                    metadir_path=args.metadir_path or ""
+                    metadir_path=args.metadir_path or "",
                 )
             )
             # os.system("clear")
@@ -355,38 +357,6 @@ def main():
                 print(json.dumps(tool_list))
             else:
                 print("No single tool available for unknown reason.")
-
-    elif sub_command == "update":
-        # loop = asyncio.get_event_loop()
-        # ret = loop.run_until_complete(
-        #     reg.list_versions(
-        #         tool=args.tool if args.tool else "",
-        #         toJSON=args.json if args.json else False,
-        #     )
-        # )
-        # for tool_name in ret:
-        #     tool = ret[]
-
-        # if not args.json:
-        #     print_single_tool_version_check(ret)
-        # else:
-        #     print(ret)
-        # loop.close()
-        pass
-
-        # print(local_tools)
-        # print_local_version_check(local_tools, remote_tools, "latest-stable")
-        # for tool in sorted(local_tools):
-        #     tlo = local_tools[tool]
-        #     print(tlo.upstream_v)
-        # reg.check_upstream_versions()
-        # # print(pathlib.Path.cwd())
-        # for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
-        #     print(tool_path.stem)
-        #     print()
-        # ghidra = pathlib.Path(pathlib.Path.cwd() / "tools/ghidra-decompiler/ghidra-decompiler.json")
-        # checker = GithubChecker(ghidra)
-        # print(checker.get_version())
 
 
 if __name__ == "__main__":

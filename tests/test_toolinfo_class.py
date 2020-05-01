@@ -21,6 +21,7 @@ def test_create_tool_info():
     assert tool_obj.updated == datetime(2020, 3, 13, 13, 37)
     assert tool_obj.location == "test_location"
     assert tool_obj.description == "test_description"
+    assert tool_obj.size == "37.70Mb"
 
     assert next(iter(tool_obj.versions)).version == "0.9"
     assert next(iter(tool_obj.upstream_v)).version == "1.2"
@@ -47,6 +48,17 @@ def test_tool_info_set():
 
     tool_obj.updated = datetime(2020, 3, 11, 11, 37)
     assert tool_obj.updated == datetime(2020, 3, 11, 11, 37)
+
+    # size
+    with pytest.raises(ValueError):
+        tool_obj.size = "16062006"
+
+    tool_obj.size = 16062
+    assert tool_obj.size == "15.69Kb"
+    tool_obj.size = 16062006
+    assert tool_obj.size == "15.32Mb"
+    tool_obj.size = 1606200600
+    assert tool_obj.size == "1.50Gb"
 
 
 def test_tool_info_origin_version():

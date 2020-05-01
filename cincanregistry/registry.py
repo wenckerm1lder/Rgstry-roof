@@ -265,9 +265,7 @@ class ToolRegistry:
                         continue
         return ret
 
-    def fetch_remote_data(
-        self, session: requests.Session, tool: ToolInfo
-    ) -> Dict[str, Any]:
+    def fetch_tags(self, session: requests.Session, tool: ToolInfo) -> Dict[str, Any]:
         """Fetch remote data to update a tool info"""
         available_versions = []
 
@@ -379,7 +377,6 @@ class ToolRegistry:
                 )
             except requests.ConnectionError as e:
                 self.logger.warning(e)
-
             if fresh_resp and fresh_resp.status_code != 200:
                 self._docker_registry_API_error(
                     fresh_resp,
@@ -420,7 +417,7 @@ class ToolRegistry:
                         ):
                             tasks.append(
                                 loop.run_in_executor(
-                                    executor, self.fetch_remote_data, *(session, t)
+                                    executor, self.fetch_tags, *(session, t)
                                 )
                             )
                             updated += 1

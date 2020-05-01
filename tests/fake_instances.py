@@ -51,12 +51,14 @@ FAKE_TOOL_INFO = {
     "name": "test_tool",
     "updated": datetime(2020, 3, 13, 13, 37),
     "location": "test_location",
+    "size": 39529754,
     "description": "test_description",
 }
 FAKE_TOOL_INFO2 = {
     "name": "test_tool_two",
     "updated": datetime(2020, 2, 12, 12, 27),
     "location": "test_location_two",
+    "size": 3952975,
     "description": "test_description_two",
 }
 

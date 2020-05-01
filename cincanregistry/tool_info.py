@@ -11,7 +11,6 @@ class ToolInfo:
         name: str,
         updated: datetime,
         location: str,
-        size: Union[int, float] = None,
         versions: List[VersionInfo] = None,
         description: str = "",
     ):
@@ -21,8 +20,6 @@ class ToolInfo:
         self._name: str = name
         self._updated: datetime = updated
         self.location: str = location
-        # Size should be in bytes
-        self._size: Union[float, int] = size
         self.versions: List[VersionInfo] = versions or []
         self.upstream_v: List[VersionInfo] = []
         self.description = description
@@ -40,26 +37,6 @@ class ToolInfo:
         if not isinstance(dt, datetime):
             raise ValueError("Given time is not 'datetime' object.")
         self._updated = dt
-
-    @property
-    def size(self) -> str:
-        size = self._size / 1024
-        if size < 1024:
-            return f"{size:0.2f}KB"
-        size = size / 1024
-        if size < 1024:
-            return f"{size:0.2f}MB"
-        size = size / 1024
-        if size < 1024:
-            return f"{size:0.2f}GB"
-
-    @size.setter
-    def size(self, value: Union[int, float]):
-        "Size as integer or float, expected to be in bytes"
-        if isinstance(value, float) or isinstance(value, int):
-            self._size = value
-        else:
-            raise ValueError("Given size for image is not float or integer.")
 
     def _map_sub_versions(self, ver: VersionInfo):
 

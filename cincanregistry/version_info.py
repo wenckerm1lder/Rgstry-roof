@@ -12,12 +12,15 @@ class VersionInfo:
         tags: set,
         updated: datetime = None,
         origin: bool = False,
+        size: Union[int, float] = None,
     ):
         self._version: str = str(version)
         self._source: Union[str, UpstreamChecker] = source
         self._origin: bool = origin
         self._tags: set = tags
         self._updated: datetime = updated
+        # Size should be in bytes
+        self._size: Union[float, int] = size
 
     @property
     def version(self) -> str:
@@ -100,6 +103,26 @@ class VersionInfo:
             raise ValueError("Given time is not 'datetime' object.")
         self._updated = dt
 
+    @property
+    def size(self) -> str:
+        size = self._size / 1024
+        if size < 1024:
+            return f"{size:0.2f}KB"
+        size = size / 1024
+        if size < 1024:
+            return f"{size:0.2f}MB"
+        size = size / 1024
+        if size < 1024:
+            return f"{size:0.2f}GB"
+
+    @size.setter
+    def size(self, value: Union[int, float]):
+        "Size as integer or float, expected to be in bytes"
+        if isinstance(value, float) or isinstance(value, int):
+            self._size = value
+        else:
+            raise ValueError("Given size for image is not float or integer.")
+
     def _normalize(self, value: str) -> Union[str, List]:
         """
         Method for normalizing version strings. It attempts to make map based 
@@ -119,7 +142,7 @@ class VersionInfo:
                 sub = re.sub(r"[^0-9._]+", "", value)
                 # Replace dash with dot, seems to be commonly used with similar purpose
                 rep = sub.replace("_", ".")
-                split_by_dot = re.split(r'[._]', rep)
+                split_by_dot = re.split(r"[._]", rep)
                 first = None
                 second = None
                 # Get slice from list, which is expected to contain version information

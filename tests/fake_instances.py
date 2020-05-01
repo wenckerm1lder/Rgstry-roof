@@ -21,6 +21,7 @@ FAKE_VERSION_INFO_NO_CHECKER = {
     "source": "no_checker_case",
     "tags": set(["latest", "latest-stable"]),
     "updated": datetime(2020, 3, 3, 13, 37,),
+    "size": 39529754,
 }
 
 FAKE_UPSTREAM_CHECKER = mock.Mock(spec=UpstreamChecker)
@@ -44,6 +45,7 @@ FAKE_VERSION_INFO_WITH_CHECKER = {
     "source": FAKE_UPSTREAM_CHECKER,
     "tags": set(["latest", "latest-stable"]),
     "updated": datetime(2020, 3, 3, 13, 37,),
+    "size": 3952975,
 }
 
 
@@ -51,14 +53,12 @@ FAKE_TOOL_INFO = {
     "name": "test_tool",
     "updated": datetime(2020, 3, 13, 13, 37),
     "location": "test_location",
-    "size": 39529754,
     "description": "test_description",
 }
 FAKE_TOOL_INFO2 = {
     "name": "test_tool_two",
     "updated": datetime(2020, 2, 12, 12, 27),
     "location": "test_location_two",
-    "size": 3952975,
     "description": "test_description_two",
 }
 

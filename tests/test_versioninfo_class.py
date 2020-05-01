@@ -38,6 +38,7 @@ def test_getters_version_info_no_checker():
     assert not obj.origin
     assert obj.tags == set(["latest", "latest-stable"])
     assert obj.updated == datetime(2020, 3, 3, 13, 37)
+    assert obj.size == "37.70MB"
 
 
 def test_setters_version_info_no_checker():
@@ -57,6 +58,17 @@ def test_setters_version_info_no_checker():
     # Test invalid time format
     with pytest.raises(ValueError):
         obj.updated = ""
+
+    # size
+    with pytest.raises(ValueError):
+        obj.size = "16062006"
+
+    obj.size = 16062
+    assert obj.size == "15.69KB"
+    obj.size = 16062006
+    assert obj.size == "15.32MB"
+    obj.size = 1606200600
+    assert obj.size == "1.50GB"
 
 
 @mock.patch.object(

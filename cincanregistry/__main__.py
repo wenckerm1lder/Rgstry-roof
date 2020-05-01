@@ -15,6 +15,10 @@ DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
 PRE_SPACE = 0
 # Name length
 MAX_WN = 35
+# Size width
+MAX_WS = 10
+
+
 # Base version length, showing only first 8 chars.
 # Hash can be 40 chars long
 CHARS_TO_SHOW = 20
@@ -187,18 +191,30 @@ def print_tools_by_location(tools: List[dict], location: str, filter_by: str = "
             print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
 
 
-def print_combined_local_remote(tools: dict):
+def print_combined_local_remote(tools: dict, show_size=False):
 
-    print(
-        f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}  {f'Local Version':{MAX_WV}}  {f'Remote Version':<{MAX_WV}}  {f'Description':<{MAX_WD}}{color.END}\n"
-    )
+    print(f"\n{' ':<{PRE_SPACE}}{color.BOLD} ", end="")
+    print(f"{'Tool name':<{MAX_WN}}", end="")
+    print(f"{f'Local Version':{MAX_WV}}", end="")
+    print(f"{'Remote Version':<{MAX_WV}}", end="")
+    if show_size:
+        print(f" {'R. Size':<{MAX_WS}}", end="")
+    print(f"{f'Description':<{MAX_WD}}", end="")
+    print(f"{color.END}\n")
+
     for tool in sorted(tools):
         l_version = tools[tool].get("local_version")[:CHARS_TO_SHOW]
         r_version = tools[tool].get("remote_version")[:CHARS_TO_SHOW]
         description = tools[tool].get("description")
-        print(
-            f"{' ':<{PRE_SPACE}}| {tool:<{MAX_WN}}  {l_version:{MAX_WV}}  {r_version:<{MAX_WT}}   {description:<{MAX_WD}}"
-        )
+
+        print(f"{' ':<{PRE_SPACE}}|", end="")
+        print(f"{tool:<{MAX_WN}}", end="")
+        print(f"{l_version:{MAX_WV}}", end="")
+        print(f"{r_version:{MAX_WV}}", end="")
+        if show_size:
+            size = tools[tool].get("size")
+            print(f"{size:>{MAX_WS}} ", end="")
+        print(f"{description:<{MAX_WD}}")
 
 
 def main():
@@ -233,6 +249,12 @@ def main():
         "--with-tags",
         action="store_true",
         help="Show all tags of selected images.",
+    )
+    list_parser.add_argument(
+        "-s",
+        "--size",
+        action="store_true",
+        help="Include size in listing. Compressed on remote, uncompressed on local.",
     )
     list_parser.add_argument(
         "-j", "--json", action="store_true", help="Print output in JSON format."
@@ -352,7 +374,7 @@ def main():
             if not args.all and not args.json and tool_list:
                 print(f"\n  Listing all tools with tag '{args.tag}':\n")
             if not args.json and tool_list:
-                print_combined_local_remote(tool_list)
+                print_combined_local_remote(tool_list, args.size)
             elif tool_list:
                 print(json.dumps(tool_list))
             else:

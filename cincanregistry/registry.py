@@ -35,6 +35,7 @@ def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
                     "source": ver.source,
                     "tags": [t for t in ver.tags],
                     "updated": ver.updated,
+                    "size": ver.raw_size(),
                 }
                 for ver in t.versions
             ]
@@ -147,6 +148,7 @@ class ToolRegistry:
         # merged_tools_dic = {**local_tools, **remote_tools}
         for i in set().union(local_tools.keys(), remote_tools.keys()):
 
+            size = ""
             l_version = ""
             r_version = ""
             if defined_tag:
@@ -163,6 +165,8 @@ class ToolRegistry:
                     for ver in r_tool.versions:
                         if defined_tag in ver.tags:
                             r_version = ver.version
+                            # Add size based on remote version
+                            size = ver.size
                             break
                     if not r_version:
                         f"Provided tag '{defined_tag}' not found for remote image {i}."
@@ -174,11 +178,13 @@ class ToolRegistry:
                 l_version = (
                     local_tools.get(i).getLatest().version if local_tools.get(i) else ""
                 )
-                r_version = (
-                    remote_tools.get(i).getLatest().version
-                    if remote_tools.get(i)
-                    else ""
-                )
+                r_obj = remote_tools.get(i).getLatest() if remote_tools.get(i) else None
+                if r_obj:
+                    r_version = r_obj.version
+                    size = r_obj.size
+                else:
+                    r_version = ""
+
             use_tools[i] = {}
             use_tools[i]["local_version"] = l_version
             use_tools[i]["remote_version"] = r_version
@@ -186,7 +192,7 @@ class ToolRegistry:
             use_tools[i]["description"] = (
                 remote_tools.get(i).description if remote_tools.get(i) else ""
             )
-
+            use_tools[i]["size"] = size
         if not use_tools:
             self.logger.info(f"No single tool found with tag `{defined_tag}`.")
         return use_tools
@@ -299,12 +305,11 @@ class ToolRegistry:
             reverse=True,
         )
         tag_names = list(map(lambda x: x["name"], tags_sorted))
-
         manifest_latest = {}
         first_run = True
         if tool.name.count(":") == 0 and tag_names:
-            for t in tag_names:
-                manifest = self.fetch_manifest(session, tool_name, t)
+            for t in tags_sorted:
+                manifest = self.fetch_manifest(session, tool_name, t.get("name"))
                 if first_run:
                     manifest_latest = manifest
                     first_run = False
@@ -314,9 +319,15 @@ class ToolRegistry:
                         version = VER_UNDEFINED
                     match = [v for v in available_versions if version == v.version]
                     if match:
-                        next(iter(match)).tags.add(t)
+                        next(iter(match)).tags.add(t.get("name"))
                     else:
-                        ver_info = VersionInfo(version, REMOTE_REGISTRY, {t}, updated)
+                        ver_info = VersionInfo(
+                            version,
+                            REMOTE_REGISTRY,
+                            {t.get("name")},
+                            updated,
+                            size=t.get("full_size"),
+                        )
                         available_versions.append(ver_info)
         else:
             manifest = self.fetch_manifest(session, tool_name, tool_tag)
@@ -324,7 +335,13 @@ class ToolRegistry:
                 manifest_latest = manifest
                 version, updated = self._get_version_from_manifest(manifest)
                 available_versions.append(
-                    VersionInfo(version, REMOTE_REGISTRY, {t}, updated)
+                    VersionInfo(
+                        version,
+                        REMOTE_REGISTRY,
+                        {t.get("name")},
+                        updated,
+                        size=t.get("full_size"),
+                    )
                 )
             else:
                 return {}
@@ -457,6 +474,7 @@ class ToolRegistry:
                             ver.get("source"),
                             set(ver.get("tags")),
                             ver.get("updated"),
+                            size=ver.get("size"),
                         )
                         for ver in j.get("versions")
                     ]

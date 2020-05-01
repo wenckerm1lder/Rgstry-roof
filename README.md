@@ -52,5 +52,6 @@ cincanregistry list remote -a
 
 ## Upstream checker
 
-This tool has feature check available new versions for tool, if this feature is configured for selected tool.
+CinCan Registry has feature to check available new versions for tool, if this feature is just configured for selected tool.
 
+This is based on looking for latest available release, tag-release, commit or other means of providing version information in original sources.

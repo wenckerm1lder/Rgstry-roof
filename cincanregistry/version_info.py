@@ -105,15 +105,23 @@ class VersionInfo:
 
     @property
     def size(self) -> str:
+        """
+        Return size in bigger units
+        """
+        if self._size is None:
+            return "NaN"
         size = self._size / 1024
         if size < 1024:
-            return f"{size:0.2f}KB"
+            return f"{size:0.2f} KB"
         size = size / 1024
         if size < 1024:
-            return f"{size:0.2f}MB"
+            return f"{size:0.2f} MB"
         size = size / 1024
         if size < 1024:
-            return f"{size:0.2f}GB"
+            return f"{size:0.2f} GB"
+
+    def raw_size(self) -> int:
+        return self._size
 
     @size.setter
     def size(self, value: Union[int, float]):

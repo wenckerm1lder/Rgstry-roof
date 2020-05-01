@@ -45,16 +45,16 @@ class ToolInfo:
     def size(self) -> str:
         size = self._size / 1024
         if size < 1024:
-            return f"{size:0.2f}Kb"
+            return f"{size:0.2f}KB"
         size = size / 1024
         if size < 1024:
-            return f"{size:0.2f}Mb"
+            return f"{size:0.2f}MB"
         size = size / 1024
         if size < 1024:
-            return f"{size:0.2f}Gb"
+            return f"{size:0.2f}GB"
 
     @size.setter
-    def size(self, value):
+    def size(self, value: Union[int, float]):
         "Size as integer or float, expected to be in bytes"
         if isinstance(value, float) or isinstance(value, int):
             self._size = value

@@ -31,9 +31,9 @@ class DidierStevensChecker(GitHubChecker):
             timeout=self.timeout,
         )
         resp = r.json()
-        encoded_file = resp.get("content")
-        decoded = base64.b64decode(encoded_file)
         if r.status_code == 200:
+            encoded_file = resp.get("content")
+            decoded = base64.b64decode(encoded_file)
             for line in decoded.splitlines():
                 line = line.decode()
                 if self.version_variable in line:

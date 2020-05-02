@@ -9,7 +9,9 @@ __name__ = "checker"
 
 
 class UpstreamChecker(metaclass=ABCMeta):
-    def __init__(self, tool_info: dict, token: str = "", timeout=20):
+    def __init__(
+        self, tool_info: dict, token: str = "", timeout=20, version="", extra_info=""
+    ):
         self.uri: str = tool_info.get("uri", "")
         self.repository: str = tool_info.get("repository", "")
         self.tool: str = tool_info.get("tool", "")
@@ -22,8 +24,8 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.docker_origin: bool = tool_info.get("docker_origin", False)
         if not isinstance(self.docker_origin, bool):
             raise ValueError("Docker origin value is not boolean")
-        self.version: str = ""
-        self.extra_info: str = ""
+        self.version: str = version
+        self.extra_info: str = extra_info
         self.token: str = token
         self.logger = logging.getLogger(__name__)
         self.timeout: int = timeout

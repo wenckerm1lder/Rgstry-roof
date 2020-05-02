@@ -376,7 +376,7 @@ def main():
             if args.name and not args.json:
                 print_single_tool_version_check(ret)
             elif not args.name and not args.json:
-                loc = "remote" if args.remote else ("local" if args.local else "both")
+                loc = "remote" if args.remote else "local"
                 print_version_check(ret, loc, args.only_updates)
             if args.json:
                 print(ret)

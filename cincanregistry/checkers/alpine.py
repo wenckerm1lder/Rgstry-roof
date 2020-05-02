@@ -7,8 +7,8 @@ class AlpineChecker(UpstreamChecker):
     Class for checking latests possible tool releases of given Alpine package.
     """
 
-    def __init__(self, tool_info: dict, token: str = ""):
-        super().__init__(tool_info, token)
+    def __init__(self, tool_info: dict, **kwargs):
+        super().__init__(tool_info, **kwargs)
         self.session = requests.Session()
         self.api = "https://git.alpinelinux.org/aports/plain"
         self.tool = self.tool.strip("/")

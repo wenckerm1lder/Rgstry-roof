@@ -25,8 +25,8 @@ class GitLabAPI:
         self.session = requests.Session()
         adapter = requests.adapters.HTTPAdapter(pool_maxsize=pool_maxsize)
         self.session.mount("https://", adapter)
-
-        if token:
+        self.token = token
+        if self.token:
             self.session.headers.update({"Authorization": f"token {self.token}"})
         # If some uri is provided, except it to be self hosted location
         self.uri = uri

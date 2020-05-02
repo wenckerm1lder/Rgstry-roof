@@ -13,15 +13,15 @@ class GitHubChecker(UpstreamChecker):
     Authenticated are limited to 5000 per hour.
     """
 
-    def __init__(self, tool_info: dict, token: str = ""):
+    def __init__(self, tool_info: dict, **kwargs):
         """
         Please use token, which as zero scopes defined.
         It is enough to be functional and rise API limit.
         """
-        super().__init__(tool_info, token)
+        super().__init__(tool_info, **kwargs)
         self.session = requests.Session()
         self.session.headers.update({"Accept": "application/vnd.github.v3+json"})
-        if token:
+        if self.token:
             self.session.headers.update({"Authorization": f"token {self.token}"})
         self.api = "https://api.github.com"
         self.repository = self.repository.strip("/")

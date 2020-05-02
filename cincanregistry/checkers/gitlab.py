@@ -9,18 +9,18 @@ class GitLabChecker(UpstreamChecker, GitLabAPI):
     Uses GitLab API v4: https://docs.gitlab.com/ee/api/
     """
 
-    def __init__(self, tool_info: dict, token: str = ""):
+    def __init__(self, tool_info: dict, **kwargs):
         """
         Please use token, which as zero scopes defined.
         It is enough to be functional and rise API limit.
         """
-        UpstreamChecker.__init__(self, tool_info=tool_info)
+        UpstreamChecker.__init__(self, tool_info=tool_info, **kwargs)
         GitLabAPI.__init__(
             self,
-            token=token,
             namespace=self.repository,
             project=self.tool,
             uri=self.uri,
+            token=kwargs.get("token", "")
         )
 
     def _get_version(self, curr_ver: str = ""):

@@ -29,6 +29,7 @@ class VersionMaintainer:
         self.logger = logging.getLogger("versions")
         self.tokens = tokens or {}
         self.max_workers = 30
+        self.cache_lifetime = 24  # Cache validity in hours
         # prefix, mostly meaning the owner of possible Docker image
         self.prefix = prefix
         self.meta_filename = meta_filename
@@ -68,9 +69,9 @@ class VersionMaintainer:
             with open(updated_timestamp_p, "r") as f:
                 timestamp = parse_file_time(f.read())
                 now = datetime.now()
-                if now - timedelta(hours=24) <= timestamp <= now:
+                if now - timedelta(hours=self.cache_lifetime) <= timestamp <= now:
                     self.logger.info(
-                        "Using old metafiles: they have been updated in past 24 hours."
+                        f"Using old metafiles: they have been updated in past {self.cache_lifetime} hours."
                     )
                     return
                 else:
@@ -159,9 +160,6 @@ class VersionMaintainer:
 
     def _set_single_tool_upstream_versions(self, tool_path: str, tool: ToolInfo) -> str:
 
-        self.logger.info(
-            f"Updating origin version information for tool {tool.name:<{40}}\r\r"
-        )
         with open(tool_path / self.meta_filename) as f:
             conf = json.load(f)
             # Expect list or single object in "upstreams" value
@@ -171,23 +169,77 @@ class VersionMaintainer:
                 else [conf.get("upstreams")]
             ):
                 provider = tool_info.get("provider").lower()
-                token_provider = tool_info.get("token_provider") or provider
-                token = self.tokens.get(token_provider) if self.tokens else ""
                 if provider not in classmap.keys():
                     self.logger.error(
                         f"No upstream checker implemented for tool '{tool.name}' with provider '{provider}'. Check JSON configuration."
                     )
                     continue
-                upstream_info = classmap.get(provider)(tool_info, token)
-                tool.upstream_v.append(
-                    VersionInfo(
-                        upstream_info.get_version(),
-                        upstream_info,
-                        set({"latest"}),
-                        datetime.now(),
-                        origin=upstream_info.origin,
-                    )
+                cache_d = self._read_checker_cache(tool_path.stem, provider)
+                if cache_d:
+                    now = datetime.now()
+                    timestamp = parse_file_time(cache_d.get("updated"))
+                    if now - timedelta(hours=self.cache_lifetime) <= timestamp <= now:
+                        # Use cache file if in time range
+                        dummy_checker = classmap.get(provider)(
+                            tool_info,
+                            version=cache_d.get("version"),
+                            extra_info=cache_d.get("extra_info"),
+                        )
+                        ver_obj = VersionInfo(
+                            cache_d.get("version"),
+                            dummy_checker,
+                            set({"latest"}),
+                            timestamp,
+                            tool_info.get("origin"),
+                        )
+                        tool.upstream_v.append(ver_obj)
+                        continue
+                self.logger.info(
+                    f"Updating origin version information for tool {tool.name:<{40}}\r\r"
                 )
+                token_provider = tool_info.get("token_provider") or provider
+                token = self.tokens.get(token_provider) if self.tokens else ""
+                upstream_info = classmap.get(provider)(tool_info, token=token)
+                updated = datetime.now()
+                ver_obj = VersionInfo(
+                    upstream_info.get_version(),
+                    upstream_info,
+                    set({"latest"}),
+                    updated,
+                    origin=upstream_info.origin,
+                )
+                store_data = {
+                    "version": ver_obj.version,
+                    "provider": provider,
+                    "updated": format_time(updated),
+                    "extra_info": upstream_info.extra_info,
+                }
+                self._write_checker_cache(tool_path.stem, provider, store_data)
+                tool.upstream_v.append(ver_obj)
+
+    def _read_checker_cache(self, tool_name: str, provider: str) -> dict:
+
+        path = self.metafiles_location / tool_name / f"{provider}_cache.json"
+        if path.is_file():
+            with open(path, "r") as f:
+                try:
+                    cache_obj = json.load(f)
+                    return cache_obj
+                except json.JSONDecodeError:
+                    self.logger.error(
+                        f"Failed to read checker cache of tool '{tool_name}' of provider '{provider}'"
+                    )
+                    return {}
+        else:
+            return {}
+
+    def _write_checker_cache(self, tool_name: str, provider: str, data: dict):
+        path = self.metafiles_location / tool_name / f"{provider}_cache.json"
+        with open(path, "w") as f:
+            json.dump(data, f)
+            self.logger.debug(
+                f"Writing checker cache of tool {tool_name} for provider {provider} into {path}"
+            )
 
     async def _check_upstream_versions(self, tools: List):
         """
@@ -287,7 +339,9 @@ class VersionMaintainer:
             tool_info["updates"]["remote"] = True
 
         if only_updates:
-            if tool_info["updates"]["remote"] or (tool_info["updates"]["local"] if l_tool else False):
+            if tool_info["updates"]["remote"] or (
+                tool_info["updates"]["local"] if l_tool else False
+            ):
                 return tool_info
             else:
                 return {}

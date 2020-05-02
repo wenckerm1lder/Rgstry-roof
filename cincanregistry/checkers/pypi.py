@@ -7,8 +7,8 @@ class PypiChecker(UpstreamChecker):
     Class for checking latests possible releases of given pypi package.
     """
 
-    def __init__(self, tool_info: dict, token: str = ""):
-        super().__init__(tool_info, token)
+    def __init__(self, tool_info: dict, **kwargs):
+        super().__init__(tool_info, **kwargs)
         self.session = requests.Session()
         self.api = "https://pypi.org/"
         self.repository = self.repository.strip("/")

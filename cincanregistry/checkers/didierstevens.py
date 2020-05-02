@@ -8,8 +8,8 @@ class DidierStevensChecker(GitHubChecker):
     Class for checking latests possible tool releases of Didier Stevens.
     """
 
-    def __init__(self, tool_info: dict, token: str = ""):
-        super().__init__(tool_info, token)
+    def __init__(self, tool_info: dict, **kwargs):
+        super().__init__(tool_info, **kwargs)
         self.version_variable = "__version__"
 
     def _get_version(self, curr_ver: str = ""):

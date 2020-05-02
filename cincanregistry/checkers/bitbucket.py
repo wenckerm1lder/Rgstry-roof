@@ -3,8 +3,8 @@ import requests
 
 
 class BitbucketChecker(UpstreamChecker):
-    def __init__(self, tool_info: dict, token: str = ""):
-        super().__init__(tool_info, token)
+    def __init__(self, tool_info: dict, **kwargs):
+        super().__init__(tool_info, **kwargs)
         self.session = requests.Session()
         self.api = "https://api.bitbucket.org/2.0"
         self.repository = self.repository.strip("/")

@@ -176,27 +176,14 @@ class VersionMaintainer:
                     continue
                 cache_d = self._read_checker_cache(tool_path.stem, provider)
                 if cache_d:
-                    now = datetime.now()
-                    timestamp = parse_file_time(cache_d.get("updated"))
-                    if now - timedelta(hours=self.cache_lifetime) <= timestamp <= now:
-                        # Use cache file if in time range
-                        dummy_checker = classmap.get(provider)(
-                            tool_info,
-                            version=cache_d.get("version"),
-                            extra_info=cache_d.get("extra_info"),
-                        )
-                        ver_obj = VersionInfo(
-                            cache_d.get("version"),
-                            dummy_checker,
-                            set({"latest"}),
-                            timestamp,
-                            tool_info.get("origin"),
-                        )
+                    ver_obj = self._handle_checker_cache_data(cache_d, tool_info)
+                    if ver_obj:
                         tool.upstream_v.append(ver_obj)
                         self.logger.debug(
                             f"Using cached upstream version info for tool {tool.name:<{40}}\r\r"
                         )
                         continue
+
                 self.logger.info(
                     f"Fetching origin version information for tool {tool.name:<{40}}\r\r"
                 )
@@ -211,13 +198,17 @@ class VersionMaintainer:
                     updated,
                     origin=upstream_info.origin,
                 )
-                store_data = {
-                    "version": ver_obj.version,
-                    "provider": provider,
-                    "updated": format_time(updated),
-                    "extra_info": upstream_info.extra_info,
-                }
-                self._write_checker_cache(tool_path.stem, provider, store_data)
+
+                self._write_checker_cache(
+                    tool_path.stem,
+                    provider,
+                    {
+                        "version": ver_obj.version,
+                        "provider": provider,
+                        "updated": format_time(updated),
+                        "extra_info": upstream_info.extra_info,
+                    },
+                )
                 tool.upstream_v.append(ver_obj)
 
     def _read_checker_cache(self, tool_name: str, provider: str) -> dict:
@@ -235,6 +226,26 @@ class VersionMaintainer:
                     return {}
         else:
             return {}
+
+    def _handle_checker_cache_data(self, data: dict, tool_info: dict) -> VersionInfo:
+        now = datetime.now()
+        timestamp = parse_file_time(data.get("updated"))
+        if now - timedelta(hours=self.cache_lifetime) <= timestamp <= now:
+            # Use cache file if in time range
+            dummy_checker = classmap.get(tool_info.get("provider").lower())(
+                tool_info,
+                version=data.get("version"),
+                extra_info=data.get("extra_info"),
+            )
+            ver_obj = VersionInfo(
+                data.get("version"),
+                dummy_checker,
+                set({"latest"}),
+                timestamp,
+                tool_info.get("origin"),
+            )
+            return ver_obj
+        return None
 
     def _write_checker_cache(self, tool_name: str, provider: str, data: dict):
         path = self.metafiles_location / tool_name / f"{provider}_cache.json"

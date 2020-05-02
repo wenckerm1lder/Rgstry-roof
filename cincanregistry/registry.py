@@ -13,21 +13,18 @@ from .utils import parse_file_time, format_time, split_tool_tag
 
 
 VERSION_VARIABLE = "TOOL_VERSION"
-REGISTRY_CONF = pathlib.Path.home() / ".cincan/registry.json"
 VER_UNDEFINED = "undefined"
 REMOTE_REGISTRY = "Dockerhub"
 LOCAL_REGISTRY = "Docker Server"
 
 
-
-
 class ToolRegistry:
     """A tool registry"""
 
-    def __init__(self):
+    def __init__(self, conf_file:str = ""):
         self.logger = logging.getLogger("registry")
         self.client = docker.from_env()
-        self.tool_cache = pathlib.Path.home() / ".cincan" / "tools.json"
+
         self.schema_version = "v2"
         self.hub_url = f"https://hub.docker.com/{self.schema_version}"
         self.auth_url = "https://auth.docker.io/token"
@@ -36,14 +33,20 @@ class ToolRegistry:
         self.registry_url = f"https://{self.registry_host}/{self.schema_version}"
         self.max_workers = 30
         self.max_page_size = 1000
+        self.conf_filepath = pathlib.Path(conf_file) if conf_file else pathlib.Path.home() / ".cincan/registry.json"
         try:
-            with open(REGISTRY_CONF) as f:
+            with open(self.conf_filepath) as f:
                 self.configuration = json.load(f)
         except IOError:
             self.logger.warning(
-                f"No configuration file found for registry in location: {REGISTRY_CONF}"
+                f"No configuration file found for registry in location: {self.conf_filepath}"
             )
             self.configuration = {}
+        self.tool_cache = (
+            pathlib.Path(self.configuration.get("tools_cache_path"))
+            if self.configuration.get("tools_cache_path")
+            else pathlib.Path.home() / ".cincan" / "tools.json"
+        )
 
     def _docker_registry_API_error(
         self, r: requests.Response, custom_error_msg: str = ""
@@ -466,7 +469,6 @@ class ToolRegistry:
             r[t.name] = td
         return r
 
-
     def read_tool_cache(self) -> Dict[str, ToolInfo]:
         """Read the local tool cache file"""
         if not self.tool_cache.exists():
@@ -496,15 +498,17 @@ class ToolRegistry:
         return r
 
     async def list_versions(
-        self,
-        tool: str = "",
-        toJSON: bool = False,
-        metadir_path: str = "",
-        only_updates: bool = False,
+        self, tool: str = "", toJSON: bool = False, only_updates: bool = False,
     ):
-
+        checker = self.configuration.get("versions", {})
+        meta_filename = checker.get("metadata_filename", "meta.json")
+        disable_remote = checker.get("disable_remote", False)
+        mfile_p = checker.get("cache_path", "")
         maintainer = VersionMaintainer(
-            self.configuration.get("tokens", None), metafiles_location=metadir_path
+            self.configuration.get("tokens", None),
+            meta_filename=meta_filename,
+            metafiles_location=mfile_p,
+            disable_remote_download=disable_remote,
         )
         versions = {}
         if tool:
@@ -512,17 +516,25 @@ class ToolRegistry:
             l_tool, r_tool = maintainer.get_versions_single_tool(
                 tool, local_tools, remote_tools
             )
-            versions = await maintainer._list_versions_single(l_tool, r_tool, only_updates)
+            versions = await maintainer._list_versions_single(
+                l_tool, r_tool, only_updates
+            )
         else:
             remote_tools = await self.list_tools_registry()
             # Remote tools, with included upstream version information
-            remote_tools_with_origin_version = await maintainer._check_upstream_versions(remote_tools)
+            remote_tools_with_origin_version = await maintainer._check_upstream_versions(
+                remote_tools
+            )
             # Local tools, without checking
             local_tools = await self.list_tools_local_images()
             for t in remote_tools_with_origin_version:
-                r_tool = remote_tools_with_origin_version.get(t)  # Contains also upstream version info
+                r_tool = remote_tools_with_origin_version.get(
+                    t
+                )  # Contains also upstream version info
                 l_tool = local_tools.get(t, "")
-                t_info = await maintainer._list_versions_single(l_tool, r_tool, only_updates)
+                t_info = await maintainer._list_versions_single(
+                    l_tool, r_tool, only_updates
+                )
                 if t_info:
                     versions[t] = t_info
 

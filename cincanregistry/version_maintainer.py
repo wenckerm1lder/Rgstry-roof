@@ -22,8 +22,8 @@ class VersionMaintainer:
     def __init__(
         self,
         tokens: dict = None,
-        prefix: str = "cincan/",
         meta_filename: str = "meta.json",
+        prefix: str = "cincan/",
         metafiles_location: str = "",
         disable_remote_download: bool = False,
     ):
@@ -37,10 +37,13 @@ class VersionMaintainer:
         self.metafiles_location = (
             pathlib.Path(metafiles_location)
             if metafiles_location
-            else pathlib.Path.home() / ".cincan" / "version_check"
+            else pathlib.Path.home() / ".cincan" / "version_cache"
         )
         self.disable_remote_download = disable_remote_download
-
+        if self.disable_remote_download:
+            self.logger.warning(
+                "Remote download disabled for meta files - using local and they are not updated automatically."
+            )
         # CinCan GitLab repository details
         self.namespace = "cincan"
         self.project = "tools"

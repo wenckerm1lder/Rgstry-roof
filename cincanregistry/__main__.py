@@ -253,6 +253,10 @@ def main():
     list_parser = subparsers.add_parser(
         "list", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
+    list_parser.add_argument(
+        "--config",
+        help="Override filepath for registry configuration file.",
+    )
     list_exclusive_group = list_parser.add_mutually_exclusive_group()
     list_exclusive_group.add_argument(
         "-t",
@@ -297,10 +301,7 @@ def main():
     version_parser.add_argument(
         "-u", "--only-updates", action="store_true", help="Lists only available updates.",
     )
-    version_parser.add_argument(
-        "--metadir-path",
-        help="Override default path for available meta files. (Directory) This directory should contain upstream information for each tool.",
-    )
+
     if len(sys.argv) > 1:
         args = m_parser.parse_args(args=sys.argv[1:])
     else:
@@ -324,7 +325,7 @@ def main():
 
     elif sub_command == "list":
 
-        reg = ToolRegistry()
+        reg = ToolRegistry(args.config)
 
         if not args.list_sub_command:
 
@@ -380,7 +381,6 @@ def main():
                 reg.list_versions(
                     tool=args.name or "",
                     toJSON=args.json or False,
-                    metadir_path=args.metadir_path or "",
                     only_updates=args.only_updates
                 )
             )

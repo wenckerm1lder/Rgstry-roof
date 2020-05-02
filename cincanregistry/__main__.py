@@ -71,9 +71,10 @@ def print_version_check(tools:dict, location="both", only_updates:bool=False):
     print(f"{color.RED_BACKGROUND}  {color.END} - update available in remote", end=" ")
     print(f"{color.GRAY_BACKGROUND}  {color.END} - remote differs from tool origin")
 
-    print(
-        f"\n{' ':<{PRE_SPACE}}By default, only versions for available local tools are visible."
-    )
+    if location == "local":
+        print(
+            f"\n{' ':<{PRE_SPACE}}By default, only versions for available local tools are visible."
+        )
     print(
         f"\n{' ':<{PRE_SPACE}}Only first {CHARS_TO_SHOW} characters are showed from version."
     )
@@ -152,7 +153,7 @@ def print_version_check(tools:dict, location="both", only_updates:bool=False):
         )
         # end colored section
         print(f"{color.END if coloring else None}")
-
+    print()
 
 def print_tools_by_location(
     tools: List[dict], location: str, filter_by: str = "", show_size=False
@@ -170,8 +171,8 @@ def print_tools_by_location(
         print(f"{'Size':<{MAX_WS}}   ", end="")
     print(f"{f'{location.capitalize()} Tags':<{MAX_WT}}", end="")
     print(f"{color.END}\n")
-    if not filter_by:
-        print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
+    # if not filter_by:
+        # print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
     for tool in sorted(tools):
         lst = tools[tool]
         first_print = True
@@ -190,6 +191,8 @@ def print_tools_by_location(
             print(f"{tags:<{MAX_WT}}")
             first_print = False
         else:
+            if not filter_by:
+                print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
             tags = ""
             version = ""
             for i, ver in enumerate(lst.versions):
@@ -207,9 +210,9 @@ def print_tools_by_location(
                 print(f"{tags:<{MAX_WT}}")
                 first_print = False
 
-        if lst.versions and not first_print and not filter_by:
-            print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
-
+            if not filter_by:
+                print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
+    print()
 
 def print_combined_local_remote(tools: dict, show_size=False):
 

@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List, Union
 from .version_info import VersionInfo
+from .utils import format_time
 from json import JSONEncoder
 
 
@@ -96,7 +97,7 @@ class ToolInfo:
 
     def __iter__(self):
         yield "name", self.name,
-        yield "updated", str(self.updated),
+        yield "updated", format_time(self.updated),
         yield "location", self.location,
         yield "versions", [dict(v) for v in self.versions],
         if self.upstream_v:

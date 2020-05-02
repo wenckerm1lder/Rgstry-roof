@@ -28,10 +28,11 @@ class VersionInfo:
         Returns version of the object. If it's containing information
         about possible upstream version, updates it if it's older than 1 hour.
         """
+        # TODO maybe remove time comparison here
         if isinstance(self._source, UpstreamChecker):
             now = datetime.now()
             if not self._updated or not (
-                now - timedelta(hours=1) <= self._updated <= now
+                now - timedelta(hours=24) <= self._updated <= now
             ):
                 self._version = self._source.get_version()
                 self._updated = now
@@ -108,6 +109,16 @@ class VersionInfo:
         """
         Return size in bigger units
         """
+        if isinstance(self._size, str):
+            if (
+                self._size.endswith(" bytes")
+                or self._size.endswith(" KB")
+                or self._size.endswith(" MB")
+                or self._size.endswith(" GB")
+            ):
+                return self._size
+            else:
+                raise ValueError("Unsupported format for size.")
         if self._size is None:
             return "NaN"
         if self._size < 1000:

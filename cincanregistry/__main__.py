@@ -362,6 +362,18 @@ def main():
                         tools, location, args.tag if not args.all else "", args.size
                     )
 
+            else:
+                tool_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
+                if not args.all and not args.json and tool_list:
+                    print(f"\n  Listing all tools with tag '{args.tag}':\n")
+                if not args.json and tool_list:
+                    print_combined_local_remote(tool_list, args.size)
+                elif tool_list:
+                    print(json.dumps(tool_list))
+                else:
+                    print("No single tool available for unknown reason.")
+
+
         elif args.list_sub_command == "versions":
             loop = asyncio.get_event_loop()
             ret = loop.run_until_complete(
@@ -381,19 +393,6 @@ def main():
             if args.json:
                 print(ret)
             loop.close()
-
-        else:
-
-            tool_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
- 
-            if not args.all and not args.json and tool_list:
-                print(f"\n  Listing all tools with tag '{args.tag}':\n")
-            if not args.json and tool_list:
-                print_combined_local_remote(tool_list, args.size)
-            elif tool_list:
-                print(json.dumps(tool_list))
-            else:
-                print("No single tool available for unknown reason.")
 
 
 if __name__ == "__main__":

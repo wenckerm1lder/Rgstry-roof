@@ -193,9 +193,12 @@ class VersionMaintainer:
                             tool_info.get("origin"),
                         )
                         tool.upstream_v.append(ver_obj)
+                        self.logger.debug(
+                            f"Using cached upstream version info for tool {tool.name:<{40}}\r\r"
+                        )
                         continue
                 self.logger.info(
-                    f"Updating origin version information for tool {tool.name:<{40}}\r\r"
+                    f"Fetching origin version information for tool {tool.name:<{40}}\r\r"
                 )
                 token_provider = tool_info.get("token_provider") or provider
                 token = self.tokens.get(token_provider) if self.tokens else ""

@@ -19,28 +19,6 @@ REMOTE_REGISTRY = "Dockerhub"
 LOCAL_REGISTRY = "Docker Server"
 
 
-def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
-    """Write tool info into JSON format"""
-    r = {}
-    for t in tools:
-        td = {"updated": format_time(t.updated)}
-        if t.location:
-            td["location"] = t.location
-        if t.description:
-            td["description"] = t.description
-        if t.versions:
-            td["versions"] = [
-                {
-                    "version": ver.version,
-                    "source": ver.source,
-                    "tags": [t for t in ver.tags],
-                    "updated": ver.updated,
-                    "size": ver.raw_size(),
-                }
-                for ver in t.versions
-            ]
-        r[t.name] = td
-    return r
 
 
 class ToolRegistry:
@@ -137,8 +115,6 @@ class ToolRegistry:
 
     def list_tools(self, defined_tag: str = "", merge=True) -> Dict[str, ToolInfo]:
         """List all tools"""
-        # TODO rework this method, remote and local listing changed
-
         loop = asyncio.get_event_loop()
         local_tools, remote_tools = loop.run_until_complete(
             self.get_local_remote_tools(defined_tag)
@@ -460,12 +436,36 @@ class ToolRegistry:
                     self.tool_cache.parent.mkdir(parents=True, exist_ok=True)
                     with self.tool_cache.open("w") as f:
                         self.logger.debug("saving tool cache %s", self.tool_cache)
-                        json.dump(tools_to_json(tool_list.values()), f)
+                        json.dump(self.tools_to_json(tool_list.values()), f)
             # read saved tools and return
             self.logger.debug(
                 f"Remote update time: {timeit.default_timer() - get_fetch_start} s"
             )
             return self.read_tool_cache()
+
+    def tools_to_json(self, tools: Iterable[ToolInfo]) -> Dict[str, Any]:
+        """Write tool info into JSON format"""
+        r = {}
+        for t in tools:
+            td = {"updated": format_time(t.updated)}
+            if t.location:
+                td["location"] = t.location
+            if t.description:
+                td["description"] = t.description
+            if t.versions:
+                td["versions"] = [
+                    {
+                        "version": ver.version,
+                        "source": ver.source,
+                        "tags": [t for t in ver.tags],
+                        "updated": ver.updated,
+                        "size": ver.raw_size(),
+                    }
+                    for ver in t.versions
+                ]
+            r[t.name] = td
+        return r
+
 
     def read_tool_cache(self) -> Dict[str, ToolInfo]:
         """Read the local tool cache file"""

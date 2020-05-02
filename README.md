@@ -10,7 +10,7 @@ Currently, no other tools are supported for version information listing or for o
 
 Docker images of remote tools are stored in Docker Hub, [under CinCan's profile.](https://hub.docker.com/u/cincan)
 
-When checking versions beyond remote (Docker Hub), tool is using multiple different APIs such as GitHub's or Debian's. See more in [upstream checking.](#upstream-checker)
+When checking versions beyond remote (Docker Hub), tool is using multiple different APIs such as GitHub's or GitLab's to acquire most recent availabe versions straight from the source. See more in [upstream checking.](#upstream-checker)
 
 ## Installation
 
@@ -24,7 +24,7 @@ Tool is not currently in pip, but should be in future.
 
 ### Regular listing
 
-The main purpose is to list available local or remote CinCan tools, sizes and their versions.
+The main purpose is to list available local or remote CinCan tools and their sizes and versions.
 
 We are also able to list upstream versions of tools, for those where this feature is configured. This is handled more thoroughly in [Upstream Checker section.](#upstream-checker)
 
@@ -85,6 +85,7 @@ If local and remote are equal, but possible upstream of the tool has update, tho
 
 ![Version listing example](img/version_list.png)
 In this example, we have only single tool installed, `cincan/radare2`.
+
 
 
 

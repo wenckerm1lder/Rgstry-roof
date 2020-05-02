@@ -155,7 +155,9 @@ def print_tools_by_location(
 
     MAX_WV = 41
     if location == "remote" and show_size:
-        print(f"{' ':<{PRE_SPACE}} Size is as compressed in Remote.")
+        print(f"{' ':<{PRE_SPACE}} Size as compressed in Remote.")
+    if location == "local" and show_size:
+        print(f"{' ':<{PRE_SPACE}} Size as uncompressed in Local.")
     print(f"\n{' ':<{PRE_SPACE}}{color.BOLD}  ", end="")
     print(f"{'Tool name':<{MAX_WN}}  ", end="")
     print(f"{f'{location.capitalize()} Version':{MAX_WV}}  ", end="")

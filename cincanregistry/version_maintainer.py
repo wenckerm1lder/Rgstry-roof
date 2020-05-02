@@ -46,6 +46,20 @@ class VersionMaintainer:
             self.get_checker_meta_files_from_gitlab()
         self.able_to_check = self.get_available_checkers()
 
+    def get_available_checkers(self) -> Dict:
+        """
+        Gets dictionary of tools, whereas upstream/origin check is supported.
+
+        """
+        able_to_check = {}
+        for tool_path in self.metafiles_location.iterdir():
+            able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path
+        if not able_to_check:
+            self.logger.error(
+                f"No single configuration for upstream check found. Something is wrong in path {self.metafiles_location}"
+            )
+        return able_to_check
+
     def get_checker_meta_files_from_gitlab(self, branch: str = "add-meta-files"):
 
         updated_timestamp_p = self.metafiles_location / "updated"
@@ -54,10 +68,10 @@ class VersionMaintainer:
             with open(updated_timestamp_p, "r") as f:
                 timestamp = parse_file_time(f.read())
                 now = datetime.now()
-                if (
-                    now - timedelta(hours=24) <= timestamp <= now
-                ):
-                    self.logger.info("Using old metafiles:they have been updated in past 24 hours.")
+                if now - timedelta(hours=24) <= timestamp <= now:
+                    self.logger.info(
+                        "Using old metafiles: they have been updated in past 24 hours."
+                    )
                     return
                 else:
                     self.logger.info("Metafiles outdated...updating")
@@ -120,25 +134,11 @@ class VersionMaintainer:
             file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(self.metafiles_location / path, "wb") as f:
                 f.write(file_data)
-                self.logger.debug(
+                self.logger.info(
                     f"Meta file written into {self.metafiles_location / path}"
                 )
         else:
             self.logger.debug(f"No file content found for file {path}")
-
-    def get_available_checkers(self) -> Dict:
-        """
-        Gets dictionary of tools, whereas upstream/origin check is supported.
-
-        """
-        able_to_check = {}
-        for tool_path in self.metafiles_location.iterdir():
-            able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path
-        if not able_to_check:
-            self.logger.error(
-                f"No single configuration for upstream check found. Something is wrong in path {self.metafiles_location}"
-            )
-        return able_to_check
 
     def get_versions_single_tool(
         self, tool: str, local_tools: dict, remote_tools: dict

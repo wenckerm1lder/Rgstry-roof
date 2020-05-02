@@ -35,6 +35,11 @@ cincanegistry list
 
 ```
 
+When running first time, output could look something like this:
+
+![Example both tool list](img/local_remote_tool_list.png)
+
+
 By default, "latest-stable" tag is always used, unless overrided with `--tag` or `-t` argument.
 
 <!-- <img src="img/cincanreg_list.svg"  width="900" height="800"> -->
@@ -45,6 +50,10 @@ To list only locally available tools with tag "latest-stable", argument `--local
 ```
 cincanregistry list --local
 ```
+Example ouput should look something like this:
+
+![Example local tool list](img/local_tool_list.png)
+
 
 To do same for remote, use `--remote` (or `-r`) argument. By adding flag `-a`, this shows tools with all possible tags.
 ```
@@ -77,28 +86,62 @@ cincanregistry list versions
 
 tool will fetch version information from configured upstreams. By default it lists only locally available tools, and compares their versions into remote versions, and further remote versions into upstream versions. 
 
-**With help of this, we should be always acknowledged whether our tool is up-to-date or not!**
+**With help of this, we should be always acknowledged whether our tool is *really* up-to-date or not!**
 
 Current implemention lists those tools as red `#AA0000`, where is immediate update available on remote. (local version differs from remote)
 
 If local and remote are equal, but possible upstream of the tool has update, those are listed as grey `#808080`. 
 
 ![Version listing example](img/version_list.png)
-In this example, we have only single tool installed, `cincan/radare2`.
+
+As seen in the above image, green should indicate, that at least for that line, everything there is *fine*.
+
+Argument `--name` (or `-n`) can be used to check updates for single tool, and exclusive argment `--only-updates` or `-u` can be used to show only tools where there are updates available.
+
+It should be noted, that tool is not able to directly tell, if there is update available. It only detects deviations. 
+
+They ways how versions are marked, are differing too much. However tool is very good at detecting same versions, even if they are marked bit differently.
+
+Most of the preceeding arguments with `list` subcommand will change the behaviour of `versions` subcommand as well.
+
+For example command:
+```
+cincanregistry list -rj versions --only-updates
+```
+
+Will produce JSON output from remote tools; generating their versions and filtering only for onces with available version updates, after checking configured upstreams for those available.
 
 
+### All available options
 
+| Specific to `list`      |    | Description |
+|-------------------------|----|-------------|
+| --config                | -c | Path to configuration file |
+| --tag                   | -t | Filter images by tag name. |
+| --all                   | -a | Show images with all tags. (Excludes --tag or -t) |
+| --size                  | -s | Inlcude  size column when listing |
+| --json                  | -j | Produce output in JSON format
+| --local                 | -l | List only locally available 'cincan' tools. Excludes --remote or -r
+| --remote                | -r | List remotely available 'cincan' tools. Excludes --local or -l
 
-<!-- If we lint output for example with [jq](https://stedolan.github.io/jq/), we can see following output:
- -->
+Size will be here always included in JSON regardless is it used with it or not.
 
+| Specific to `list versions` |    | Description
+|-------------------------|----|-------------|
+| --name                  | -n | Check single tool by the name.
+| --only-updates          | -u | Lists only available updates. Excludes --name or -n
+|
+
+These can be used with the combination of `list` options to produce varying outputs.
 
 
 ## More in depth
 
-This tool takes advantage of Docker Hub's registry API, when listing remote tools and their versions.
+This tool takes advantage of Docker Hub's Registry API, when listing remote tools and their sizes and versions. Version information is extracted from `manifest` file, which is containing the configuration of Docker Image. More presicely, version information value is acquired for `TOOL_VERSION` environment variable in the configuration.
 
-However, there is also a possibility to show their exact versions, if they are correctly defined; version information is acquired for `TOOL_VERSION` environment variable from the Docker image.
+This same variable is used for acquiring the version information on local as well, however we are using configuration information provided by `Docker Engine`.
+
+Docker Images should have been build by using this variable, so the information is correct.
 
 ## Upstream checker
 

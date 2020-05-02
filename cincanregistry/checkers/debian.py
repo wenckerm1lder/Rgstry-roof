@@ -40,10 +40,11 @@ class DebianChecker(UpstreamChecker):
             data = r.json().get("versions")
             # loop trough version list and get wanted version.
             # Wanted version is defined in specific tool json
-            for x in data:
-                if self.suite in x.get("suites", ""):
-                    self.version = x.get("version", "")
-                    break
+            if data is not None:
+                for x in data:
+                    if self.suite in x.get("suites", ""):
+                        self.version = x.get("version", "")
+                        break
             if not self.version:
                 self.logger.error(f"Selected suite '{self.suite}' not found for Debian tool {self.tool}")
                 self.version = NO_VERSION

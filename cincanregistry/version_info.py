@@ -12,12 +12,15 @@ class VersionInfo:
         tags: set,
         updated: datetime = None,
         origin: bool = False,
+        size: Union[int, float] = None,
     ):
         self._version: str = str(version)
         self._source: Union[str, UpstreamChecker] = source
         self._origin: bool = origin
         self._tags: set = tags
         self._updated: datetime = updated
+        # Size should be in bytes
+        self._size: Union[float, int] = size
 
     @property
     def version(self) -> str:
@@ -39,6 +42,7 @@ class VersionInfo:
 
     @version.setter
     def version(self, version: Union[str, int, float]):
+        """Sets 'versions' attribute to new value, does not accept empty value"""
         if not version:
             raise ValueError("Cannot set empty value for version.")
         self._version = str(version)
@@ -94,11 +98,47 @@ class VersionInfo:
 
     @updated.setter
     def updated(self, dt: datetime):
+        """Sets 'updated' attribute to new value, only 'datetime' object is valid"""
         if not isinstance(dt, datetime):
             raise ValueError("Given time is not 'datetime' object.")
         self._updated = dt
 
+    @property
+    def size(self) -> str:
+        """
+        Return size in bigger units
+        """
+        if self._size is None:
+            return "NaN"
+        if self._size < 1000:
+            return f"{self._size} bytes"
+        size = self._size / 1000
+        if size < 1000:
+            return f"{size:0.2f} KB"
+        size /= 1000
+        if size < 1000:
+            return f"{size:0.2f} MB"
+        size /= 1000
+        if size < 1000:
+            return f"{size:0.2f} GB"
+
+    def raw_size(self) -> int:
+        return self._size
+
+    @size.setter
+    def size(self, value: Union[int, float]):
+        "Size as integer or float, expected to be in bytes"
+        if isinstance(value, float) or isinstance(value, int):
+            self._size = value
+        else:
+            raise ValueError("Given size for image is not float or integer.")
+
     def _normalize(self, value: str) -> Union[str, List]:
+        """
+        Method for normalizing version strings. It attempts to make map based 
+        on potential version number part of the string, which is comparable.
+        Potential hashes are returned as they are, as well strings without any digits.
+        """
         if any(char.isdigit() for char in value):
             # Git uses SHA-1 hash currently, length 40 characters
             # Commit hash maybe
@@ -112,7 +152,7 @@ class VersionInfo:
                 sub = re.sub(r"[^0-9._]+", "", value)
                 # Replace dash with dot, seems to be commonly used with similar purpose
                 rep = sub.replace("_", ".")
-                split_by_dot = re.split(r'[._]', rep)
+                split_by_dot = re.split(r"[._]", rep)
                 first = None
                 second = None
                 # Get slice from list, which is expected to contain version information
@@ -129,6 +169,7 @@ class VersionInfo:
             return value
 
     def get_normalized_ver(self) -> List:
+        """Normalize version number of this instance"""
         return self._normalize(self.version)
 
     def __eq__(self, value: Union[str, "VersionInfo"]) -> bool:
@@ -164,3 +205,4 @@ class VersionInfo:
         yield "tags", sorted(list(self.tags)),
         yield "updated", str(self.updated),
         yield "origin", self.origin,
+        yield "size", self.size

@@ -1,9 +1,8 @@
 from ._checker import UpstreamChecker, NO_VERSION
-import requests
-from urllib.parse import quote_plus, urlparse
+from ..gitlab_utils import GitLabAPI
 
 
-class GitLabChecker(UpstreamChecker):
+class GitLabChecker(UpstreamChecker, GitLabAPI):
     """
     Class for checking latests possible releases of given repository by
     release or tag release.
@@ -15,21 +14,14 @@ class GitLabChecker(UpstreamChecker):
         Please use token, which as zero scopes defined.
         It is enough to be functional and rise API limit.
         """
-        super().__init__(tool_info, token)
-        self.session = requests.Session()
-        if token:
-            self.session.headers.update({"Authorization": f"token {self.token}"})
-        if self.uri:
-            netloc = urlparse(self.uri).netloc
-            self.api = f"https://{netloc}/api/v4/projects"
-        else:
-            self.api = "https://gitlab.com/api/v4/projects"
-        self.repository = self.repository.strip("/")
-        self.tool = self.tool.strip("/")
-        if self.repository and self.tool:
-            self.loc = quote_plus(f"{self.repository}/{self.tool}")
-        else:
-            self.loc = quote_plus(self.tool if self.tool else self.repository)
+        UpstreamChecker.__init__(self, tool_info=tool_info)
+        GitLabAPI.__init__(
+            self,
+            token=token,
+            namespace=self.repository,
+            project=self.tool,
+            uri=self.uri,
+        )
 
     def _get_version(self, curr_ver: str = ""):
         if self.method == "release":
@@ -38,32 +30,26 @@ class GitLabChecker(UpstreamChecker):
             self._by_tag()
         else:
             self.logger.error(
-                f"Invalid query method for {self.provider} in tool {self.tool}."
+                f"Invalid query method for {self.provider} in tool {self.project}."
             )
             self.version = NO_VERSION
 
-    def _fail(self, r: requests.Response):
+    def _fail(self, r):
         """
         Set version for not defined on fail, log error.
         """
         self.version = NO_VERSION
         self.logger.error(
-            f"Failed to fetch version update information for {self.tool}: {r.status_code} : {r.json().get('message')}"
+            f"Failed to fetch version update information for {self.project}"
         )
-
-    def _check_api_limit(self, resp: dict) -> bool:
-        if resp.get("message").startswith("API rate limit exceeded"):
-            self.logger.error(resp.get("message"))
-            return True
-        return False
 
     def _by_release(self):
         """
         Method for finding latest release from repository.
         """
-        r = self.session.get(f"{self.api}/{self.loc}/releases", timeout=self.timeout)
-        if r.status_code == 200:
-            self.version = r.json()[0].get("name")
+        r = self.get_releases()
+        if r:
+            self.version = r[0].get("name")
         else:
             self._fail(r)
 
@@ -71,9 +57,9 @@ class GitLabChecker(UpstreamChecker):
         """
         Method for finding latest tag.
         """
-        r = self.session.get(f"{self.api}/{self.loc}/repository/tags", timeout=self.timeout)
-        if r.status_code == 200:
-            self.version = r.json()[0].get("name")
+        r = self.get_tags()
+        if r:
+            self.version = r[0].get("name")
         else:
             self._fail(r)
 
@@ -87,7 +73,7 @@ class GitLabChecker(UpstreamChecker):
         """
         if current_commit:
             r = self.session.get(
-                f"{self.api}/{self.author}%2F{self.tool}/repository/compare/master?from=master&to{current_commit}
+                f"{self.api}/{self.author}%2F{self.project}/repository/compare/master?from=master&to{current_commit}
             )
             if r.status_code == 200:
                 self.extra_info = f"{r.json().get('behind_by')} commits behind master."
@@ -96,7 +82,7 @@ class GitLabChecker(UpstreamChecker):
                 self._fail(r)
         else:
             r = self.session.get(
-                f"{self.api}/{self.author}%2F{self.tool}/repository/commits/master"
+                f"{self.api}/{self.author}%2F{self.project}/repository/commits/master"
             )
             if r.status_code == 200:
                 self.version = r.json().get("sha")
@@ -110,7 +96,7 @@ class GitLabChecker(UpstreamChecker):
         Get date of commit by commit hash.
         """
         r = self.session.get(
-            f"{self.api}/{self.author}%2F{self.tool}/repository/tags"
+            f"{self.api}/{self.author}%2F{self.project}/repository/tags"
         )
         if r.status_code != 200:
             self.logger.error(

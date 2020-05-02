@@ -10,18 +10,13 @@ with open("VERSION", "r") as ver:
 setup(
     name="cincan-registry",
     version=version_info,
-    author="",
-    author_email="",
-    description="CinCan Registry: a tool for listing available CinCan tools, their versions and possible updates.",
+    author="Niklas Saari",
+    author_email="niklas.saari@tutanota.com",
+    description='CinCan Registry: a tool for listing available CinCan tools, their versions and possible updates.',
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://gitlab.com/cincan/cincan-registry",
     packages=["cincanregistry", "cincanregistry.checkers"],
-    data_files=[
-        (str(Path.home() / ".cincan/tools" / f.parent.stem), [str(f)])
-        for f in (Path.cwd() / "tools").glob("**/*.json")
-        if f.is_file()
-    ],
     install_requires=["docker>=4.1"],
     classifiers=[
         "Programming Language :: Python :: 3",

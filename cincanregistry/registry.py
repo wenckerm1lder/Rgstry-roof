@@ -9,7 +9,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Iterable, Tuple
 from . import ToolInfo, VersionInfo, VersionMaintainer
-from .utils import parse_json_time, format_time, split_tool_tag
+from .utils import parse_file_time, format_time, split_tool_tag
 
 
 VERSION_VARIABLE = "TOOL_VERSION"
@@ -35,6 +35,7 @@ def tools_to_json(tools: Iterable[ToolInfo]) -> Dict[str, Any]:
                     "source": ver.source,
                     "tags": [t for t in ver.tags],
                     "updated": ver.updated,
+                    "size": ver.raw_size(),
                 }
                 for ver in t.versions
             ]
@@ -147,6 +148,7 @@ class ToolRegistry:
         # merged_tools_dic = {**local_tools, **remote_tools}
         for i in set().union(local_tools.keys(), remote_tools.keys()):
 
+            size = ""
             l_version = ""
             r_version = ""
             if defined_tag:
@@ -163,6 +165,8 @@ class ToolRegistry:
                     for ver in r_tool.versions:
                         if defined_tag in ver.tags:
                             r_version = ver.version
+                            # Add size based on remote version
+                            size = ver.size
                             break
                     if not r_version:
                         f"Provided tag '{defined_tag}' not found for remote image {i}."
@@ -171,10 +175,16 @@ class ToolRegistry:
                 if not l_version:
                     l_version = "Not installed"
             else:
-                l_version = local_tools.get(i).getLatest().version if local_tools.get(i) else ""
-                r_version = (
-                    remote_tools.get(i).getLatest().version if remote_tools.get(i) else ""
+                l_version = (
+                    local_tools.get(i).getLatest().version if local_tools.get(i) else ""
                 )
+                r_obj = remote_tools.get(i).getLatest() if remote_tools.get(i) else None
+                if r_obj:
+                    r_version = r_obj.version
+                    size = r_obj.size
+                else:
+                    r_version = ""
+
             use_tools[i] = {}
             use_tools[i]["local_version"] = l_version
             use_tools[i]["remote_version"] = r_version
@@ -182,7 +192,7 @@ class ToolRegistry:
             use_tools[i]["description"] = (
                 remote_tools.get(i).description if remote_tools.get(i) else ""
             )
-
+            use_tools[i]["size"] = size
         if not use_tools:
             self.logger.info(f"No single tool found with tag `{defined_tag}`.")
         return use_tools
@@ -202,14 +212,13 @@ class ToolRegistry:
         """
         images = self.client.images.list(filters={"dangling": False})
         # images oldest first (tags are listed in proper order)
-        images.sort(key=lambda x: parse_json_time(x.attrs["Created"]), reverse=True)
+        images.sort(key=lambda x: parse_file_time(x.attrs["Created"]), reverse=True)
         ret = {}
         for i in images:
             # print(i.attrs.get("ContainerConfig").get("Env"))
             if len(i.tags) == 0:
                 continue  # not sure what these are...
-            updated = parse_json_time(i.attrs["Created"])
-
+            updated = parse_file_time(i.attrs["Created"])
             for t in i.tags:
                 version = default_ver
                 existing_ver = False
@@ -244,11 +253,12 @@ class ToolRegistry:
                                         LOCAL_REGISTRY,
                                         set(stripped_tags),
                                         updated,
+                                        size=i.attrs.get("Size"),
                                     )
                                 )
                         else:
                             ver_info = VersionInfo(
-                                version, LOCAL_REGISTRY, set(stripped_tags), updated
+                                version, LOCAL_REGISTRY, set(stripped_tags), updated, size=i.attrs.get("Size")
                             )
                             ret[name] = ToolInfo(
                                 name, updated, "local", versions=[ver_info]
@@ -261,9 +271,7 @@ class ToolRegistry:
                         continue
         return ret
 
-    def fetch_remote_data(
-        self, session: requests.Session, tool: ToolInfo
-    ) -> Dict[str, Any]:
+    def fetch_tags(self, session: requests.Session, tool: ToolInfo) -> Dict[str, Any]:
         """Fetch remote data to update a tool info"""
         available_versions = []
 
@@ -293,16 +301,15 @@ class ToolRegistry:
         # sort tags by update time
         tags_sorted = sorted(
             tags.get("results", []),
-            key=lambda x: parse_json_time(x["last_updated"]),
+            key=lambda x: parse_file_time(x["last_updated"]),
             reverse=True,
         )
         tag_names = list(map(lambda x: x["name"], tags_sorted))
-
         manifest_latest = {}
         first_run = True
         if tool.name.count(":") == 0 and tag_names:
-            for t in tag_names:
-                manifest = self.fetch_manifest(session, tool_name, t)
+            for t in tags_sorted:
+                manifest = self.fetch_manifest(session, tool_name, t.get("name"))
                 if first_run:
                     manifest_latest = manifest
                     first_run = False
@@ -312,9 +319,15 @@ class ToolRegistry:
                         version = VER_UNDEFINED
                     match = [v for v in available_versions if version == v.version]
                     if match:
-                        next(iter(match)).tags.add(t)
+                        next(iter(match)).tags.add(t.get("name"))
                     else:
-                        ver_info = VersionInfo(version, REMOTE_REGISTRY, {t}, updated)
+                        ver_info = VersionInfo(
+                            version,
+                            REMOTE_REGISTRY,
+                            {t.get("name")},
+                            updated,
+                            size=t.get("full_size"),
+                        )
                         available_versions.append(ver_info)
         else:
             manifest = self.fetch_manifest(session, tool_name, tool_tag)
@@ -322,7 +335,13 @@ class ToolRegistry:
                 manifest_latest = manifest
                 version, updated = self._get_version_from_manifest(manifest)
                 available_versions.append(
-                    VersionInfo(version, REMOTE_REGISTRY, {t}, updated)
+                    VersionInfo(
+                        version,
+                        REMOTE_REGISTRY,
+                        {t.get("name")},
+                        updated,
+                        size=t.get("full_size"),
+                    )
                 )
             else:
                 return {}
@@ -375,7 +394,6 @@ class ToolRegistry:
                 )
             except requests.ConnectionError as e:
                 self.logger.warning(e)
-
             if fresh_resp and fresh_resp.status_code != 200:
                 self._docker_registry_API_error(
                     fresh_resp,
@@ -397,7 +415,7 @@ class ToolRegistry:
                     name = f"{t['user']}/{t['name']}"
                     tool_list[name] = ToolInfo(
                         name,
-                        parse_json_time(t["last_updated"]),
+                        parse_file_time(t["last_updated"]),
                         "remote",
                         description=t.get("description", ""),
                     )
@@ -416,7 +434,7 @@ class ToolRegistry:
                         ):
                             tasks.append(
                                 loop.run_in_executor(
-                                    executor, self.fetch_remote_data, *(session, t)
+                                    executor, self.fetch_tags, *(session, t)
                                 )
                             )
                             updated += 1
@@ -448,7 +466,7 @@ class ToolRegistry:
             for name, j in root_json.items():
                 r[name] = ToolInfo(
                     name,
-                    updated=parse_json_time(j["updated"]),
+                    updated=parse_file_time(j["updated"]),
                     location=j.get("location"),
                     versions=[
                         VersionInfo(
@@ -456,6 +474,7 @@ class ToolRegistry:
                             ver.get("source"),
                             set(ver.get("tags")),
                             ver.get("updated"),
+                            size=ver.get("size"),
                         )
                         for ver in j.get("versions")
                     ]
@@ -465,13 +484,19 @@ class ToolRegistry:
                 )
         return r
 
-    async def list_versions(self, tool: str = "", toJSON: bool = False):
+    async def list_versions(
+        self, tool: str = "", toJSON: bool = False, metadir_path: str = ""
+    ):
 
-        maintainer = VersionMaintainer(self.configuration.get("tokens", None))
+        maintainer = VersionMaintainer(
+            self.configuration.get("tokens", None), metafiles_location=metadir_path
+        )
         versions = {}
         if tool:
             local_tools, remote_tools = await self.get_local_remote_tools()
-            l_tool, r_tool = maintainer.get_versions_single_tool(tool, local_tools, remote_tools)
+            l_tool, r_tool = await maintainer.get_versions_single_tool(
+                tool, local_tools, remote_tools
+            )
             versions = await maintainer._list_versions_single(l_tool, r_tool)
         else:
             remote_tools = await self.list_tools_registry()

@@ -15,7 +15,11 @@ DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
 PRE_SPACE = 0
 # Name length
 MAX_WN = 35
-# Base version lenght, showing only first 8 chars.
+# Size width
+MAX_WS = 10
+
+
+# Base version length, showing only first 8 chars.
 # Hash can be 40 chars long
 CHARS_TO_SHOW = 20
 # Version Length
@@ -66,6 +70,9 @@ def print_version_check(tools, only_local=True):
     print(f"{color.RED_BACKGROUND}  {color.END} - update available in remote", end=" ")
     print(f"{color.GRAY_BACKGROUND}  {color.END} - remote differs from tool origin")
 
+    print(
+        f"\n{' ':<{PRE_SPACE}}By default, only versions for available local tools are visible."
+    )
     print(
         f"\n{' ':<{PRE_SPACE}}Only first {CHARS_TO_SHOW} characters are showed from version."
     )
@@ -142,60 +149,85 @@ def print_version_check(tools, only_local=True):
         print(f"{color.END if coloring else None}")
 
 
-def print_tools_by_location(tools: List[dict], location: str, filter_by: str = ""):
+def print_tools_by_location(
+    tools: List[dict], location: str, filter_by: str = "", show_size=False
+):
 
     MAX_WV = 41
-    # if local_tools:
-    print(
-        f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}  {f'{location.capitalize()} Version':{MAX_WV}}  {f'{location.capitalize()} Tags':<{MAX_WT}}{color.END}\n"
-    )
+    if location == "remote" and show_size:
+        print(f"{' ':<{PRE_SPACE}} Size is as compressed in Remote.")
+    print(f"\n{' ':<{PRE_SPACE}}{color.BOLD}  ", end="")
+    print(f"{'Tool name':<{MAX_WN}}  ", end="")
+    print(f"{f'{location.capitalize()} Version':{MAX_WV}}  ", end="")
+    if show_size:
+        print(f"{'Size':<{MAX_WS}}   ", end="")
+    print(f"{f'{location.capitalize()} Tags':<{MAX_WT}}", end="")
+    print(f"{color.END}\n")
     if not filter_by:
         print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
     for tool in sorted(tools):
-        # print(1)
         lst = tools[tool]
         first_print = True
         if lst.versions and len(lst.versions) == 1:
             tags = ",".join(next(iter(lst.versions)).tags)
+            size = next(iter(lst.versions)).size
             version = next(iter(lst.versions)).version
             name = lst.name.split(":")[0]
             if filter_by and filter_by not in tags:
                 continue
-            print(
-                f"{' ':<{PRE_SPACE}}| {name:<{MAX_WN}}| {version:{MAX_WV}}| {tags:<{MAX_WT}}"
-            )
+            print(f"{' ':<{PRE_SPACE}}| ", end="")
+            print(f"{name:<{MAX_WN}}| ", end="")
+            print(f"{version:{MAX_WV}}| ", end="")
+            if show_size:
+                print(f"{size:>{MAX_WS}} | ", end="")
+            print(f"{tags:<{MAX_WT}}")
             first_print = False
         else:
             tags = ""
             version = ""
             for i, ver in enumerate(lst.versions):
                 name = lst.name.split(":")[0] if first_print else ""
-                # print(ver.tags)
                 tags = ",".join(lst.versions[i].tags)
                 version = ver.version
+                size = ver.size
                 if filter_by and filter_by not in tags:
                     continue
-                print(
-                    f"{' ':<{PRE_SPACE}}| {name:<{MAX_WN}}| {version:{MAX_WV}}| {tags:<{MAX_WT}}"
-                )
+                print(f"{' ':<{PRE_SPACE}}| ", end="")
+                print(f"{name:<{MAX_WN}}| ", end="")
+                print(f"{version:{MAX_WV}}| ", end="")
+                if show_size:
+                    print(f"{size:>{MAX_WS}} | ", end="")
+                print(f"{tags:<{MAX_WT}}")
                 first_print = False
 
         if lst.versions and not first_print and not filter_by:
             print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
 
 
-def print_combined_local_remote(tools: dict):
+def print_combined_local_remote(tools: dict, show_size=False):
 
-    print(
-        f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}  {f'Local Version':{MAX_WV}}  {f'Remote Version':<{MAX_WV}}  {f'Description':<{MAX_WD}}{color.END}\n"
-    )
+    print(f"\n{' ':<{PRE_SPACE}}{color.BOLD} ", end="")
+    print(f"{'Tool name':<{MAX_WN}}", end="")
+    print(f"{f'Local Version':{MAX_WV}}", end="")
+    print(f"{'Remote Version':<{MAX_WV}}", end="")
+    if show_size:
+        print(f" {'R. Size':<{MAX_WS}}", end="")
+    print(f"{f'Description':<{MAX_WD}}", end="")
+    print(f"{color.END}\n")
+
     for tool in sorted(tools):
         l_version = tools[tool].get("local_version")[:CHARS_TO_SHOW]
         r_version = tools[tool].get("remote_version")[:CHARS_TO_SHOW]
         description = tools[tool].get("description")
-        print(
-            f"{' ':<{PRE_SPACE}}| {tool:<{MAX_WN}}  {l_version:{MAX_WV}}  {r_version:<{MAX_WT}}   {description:<{MAX_WD}}"
-        )
+
+        print(f"{' ':<{PRE_SPACE}}|", end="")
+        print(f"{tool:<{MAX_WN}}", end="")
+        print(f"{l_version:{MAX_WV}}", end="")
+        print(f"{r_version:{MAX_WV}}", end="")
+        if show_size:
+            size = tools[tool].get("size")
+            print(f"{size:>{MAX_WS}} ", end="")
+        print(f"{description:<{MAX_WD}}")
 
 
 def main():
@@ -226,31 +258,28 @@ def main():
         "-a", "--all", action="store_true", help="List all images from the registry."
     )
     list_parser.add_argument(
-        "-w",
-        "--with-tags",
+        "-s",
+        "--size",
         action="store_true",
-        help="Show all tags of selected images.",
+        help="Include size in listing. Compressed on remote, uncompressed on local.",
     )
     list_parser.add_argument(
         "-j", "--json", action="store_true", help="Print output in JSON format."
     )
-    update_parser = subparsers.add_parser(
-        "update", formatter_class=argparse.ArgumentDefaultsHelpFormatter
-    )
-    # update_parser.add_argument(
-    #     "-t", "--tool", help="Check single tool.",
-    # )
-    subsubparsers = list_parser.add_subparsers(dest="list_sub_command")
-    local_parser = subsubparsers.add_parser(
-        "local",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        help="List only local 'cincan' tools.",
-    )
-    remote_parser = subsubparsers.add_parser(
-        "remote",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    list_second_exclusive = list_parser.add_mutually_exclusive_group()
+    list_second_exclusive.add_argument(
+        "-r",
+        "--remote",
+        action="store_true",
         help="List remote 'cincan' tools from registry.",
     )
+    list_second_exclusive.add_argument(
+        "-l",
+        "--local",
+        action="store_true",
+        help="List only locally available 'cincan' tools.",
+    )
+    subsubparsers = list_parser.add_subparsers(dest="list_sub_command")
     version_parser = subsubparsers.add_parser(
         "versions",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -258,6 +287,13 @@ def main():
     )
     version_parser.add_argument(
         "-t", "--tool", help="Check single tool.",
+    )
+    version_parser.add_argument(
+        "-u", "--only-updates", help="Lists only available updates.",
+    )
+    version_parser.add_argument(
+        "--metadir-path",
+        help="Override default path for available meta files. (Directory) This directory should contain upstream information for each tool.",
     )
     if len(sys.argv) > 1:
         args = m_parser.parse_args(args=sys.argv[1:])
@@ -272,7 +308,8 @@ def main():
     if log_level not in {"DEBUG"}:
         sys.tracebacklimit = 0  # avoid track traces unless debugging
     logging.basicConfig(
-        format=f"{' ':<{PRE_SPACE}}%(levelname)s - %(name)s: %(message)s", level=getattr(logging, log_level)
+        format=f"{' ':<{PRE_SPACE}}%(levelname)s - %(name)s: %(message)s",
+        level=getattr(logging, log_level),
     )
 
     if sub_command == "help":
@@ -282,24 +319,18 @@ def main():
     elif sub_command == "list":
 
         reg = ToolRegistry()
-        format_str = "{0:<30}"
-        if args.with_tags:
-            format_str += " {5:<30}"
-        format_str += " {1:<10}"
-        format_str += " {2}"
-        # print(f"Tag is {args.tag}")
 
-        if args.list_sub_command == "local" or args.list_sub_command == "remote":
+        if args.local or args.remote:
 
             loop = asyncio.get_event_loop()
             try:
-                if args.list_sub_command == "local":
+                if args.local:
                     tools = loop.run_until_complete(
                         reg.list_tools_local_images(
                             defined_tag=args.tag if not args.all else ""
                         )
                     )
-                elif args.list_sub_command == "remote":
+                elif args.remote:
                     tools = loop.run_until_complete(
                         reg.list_tools_registry(
                             defined_tag=args.tag if not args.all else ""
@@ -317,16 +348,19 @@ def main():
                 else:
                     print(f"\n  Listing all tools :\n")
 
+                location = "local" if args.local else "remote"
+
                 print_tools_by_location(
-                    tools, args.list_sub_command, args.tag if not args.all else ""
+                    tools, location, args.tag if not args.all else "", args.size
                 )
 
         elif args.list_sub_command == "versions":
             loop = asyncio.get_event_loop()
             ret = loop.run_until_complete(
                 reg.list_versions(
-                    tool=args.tool if args.tool else "",
-                    toJSON=args.json if args.json else False,
+                    tool=args.tool or "",
+                    toJSON=args.json or False,
+                    metadir_path=args.metadir_path or "",
                 )
             )
             # os.system("clear")
@@ -347,43 +381,11 @@ def main():
             if not args.all and not args.json and tool_list:
                 print(f"\n  Listing all tools with tag '{args.tag}':\n")
             if not args.json and tool_list:
-                print_combined_local_remote(tool_list)
+                print_combined_local_remote(tool_list, args.size)
             elif tool_list:
                 print(json.dumps(tool_list))
             else:
                 print("No single tool available for unknown reason.")
-
-    elif sub_command == "update":
-        # loop = asyncio.get_event_loop()
-        # ret = loop.run_until_complete(
-        #     reg.list_versions(
-        #         tool=args.tool if args.tool else "",
-        #         toJSON=args.json if args.json else False,
-        #     )
-        # )
-        # for tool_name in ret:
-        #     tool = ret[]
-
-        # if not args.json:
-        #     print_single_tool_version_check(ret)
-        # else:
-        #     print(ret)
-        # loop.close()
-        pass
-
-        # print(local_tools)
-        # print_local_version_check(local_tools, remote_tools, "latest-stable")
-        # for tool in sorted(local_tools):
-        #     tlo = local_tools[tool]
-        #     print(tlo.upstream_v)
-        # reg.check_upstream_versions()
-        # # print(pathlib.Path.cwd())
-        # for tool_path in (pathlib.Path(pathlib.Path.cwd() / "tools")).iterdir():
-        #     print(tool_path.stem)
-        #     print()
-        # ghidra = pathlib.Path(pathlib.Path.cwd() / "tools/ghidra-decompiler/ghidra-decompiler.json")
-        # checker = GithubChecker(ghidra)
-        # print(checker.get_version())
 
 
 if __name__ == "__main__":

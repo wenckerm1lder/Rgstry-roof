@@ -2,8 +2,8 @@ import datetime
 from typing import List
 
 
-def parse_json_time(string: str) -> datetime.datetime:
-    """Parse time from JSON as stored by Docker"""
+def parse_file_time(string: str) -> datetime.datetime:
+    """Parse time from file as stored by Docker"""
     s = string[0:19]
     return datetime.datetime.strptime(s, "%Y-%m-%dT%H:%M:%S")
 

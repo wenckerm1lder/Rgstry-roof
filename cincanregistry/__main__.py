@@ -1,5 +1,6 @@
 from . import ToolRegistry
 from . import VersionInfo
+from . import ToolInfoEncoder
 import argparse
 import sys
 import logging
@@ -352,8 +353,8 @@ def main():
                     if not args.all and not args.json:
                         print(f"\n  Listing all tools with tag '{args.tag}':\n")
                     elif not args.all and args.json:
-                        raise NotImplementedError
-                        print(json.dumps(tools))
+                        print(json.dumps(tools, cls=ToolInfoEncoder))
+                        exit(0)
                     else:
                         print(f"\n  Listing all tools :\n")
 
@@ -384,7 +385,6 @@ def main():
                     only_updates=args.only_updates
                 )
             )
-            # os.system("clear")
             if args.name and not args.json:
                 print_single_tool_version_check(ret)
             elif not args.name and not args.json:

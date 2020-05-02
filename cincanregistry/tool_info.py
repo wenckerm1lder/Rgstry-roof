@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List, Union
 from .version_info import VersionInfo
+from json import JSONEncoder
 
 
 class ToolInfo:
@@ -93,6 +94,15 @@ class ToolInfo:
         else:
             return latest
 
+    def __iter__(self):
+        yield "name", self.name,
+        yield "updated", str(self.updated),
+        yield "location", self.location,
+        yield "versions", [dict(v) for v in self.versions],
+        if self.upstream_v:
+            yield "upstream_v", [dict(v) for v in self.upstream_v],
+        yield "description", self.description
+
     def __str__(self):
         return f"{self.name} {self.description}"
 
@@ -108,3 +118,8 @@ class ToolInfo:
             return True
         else:
             return False
+
+
+class ToolInfoEncoder(JSONEncoder):
+    def default(self, o):
+        return dict(o)

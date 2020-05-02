@@ -1,5 +1,5 @@
 from .version_info import VersionInfo
-from .tool_info import ToolInfo
+from .tool_info import ToolInfo, ToolInfoEncoder
 from .version_maintainer import VersionMaintainer
 from .registry import ToolRegistry
 

@@ -25,6 +25,7 @@ class VersionMaintainer:
         prefix: str = "cincan/",
         meta_filename: str = "meta.json",
         metafiles_location: str = "",
+        disable_remote_download: bool = False,
     ):
         self.logger = logging.getLogger("versions")
         self.tokens = tokens or {}
@@ -33,12 +34,12 @@ class VersionMaintainer:
         # prefix, mostly meaning the owner of possible Docker image
         self.prefix = prefix
         self.meta_filename = meta_filename
-        if metafiles_location:
-            self.disable_remote_download = True
-            self.metafiles_location = pathlib.Path(metafiles_location)
-        else:
-            self.disable_remote_download = False
-            self.metafiles_location = pathlib.Path.home() / ".cincan" / "tools"
+        self.metafiles_location = (
+            pathlib.Path(metafiles_location)
+            if metafiles_location
+            else pathlib.Path.home() / ".cincan" / "version_check"
+        )
+        self.disable_remote_download = disable_remote_download
 
         # CinCan GitLab repository details
         self.namespace = "cincan"
@@ -249,6 +250,7 @@ class VersionMaintainer:
 
     def _write_checker_cache(self, tool_name: str, provider: str, data: dict):
         path = self.metafiles_location / tool_name / f"{provider}_cache.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:
             json.dump(data, f)
             self.logger.debug(

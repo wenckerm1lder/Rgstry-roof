@@ -218,7 +218,9 @@ class VersionMaintainer:
                 )
         return tools
 
-    async def _list_versions_single(self, l_tool: ToolInfo, r_tool: ToolInfo) -> dict:
+    async def _list_versions_single(
+        self, l_tool: ToolInfo, r_tool: ToolInfo, only_updates: bool = False
+    ) -> dict:
         """
         Generates version information for single tool. Attempts to define if there are
         new versions available.
@@ -283,5 +285,11 @@ class VersionMaintainer:
                 f"Tool {r_tool.name} is not up to date with origin/installation upstream."
             )
             tool_info["updates"]["remote"] = True
+
+        if only_updates:
+            if tool_info["updates"]["remote"] or (tool_info["updates"]["local"] if l_tool else False):
+                return tool_info
+            else:
+                return {}
 
         return tool_info

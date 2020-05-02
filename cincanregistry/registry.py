@@ -166,6 +166,7 @@ class ToolRegistry:
                         if defined_tag in ver.tags:
                             r_version = ver.version
                             # Add size based on remote version
+                            # compressed
                             size = ver.size
                             break
                     if not r_version:
@@ -192,7 +193,7 @@ class ToolRegistry:
             use_tools[i]["description"] = (
                 remote_tools.get(i).description if remote_tools.get(i) else ""
             )
-            use_tools[i]["size"] = size
+            use_tools[i]["compressed_size"] = size
         if not use_tools:
             self.logger.info(f"No single tool found with tag `{defined_tag}`.")
         return use_tools
@@ -210,6 +211,12 @@ class ToolRegistry:
         Additionally, if tag is defined, tool must have this tag
         before it is listed.
         """
+        try:
+            self.client.ping()
+        except:
+            self.logger.error("Failed to connect to Docker Server. Is it running?")
+            self.logger.error("Not able to list local tools.")
+            return {}
         images = self.client.images.list(filters={"dangling": False})
         # images oldest first (tags are listed in proper order)
         images.sort(key=lambda x: parse_file_time(x.attrs["Created"]), reverse=True)
@@ -258,7 +265,11 @@ class ToolRegistry:
                                 )
                         else:
                             ver_info = VersionInfo(
-                                version, LOCAL_REGISTRY, set(stripped_tags), updated, size=i.attrs.get("Size")
+                                version,
+                                LOCAL_REGISTRY,
+                                set(stripped_tags),
+                                updated,
+                                size=i.attrs.get("Size"),
                             )
                             ret[name] = ToolInfo(
                                 name, updated, "local", versions=[ver_info]
@@ -485,7 +496,11 @@ class ToolRegistry:
         return r
 
     async def list_versions(
-        self, tool: str = "", toJSON: bool = False, metadir_path: str = ""
+        self,
+        tool: str = "",
+        toJSON: bool = False,
+        metadir_path: str = "",
+        only_updates: bool = False,
     ):
 
         maintainer = VersionMaintainer(
@@ -494,20 +509,22 @@ class ToolRegistry:
         versions = {}
         if tool:
             local_tools, remote_tools = await self.get_local_remote_tools()
-            l_tool, r_tool = await maintainer.get_versions_single_tool(
+            l_tool, r_tool = maintainer.get_versions_single_tool(
                 tool, local_tools, remote_tools
             )
-            versions = await maintainer._list_versions_single(l_tool, r_tool)
+            versions = await maintainer._list_versions_single(l_tool, r_tool, only_updates)
         else:
             remote_tools = await self.list_tools_registry()
             # Remote tools, with included upstream version information
-            remote_tools = await maintainer._check_upstream_versions(remote_tools)
+            remote_tools_with_origin_version = await maintainer._check_upstream_versions(remote_tools)
             # Local tools, without checking
             local_tools = await self.list_tools_local_images()
-            for t in remote_tools:
-                r_tool = remote_tools.get(t)  # Contains also upstream version info
+            for t in remote_tools_with_origin_version:
+                r_tool = remote_tools_with_origin_version.get(t)  # Contains also upstream version info
                 l_tool = local_tools.get(t, "")
-                versions[t] = await maintainer._list_versions_single(l_tool, r_tool)
+                t_info = await maintainer._list_versions_single(l_tool, r_tool, only_updates)
+                if t_info:
+                    versions[t] = t_info
 
         if toJSON:
             return json.dumps(versions)

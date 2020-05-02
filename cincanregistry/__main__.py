@@ -63,7 +63,7 @@ def print_single_tool_version_check(tool):
     print("\nUse -j flag to print as JSON with additional details.\n")
 
 
-def print_version_check(tools, only_local=True):
+def print_version_check(tools:dict, location="both", only_updates:bool=False):
 
     print(f"\n{' ':<{PRE_SPACE}}Color explanations:", end=" ")
     print(f"{color.GREEN_BACKGROUND}  {color.END} - tool up to date", end=" ")
@@ -101,13 +101,17 @@ def print_version_check(tools, only_local=True):
 
         tool = tools[tool_name]
 
-        if tool.get("updates").get("local"):
+
+        if tool.get("updates").get("local") and location in ["local", "both"]:
             coloring = color.BOLD_RED
         elif tool.get("updates").get("remote"):
             coloring = color.GRAY
-        if only_local:
+        if location == "local":
             if not tool.get("versions").get("local").get("version"):
                 continue
+        if location == "remote" and only_updates:
+            if not tool.get("updates").get("remote"):
+                continue           
 
         # pre-space and color
         print(f"{coloring}{' ':<{PRE_SPACE}}| ", end="")
@@ -227,7 +231,7 @@ def print_combined_local_remote(tools: dict, show_size=False):
         print(f"{l_version:{MAX_WV}}", end="")
         print(f"{r_version:{MAX_WV}}", end="")
         if show_size:
-            size = tools[tool].get("size")
+            size = tools[tool].get("compressed_size")
             print(f"{size:>{MAX_WS}} ", end="")
         print(f"{description:<{MAX_WD}}")
 
@@ -288,10 +292,10 @@ def main():
         help="List all versions of the tools.",
     )
     version_parser.add_argument(
-        "-t", "--tool", help="Check single tool.",
+        "-n", "--name", help="Check single tool by the name.",
     )
     version_parser.add_argument(
-        "-u", "--only-updates", help="Lists only available updates.",
+        "-u", "--only-updates", action="store_true", help="Lists only available updates.",
     )
     version_parser.add_argument(
         "--metadir-path",
@@ -322,64 +326,66 @@ def main():
 
         reg = ToolRegistry()
 
-        if args.local or args.remote:
+        if not args.list_sub_command:
 
-            loop = asyncio.get_event_loop()
-            try:
-                if args.local:
-                    tools = loop.run_until_complete(
-                        reg.list_tools_local_images(
-                            defined_tag=args.tag if not args.all else ""
+            if args.local or args.remote:
+
+                loop = asyncio.get_event_loop()
+                try:
+                    if args.local:
+                        tools = loop.run_until_complete(
+                            reg.list_tools_local_images(
+                                defined_tag=args.tag if not args.all else ""
+                            )
                         )
-                    )
-                elif args.remote:
-                    tools = loop.run_until_complete(
-                        reg.list_tools_registry(
-                            defined_tag=args.tag if not args.all else ""
+                    elif args.remote:
+                        tools = loop.run_until_complete(
+                            reg.list_tools_registry(
+                                defined_tag=args.tag if not args.all else ""
+                            )
                         )
+
+                finally:
+                    loop.close()
+                if tools:
+                    if not args.all and not args.json:
+                        print(f"\n  Listing all tools with tag '{args.tag}':\n")
+                    elif not args.all and args.json:
+                        raise NotImplementedError
+                        print(json.dumps(tools))
+                    else:
+                        print(f"\n  Listing all tools :\n")
+
+                    location = "local" if args.local else "remote"
+
+                    print_tools_by_location(
+                        tools, location, args.tag if not args.all else "", args.size
                     )
-
-            finally:
-                loop.close()
-            if tools:
-                if not args.all and not args.json:
-                    print(f"\n  Listing all tools with tag '{args.tag}':\n")
-                elif not args.all and args.json:
-                    raise NotImplementedError
-                    print(json.dumps(tools))
-                else:
-                    print(f"\n  Listing all tools :\n")
-
-                location = "local" if args.local else "remote"
-
-                print_tools_by_location(
-                    tools, location, args.tag if not args.all else "", args.size
-                )
 
         elif args.list_sub_command == "versions":
             loop = asyncio.get_event_loop()
             ret = loop.run_until_complete(
                 reg.list_versions(
-                    tool=args.tool or "",
+                    tool=args.name or "",
                     toJSON=args.json or False,
                     metadir_path=args.metadir_path or "",
+                    only_updates=args.only_updates
                 )
             )
             # os.system("clear")
-            if args.tool and not args.json:
+            if args.name and not args.json:
                 print_single_tool_version_check(ret)
-            elif not args.tool and not args.json:
-                print_version_check(ret)
+            elif not args.name and not args.json:
+                loc = "remote" if args.remote else ("local" if args.local else "both")
+                print_version_check(ret, loc, args.only_updates)
             if args.json:
                 print(ret)
             loop.close()
 
         else:
-            try:
-                tool_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
-            except OSError:
-                print(f"Failed to connect to Docker.")
-                sys.exit(1)
+
+            tool_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
+ 
             if not args.all and not args.json and tool_list:
                 print(f"\n  Listing all tools with tag '{args.tag}':\n")
             if not args.json and tool_list:

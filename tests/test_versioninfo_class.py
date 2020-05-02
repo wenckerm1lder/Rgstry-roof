@@ -38,7 +38,7 @@ def test_getters_version_info_no_checker():
     assert not obj.origin
     assert obj.tags == set(["latest", "latest-stable"])
     assert obj.updated == datetime(2020, 3, 3, 13, 37)
-    assert obj.size == "37.70 MB"
+    assert obj.size == "39.53 MB"
     assert obj.raw_size() == 39529754
 
 
@@ -64,12 +64,16 @@ def test_setters_version_info_no_checker():
     with pytest.raises(ValueError):
         obj.size = "16062006"
 
+    obj._size = None
+    assert obj.size == "NaN"
+    obj.size = 1001
+    assert obj.size == "1.00 KB"
     obj.size = 16062
-    assert obj.size == "15.69 KB"
+    assert obj.size == "16.06 KB"
     obj.size = 16062006
-    assert obj.size == "15.32 MB"
+    assert obj.size == "16.06 MB"
     obj.size = 1606200600
-    assert obj.size == "1.50 GB"
+    assert obj.size == "1.61 GB"
 
 
 @mock.patch.object(
@@ -167,7 +171,7 @@ def test_version_info_iter():
         "tags": ["latest", "latest-stable"],
         "updated": str(obj.updated),
         "origin": True,
-        "size": "3.77 MB"
+        "size": "3.95 MB"
     }
     assert dict(obj) == test_dict
     obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
@@ -178,7 +182,7 @@ def test_version_info_iter():
         "tags": ["latest", "latest-stable"],
         "updated": str(obj.updated),
         "origin": False,
-        "size": "37.70 MB"
+        "size": "39.53 MB"
     }
     assert dict(obj) == test_dict2
 

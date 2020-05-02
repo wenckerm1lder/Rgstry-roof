@@ -219,7 +219,6 @@ class ToolRegistry:
             if len(i.tags) == 0:
                 continue  # not sure what these are...
             updated = parse_json_time(i.attrs["Created"])
-
             for t in i.tags:
                 version = default_ver
                 existing_ver = False
@@ -254,11 +253,12 @@ class ToolRegistry:
                                         LOCAL_REGISTRY,
                                         set(stripped_tags),
                                         updated,
+                                        size=i.attrs.get("Size"),
                                     )
                                 )
                         else:
                             ver_info = VersionInfo(
-                                version, LOCAL_REGISTRY, set(stripped_tags), updated
+                                version, LOCAL_REGISTRY, set(stripped_tags), updated, size=i.attrs.get("Size")
                             )
                             ret[name] = ToolInfo(
                                 name, updated, "local", versions=[ver_info]

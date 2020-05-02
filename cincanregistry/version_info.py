@@ -110,14 +110,16 @@ class VersionInfo:
         """
         if self._size is None:
             return "NaN"
-        size = self._size / 1024
-        if size < 1024:
+        if self._size < 1000:
+            return f"{self._size} bytes"
+        size = self._size / 1000
+        if size < 1000:
             return f"{size:0.2f} KB"
-        size = size / 1024
-        if size < 1024:
+        size /= 1000
+        if size < 1000:
             return f"{size:0.2f} MB"
-        size = size / 1024
-        if size < 1024:
+        size /= 1000
+        if size < 1000:
             return f"{size:0.2f} GB"
 
     def raw_size(self) -> int:

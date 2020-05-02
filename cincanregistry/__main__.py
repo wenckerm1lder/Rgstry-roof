@@ -149,42 +149,55 @@ def print_version_check(tools, only_local=True):
         print(f"{color.END if coloring else None}")
 
 
-def print_tools_by_location(tools: List[dict], location: str, filter_by: str = ""):
+def print_tools_by_location(
+    tools: List[dict], location: str, filter_by: str = "", show_size=False
+):
 
     MAX_WV = 41
-    # if local_tools:
-    print(
-        f"\n{' ':<{PRE_SPACE}}{color.BOLD}  {'Tool name':<{MAX_WN}}  {f'{location.capitalize()} Version':{MAX_WV}}  {f'{location.capitalize()} Tags':<{MAX_WT}}{color.END}\n"
-    )
+    if location == "remote" and show_size:
+        print(f"{' ':<{PRE_SPACE}} Size is as compressed in Remote.")
+    print(f"\n{' ':<{PRE_SPACE}}{color.BOLD}  ", end="")
+    print(f"{'Tool name':<{MAX_WN}}  ", end="")
+    print(f"{f'{location.capitalize()} Version':{MAX_WV}}  ", end="")
+    if show_size:
+        print(f"{'Size':<{MAX_WS}}   ", end="")
+    print(f"{f'{location.capitalize()} Tags':<{MAX_WT}}", end="")
+    print(f"{color.END}\n")
     if not filter_by:
         print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
     for tool in sorted(tools):
-        # print(1)
         lst = tools[tool]
         first_print = True
         if lst.versions and len(lst.versions) == 1:
             tags = ",".join(next(iter(lst.versions)).tags)
+            size = next(iter(lst.versions)).size
             version = next(iter(lst.versions)).version
             name = lst.name.split(":")[0]
             if filter_by and filter_by not in tags:
                 continue
-            print(
-                f"{' ':<{PRE_SPACE}}| {name:<{MAX_WN}}| {version:{MAX_WV}}| {tags:<{MAX_WT}}"
-            )
+            print(f"{' ':<{PRE_SPACE}}| ", end="")
+            print(f"{name:<{MAX_WN}}| ", end="")
+            print(f"{version:{MAX_WV}}| ", end="")
+            if show_size:
+                print(f"{size:>{MAX_WS}} | ", end="")
+            print(f"{tags:<{MAX_WT}}")
             first_print = False
         else:
             tags = ""
             version = ""
             for i, ver in enumerate(lst.versions):
                 name = lst.name.split(":")[0] if first_print else ""
-                # print(ver.tags)
                 tags = ",".join(lst.versions[i].tags)
                 version = ver.version
+                size = ver.size
                 if filter_by and filter_by not in tags:
                     continue
-                print(
-                    f"{' ':<{PRE_SPACE}}| {name:<{MAX_WN}}| {version:{MAX_WV}}| {tags:<{MAX_WT}}"
-                )
+                print(f"{' ':<{PRE_SPACE}}| ", end="")
+                print(f"{name:<{MAX_WN}}| ", end="")
+                print(f"{version:{MAX_WV}}| ", end="")
+                if show_size:
+                    print(f"{size:>{MAX_WS}} | ", end="")
+                print(f"{tags:<{MAX_WT}}")
                 first_print = False
 
         if lst.versions and not first_print and not filter_by:
@@ -243,12 +256,6 @@ def main():
     )
     list_exclusive_group.add_argument(
         "-a", "--all", action="store_true", help="List all images from the registry."
-    )
-    list_parser.add_argument(
-        "-w",
-        "--with-tags",
-        action="store_true",
-        help="Show all tags of selected images.",
     )
     list_parser.add_argument(
         "-s",
@@ -344,7 +351,7 @@ def main():
                 location = "local" if args.local else "remote"
 
                 print_tools_by_location(
-                    tools, location, args.tag if not args.all else ""
+                    tools, location, args.tag if not args.all else "", args.size
                 )
 
         elif args.list_sub_command == "versions":

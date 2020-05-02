@@ -79,9 +79,9 @@ tool will fetch version information from configured upstreams. By default it lis
 
 **With help of this, we should be always acknowledged whether our tool is up-to-date or not!**
 
-Current implemention lists those tools as red `#FF0000`, where is immediate update available on remote. (local version differs from remote)
+Current implemention lists those tools as red `#AA0000`, where is immediate update available on remote. (local version differs from remote)
 
-If local and remote are equal, but possible upstream of the tool has update, those are listed as grey `#D3D3D3`. 
+If local and remote are equal, but possible upstream of the tool has update, those are listed as grey `#808080`. 
 
 ![Version listing example](img/version_list.png)
 In this example, we have only single tool installed, `cincan/radare2`.

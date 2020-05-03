@@ -20,6 +20,8 @@ Tool can be installed by running following command:
 
 `pip install git+https://gitlab.com/cincan/cincan-registry`
 
+To list locally available tools, "Docker" must be installed and running on your machine.
+
 Tool is not currently in pip, but should be in future.
 
 ## Usage
@@ -33,26 +35,29 @@ We are also able to list upstream versions of tools, for those where this featur
 
 To list both available local and remote tools with tag "latest-stable", simply write
 ```
-cincanegistry list
+cincanregistry list
 
 ```
 
 When running first time, output could look something like this:
 
-![Example both tool list](img/local_remote_tool_list.png)
+<img src="img/list_tools.svg">
 
 
-By default, "latest-stable" tag is always used, unless overrided with `--tag` or `-t` argument.
+<!-- ![Example both tool list](img/local_remote_tool_list.png) -->
+
+
+By default, "latest-stable" tag is always used, unless overridden with `--tag` or `-t` argument.
 
 <!-- <img src="img/cincanreg_list.svg"  width="900" height="800"> -->
 
 
-To list only locally available tools with tag "latest-stable", argument `--local` (or `-l`) can be used. Additionally, when listing only tools for specfic location, listing will show all viable tags pointing into same image.
+To list only locally available tools with tag "latest-stable", argument `--local` (or `-l`) can be used. Additionally, when listing only tools for specific location, listing will show all viable tags pointing into same image.
 
 ```
 cincanregistry list --local
 ```
-Example ouput should look something like this:
+Example output should look something like this:
 
 ![Example local tool list](img/local_tool_list.png)
 
@@ -62,7 +67,7 @@ To do same for remote, use `--remote` (or `-r`) argument. By adding flag `-a`, t
 cincanregistry list --remote -a 
 ```
 
-All commands are supporting JSON output. Simply add `--json` or `-j` argument. To combine previosly mentioned `-t` flag, we can use following arguments to provide JSON output:
+All commands are supporting JSON output. Simply add `--json` or `-j` argument. To combine previously mentioned `-t` flag, we can use following arguments to provide JSON output:
 
 ```
 cincanregistry list -ljt latest
@@ -76,6 +81,7 @@ For `local` images, size is as *uncompressed* and for remote images, as *compres
 By adding size column for regular listing, `--size` (or `-s`) argument can be used.
 
 To list local images with all tags and size column included:
+
 ```
 cincanregistry list -lsa
 ```
@@ -92,7 +98,7 @@ tool will fetch version information from configured upstreams. By default it lis
 
 **With help of this, we should be always acknowledged whether our tool is *really* up-to-date or not!**
 
-Current implemention lists those tools as red `#AA0000`, where is immediate update available on remote. (local version differs from remote)
+Current implementation lists those tools as red `#AA0000`, where is immediate update available on remote. (local version differs from remote)
 
 If local and remote are equal, but possible upstream of the tool has update, those are listed as grey `#808080`. 
 
@@ -100,13 +106,13 @@ If local and remote are equal, but possible upstream of the tool has update, tho
 
 As seen in the above image, green should indicate, that at least for that line, everything there is *fine*.
 
-Argument `--name` (or `-n`) can be used to check updates for single tool, and exclusive argment `--only-updates` or `-u` can be used to show only tools where there are updates available.
+Argument `--name` (or `-n`) can be used to check updates for single tool, and exclusive argument `--only-updates` or `-u` can be used to show only tools where there are updates available.
 
-It should be noted, that tool is not able to directly tell, if there is update available. It only detects deviations. 
+It should be noted, that tool is not able to directly tell, if there is actually newer version available. It only detects deviations. 
 
-They ways how versions are marked in gloab lever, are varying too much. However tool is very good at detecting same versions, even if they are marked bit differently.
+They ways how versions are marked in global level, are varying too much. However tool is very good at detecting same versions, even if they are marked bit differently.
 
-Most of the preceeding arguments with `list` subcommand will change the behaviour of `versions` subcommand as well.
+Most of the preceding arguments with `list` subcommand will change the behavior of `versions` subcommand as well.
 
 For example command:
 ```
@@ -123,7 +129,7 @@ Will produce JSON output from remote tools; generating their versions and filter
 | --config                | -c | Path to configuration file |
 | --tag                   | -t | Filter images by tag name. |
 | --all                   | -a | Show images with all tags. (Excludes --tag or -t) |
-| --size                  | -s | Inlcude  size column when listing |
+| --size                  | -s | Include  size column when listing |
 | --json                  | -j | Produce output in JSON format
 | --local                 | -l | List only locally available 'cincan' tools. Excludes --remote or -r
 | --remote                | -r | List remotely available 'cincan' tools. Excludes --local or -l
@@ -138,6 +144,7 @@ Size will be here always included in JSON regardless is it used with argument or
 
 These can be used with the combination of `list` options `-l` and `-r` to produce varying outputs. Arguments `-t`, `-a` and `-s` are ineffective when used with `versions` subcommand.
 
+Tool is attempting to always find the latest available version among all tags.
 
 ## Upstream checker
 
@@ -151,9 +158,9 @@ Currently supported providers are:
 * `Debian packages` - latest package version for any suite
 * `Alpine packages` - latest package version for any Alpine version
 * `PyPi` - latest release for any package
-* `Tools by Didier Stevens` - latest release for any publised tool in his GitHub repository with similar versioning
+* `Tools by Didier Stevens` - latest release for any published tool in his GitHub repository with similar versioning
  
-Multiple origins can be configured for every tool, however two should be enough, and in most cases just one: one for source of the tool (e.g. GitHub) and second origin for installation method in Dockerfile (e.g. tool installed as Alpine package into Dockerfile). Only one is needed and is ideal; hopefully tool is installed from direct source in Dockerfile.
+Multiple origins can be configured for every tool, however two should be enough, and in most cases just one. One for source of the tool (e.g. GitHub) and second origin for installation method in Dockerfile (e.g. tool installed as Alpine package into Dockerfile). Only one is needed and is ideal; hopefully tool is installed from direct source in Dockerfile.
 
 ### Configuring tool to be checked for origin version updates
 
@@ -187,18 +194,18 @@ Required attributes depends on provider, but usually at least repository, tool, 
 
 (TODO add provider  specific documentation)
 
-Currently tool is looking these files directly from GitLab repository and caching them after first download, so debugging and development might be hard sometimes. **Cache is refreshed every 24 hours.**
+Currently tool is looking these files directly from tools' GitLab repository and caching them after first download, so debugging and development might be hard sometimes. **Cache is refreshed every 24 hours.**
 
 By default, these files are stored into folder `$HOME/.cincan/version_cache` 
 
-However, there is option make tool use of different local path, and disable remote downloading. Path could be for example place, where you clone `tools` repository.
+However, there is option make tool to use different local path, and disable remote downloading to help development. Path could be for example place, where you clone `tools` repository.
 
 See [configuration for more details.](#Additional-configuration)
 
 
 ### Adding new provider
 
-Adding new provider is straighforward - [inherit UpstreamChecker](cincanregistry/checkers/_checker.py) class and add implemention in same folder. Existing implementations can be used as model. 
+Adding new provider is straighforward - [inherit UpstreamChecker](cincanregistry/checkers/_checker.py) class and add implementation in same folder. Existing implementations can be used as model. 
 Short idea is, that there is meta file for every tool containing upstream information, in JSON format.
 
 New provider class should implement at least one method `_get_version()` which returns latest version of tool from provider, based on configuration.
@@ -211,12 +218,12 @@ Separate file can be used with `--config` or `-c` option.
 
 Configuration file does not have many options, but some are needed.
 
-Data from DockerHub registry is cached into some specfic path with `tools_cache_path` attribute.
+Data from DockerHub registry is cached into some specific path with `tools_cache_path` attribute.
 
-`tokens` attribute can countain multiple tokens with schema \<provider\>:token.
+`tokens` attribute can contain multiple tokens with schema \<provider\>:token.
 Tokens are helpful in cases, when API limit is needed to be increased for version checking. Caching is used to reduce the amount of requests.
 
-`versions` attribute contains some version checking specfic details: `cache_path` is location, where metafiles and version cache is stored.
+`versions` attribute contains some version checking specific details: `cache_path` is location, where metafiles and version cache is stored.
 
 `metadata_filename` is filename to be checked as metafile.
 
@@ -240,7 +247,7 @@ Tokens are helpful in cases, when API limit is needed to be increased for versio
 
 ## More in depth
 
-This tool takes advantage of Docker Hub's Registry API, when listing remote tools and their sizes and versions. Version information is extracted from `manifest` file, which is containing the configuration of Docker Image. More presicely, version information value is acquired for `TOOL_VERSION` environment variable in the configuration.
+This tool takes advantage of Docker Hub's Registry API, when listing remote tools and their sizes and versions. Version information is extracted from `manifest` file, which is containing the configuration of Docker Image. More precisely, version information value is acquired for `TOOL_VERSION` environment variable in the configuration.
 
 This same variable is used for acquiring the version information on local as well, however we are using configuration information provided by `Docker Engine`.
 

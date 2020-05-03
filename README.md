@@ -41,7 +41,7 @@ cincanregistry list
 
 When running first time, output could look something like this:
 
-<img src="img/list_tools.svg">
+<img src="https://gitlab.com/CinCan/cincan-registry/-/raw/master/img/list_tools.svg">
 
 
 
@@ -55,7 +55,7 @@ cincanregistry list --local
 ```
 Example output should look something like this:
 
-![Example local tool list](img/local_tool_list.png)
+![Example local tool list](https://gitlab.com/CinCan/cincan-registry/-/raw/master/img/local_tool_list.png)
 
 
 To do same for remote, use `--remote` (or `-r`) argument. By adding flag `-a`, this shows tools with all possible tags.
@@ -98,7 +98,7 @@ Current implementation lists those tools as red `#AA0000`, where is immediate up
 
 If local and remote are equal, but possible upstream of the tool has update, those are listed as grey `#808080`. 
 
-![Version listing example](img/version_list.png)
+![Version listing example](https://gitlab.com/CinCan/cincan-registry/-/raw/master/img/version_list.png)
 
 As seen in the above image, green should indicate, that at least for that line, everything there is *fine*.
 

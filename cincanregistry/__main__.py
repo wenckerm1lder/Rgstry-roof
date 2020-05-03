@@ -56,19 +56,23 @@ class color:
 
 def print_single_tool_version_check(tool):
 
-    # MAX_WN = 15
+    # Provider name lenght
+    MAX_WN = 25
 
     print(f"\n{' ':<{PRE_SPACE}}{color.GREEN}  {tool.get('name')}{color.END}")
-
     # pre-space and text format
     print(f"\n{' ':<{PRE_SPACE}}", end="")
     # Location
-    print(f"  {f'{color.UNDERLINE}Location{color.END}':<{MAX_WN}}", end="")
-    print(f"{f'{color.UNDERLINE}Version{color.END}':<{MAX_WV}}")
+    underlined_loc = f'{color.UNDERLINE}Location{color.END}'
+    underlined_ver = f'{color.UNDERLINE}Version{color.END}'
+    # Underline "eats" padding for some reason
+    print(f"  {underlined_loc:<{MAX_WN+8}}", end="")
+    print(f"{underlined_ver:<{MAX_WV+8}}")
     # local
-    print(f"\n{' ':<{PRE_SPACE}}", end="")
+    print()
+    print(f"{' ':<{PRE_SPACE}}", end="")
     print(f"| {'Local':<{MAX_WN}}", end="")
-    print(f"{tool.get('versions').get('local').get('version'):<{MAX_WV}}")
+    print(f"{tool.get('versions').get('local').get('version'):0<{MAX_WV}}")
     # remote
     print(f"{' ':<{PRE_SPACE}}| {'Remote':<{MAX_WN}}", end="")
     print(f"{tool.get('versions').get('remote').get('version'):<{MAX_WV}}")
@@ -76,11 +80,6 @@ def print_single_tool_version_check(tool):
     if tool.get('versions').get('origin'):
         print(f"{' ':<{PRE_SPACE}}| {tool.get('versions').get('origin').get('details').get('provider'):<{MAX_WN}}", end="")
         print(f"{tool.get('versions').get('origin').get('version'):<{MAX_WV}}")
-    # print()
-
-    # print(
-    #     f"Name: {tool.get('name')}\nLocal version: {tool.get('versions').get('local')}\nRemote version: {tool.get('versions').get('local')}\nOrigin Version: {tool.get('versions').get('origin')}"
-    # )
 
     if tool.get("versions").get("other"):
         for other in tool.get("versions").get("other"):

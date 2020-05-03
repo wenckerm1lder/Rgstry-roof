@@ -1,16 +1,18 @@
-[![pipeline status](https://gitlab.com/CinCan/cincan-registry/badges/master/pipeline.svg)](https://gitlab.com/CinCan/cincan-registry/commits/master)
+
 
 # CinCan Registry
 
-CinCan registry is  a tool for listing available CinCan tools, their versions, size and possible updates. 
+CinCan registry is  a tool for listing available CinCan tools, their versions, sizes and possible updates as far as into their original source. 
 
- Available tools can be found in the CinCan's [tool repository.](https://gitlab.com/CinCan/tools) In practice, source code for tools' Dockerfiles is available in there.
+ Available tools can be found in the CinCan's [tool repository.](https://gitlab.com/CinCan/tools) Source code for tools' Dockerfiles is available in there.
 
 Currently, no other tools are supported for version information listing or for other details.
 
 Docker images of remote tools are stored in Docker Hub, [under CinCan's profile.](https://hub.docker.com/u/cincan)
 
 When checking versions beyond remote (Docker Hub), tool is using multiple different APIs such as GitHub's or GitLab's to acquire most recent availabe versions straight from the source. See more in [upstream checking.](#upstream-checker)
+
+[![pipeline status](https://gitlab.com/CinCan/cincan-registry/badges/master/pipeline.svg)](https://gitlab.com/CinCan/cincan-registry/commits/master)
 
 ## Installation
 
@@ -67,7 +69,9 @@ cincanregistry list -ljt latest
 ```
 This lists locally available tools with 'latest' tag in JSON format.
 
-JSON will contain also size of the images. For `local` images, size is as *uncompressed* and for remote images, as *compressed* size. 
+JSON will contain also size of the images. 
+
+For `local` images, size is as *uncompressed* and for remote images, as *compressed* size. 
 
 By adding size column for regular listing, `--size` (or `-s`) argument can be used.
 
@@ -124,7 +128,7 @@ Will produce JSON output from remote tools; generating their versions and filter
 | --local                 | -l | List only locally available 'cincan' tools. Excludes --remote or -r
 | --remote                | -r | List remotely available 'cincan' tools. Excludes --local or -l
 
-Size will be here always included in JSON regardless is it used with it or not.
+Size will be here always included in JSON regardless is it used with argument or not.
 
 | Specific to `list versions` |    | Description
 |-------------------------|----|-------------|
@@ -132,9 +136,7 @@ Size will be here always included in JSON regardless is it used with it or not.
 | --only-updates          | -u | Lists only available updates. Excludes --name or -n
 
 
-These can be used with the combination of `list` options to produce varying outputs.
-
-
+These can be used with the combination of `list` options `-l` and `-r` to produce varying outputs. Arguments `-t`, `-a` and `-s` are ineffective when used with `versions` subcommand.
 
 
 ## Upstream checker
@@ -151,7 +153,48 @@ Currently supported providers are:
 * `PyPi` - latest release for any package
 * `Tools by Didier Stevens` - latest release for any publised tool in his GitHub repository with similar versioning
  
-Multiple origins can be configured for every tool, however two should be enough, and in most cases just one: one for source of the tool(e.g. GitHub) and second origin for installation method in Dockerfile (e.g. tool installed as Alpine package into Dockerfile). Only one is needed and is ideal, when installing from source in Dockerfile.
+Multiple origins can be configured for every tool, however two should be enough, and in most cases just one: one for source of the tool (e.g. GitHub) and second origin for installation method in Dockerfile (e.g. tool installed as Alpine package into Dockerfile). Only one is needed and is ideal; hopefully tool is installed from direct source in Dockerfile.
+
+### Configuring tool to be checked for origin version updates
+
+Currently configuration files, so called 'metafiles' are stored into same place as Dockerfiles: [CinCan's tool repository.](https://gitlab.com/CinCan/tools) Every file is named as `meta.json`.
+
+Here is [example configuration](https://gitlab.com/CinCan/tools/-/blob/master/binwalk/meta.json) of binwalk. It has two providers where another is *source code* origin, and another is just *upstream for Dockefile*.
+
+```json
+{
+  "upstreams": [
+    {
+      "uri": "https://github.com/ReFirmLabs/binwalk",
+      "repository": "ReFirmLabs",
+      "tool": "binwalk",
+      "provider": "GitHub",
+      "method": "release",
+      "origin": true
+    },
+    {
+      "uri": "https://sources.debian.org/api/src/binwalk/",
+      "tool": "binwalk",
+      "provider": "Debian",
+      "method": "release",
+      "suite": "buster",
+      "docker_origin": true
+    }
+  ]
+}
+```
+Required attributes depends on provider, but usually at least repository, tool, provider and method are required. URI might be enough some cases.
+
+(TODO add provider  specific documentation)
+
+Currently tool is looking these files directly from GitLab repository and caching them after first download, so debugging and development might be hard sometimes. Cache is refreshed every 24 hours.
+
+By default, these files are stored into folder `$HOME/.cincan/version_cache` 
+
+However, there is option make tool use of different local path, and disable remote downloading. Path could be for example place, where you clone `tools` repository.
+
+See [configuration for more details.](#Additional-configuration)
+
 
 ### Adding new provider
 
@@ -159,6 +202,40 @@ Adding new provider is straighforward - [inherit UpstreamChecker](cincanregistry
 Short idea is, that there is meta file for every tool containing upstream information, in JSON format.
 
 New provider class should implement at least one method `_get_version()` which returns latest version of tool from provider, based on configuration.
+
+##  Additional configuration
+
+By default, configuration file is stored in $HOME/.cincan/registry.json
+
+Separate file can be used with `--config` or `-c` option.
+
+Configuration file does not have many options, but some are needed.
+
+Data from DockerHub registry is cached into some specfic path with `tools_cache_path` attribute.
+
+`tokens` attribute can countain multiple tokens with schema \<provider\>:token.
+Tokens are helpful in cases, when API limit is needed to be increased for version checking. Caching is used to reduce the amount of requests.
+
+`versions` attribute contains some version checking specfic details: `cache_path` is location, where metafiles and version cache is stored.
+
+`metadata_filename` is filename to be checked as metafile.
+
+`disable_remote` when set as `True`, disables downloading of metafiles from GitLab, which are required for upstream checking, if files do not exist yet. Disabling might be helpful when some tool is in development phase and version checking is just to be added.
+
+
+```json
+{
+  "tools_cache_path": "/home/<username>/.cincan/tools.json",
+  "tokens": {
+    "github": "<TOKEN>"
+  },
+  "versions": {
+    "cache_path": "/home/<username>/.cincan/version_cache",
+    "metadata_filename": "meta.json",
+    "disable_remote": false
+  }
+}
+```
 
 
 ## More in depth

@@ -2,7 +2,7 @@
 
 # CinCan Registry
 
-CinCan registry is  a tool for listing available CinCan tools, their versions, sizes and possible updates as far as into their original source. 
+CinCan registry is  a tool for listing available CinCan tools, their versions, sizes and possible updates up into their original source! 
 
  Available tools can be found in the CinCan's [tool repository.](https://gitlab.com/CinCan/tools) Source code for tools' Dockerfiles is available in there.
 
@@ -187,7 +187,7 @@ Required attributes depends on provider, but usually at least repository, tool, 
 
 (TODO add provider  specific documentation)
 
-Currently tool is looking these files directly from GitLab repository and caching them after first download, so debugging and development might be hard sometimes. Cache is refreshed every 24 hours.
+Currently tool is looking these files directly from GitLab repository and caching them after first download, so debugging and development might be hard sometimes. **Cache is refreshed every 24 hours.**
 
 By default, these files are stored into folder `$HOME/.cincan/version_cache` 
 

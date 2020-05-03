@@ -55,13 +55,39 @@ class color:
 
 
 def print_single_tool_version_check(tool):
-    print(
-        f"Name: {tool.get('name')}\nLocal version: {tool.get('versions').get('local')}\nRemote version: {tool.get('versions').get('local')}\nOrigin Version: {tool.get('versions').get('origin')}"
-    )
-    for other in tool.get("versions").get("other"):
-        print(f"{other.get('provider')} version: {other.get('version')}")
 
-    print("\nUse -j flag to print as JSON with additional details.\n")
+    # MAX_WN = 15
+
+    print(f"\n{' ':<{PRE_SPACE}}{color.GREEN}  {tool.get('name')}{color.END}")
+
+    # pre-space and text format
+    print(f"\n{' ':<{PRE_SPACE}}", end="")
+    # Location
+    print(f"  {f'{color.UNDERLINE}Location{color.END}':<{MAX_WN}}", end="")
+    print(f"{f'{color.UNDERLINE}Version{color.END}':<{MAX_WV}}")
+    # local
+    print(f"\n{' ':<{PRE_SPACE}}", end="")
+    print(f"| {'Local':<{MAX_WN}}", end="")
+    print(f"{tool.get('versions').get('local').get('version'):<{MAX_WV}}")
+    # remote
+    print(f"{' ':<{PRE_SPACE}}| {'Remote':<{MAX_WN}}", end="")
+    print(f"{tool.get('versions').get('remote').get('version'):<{MAX_WV}}")
+    # other
+    if tool.get('versions').get('origin'):
+        print(f"{' ':<{PRE_SPACE}}| {tool.get('versions').get('origin').get('details').get('provider'):<{MAX_WN}}", end="")
+        print(f"{tool.get('versions').get('origin').get('version'):<{MAX_WV}}")
+    # print()
+
+    # print(
+    #     f"Name: {tool.get('name')}\nLocal version: {tool.get('versions').get('local')}\nRemote version: {tool.get('versions').get('local')}\nOrigin Version: {tool.get('versions').get('origin')}"
+    # )
+
+    if tool.get("versions").get("other"):
+        for other in tool.get("versions").get("other"):
+            print(f"{' ':<{PRE_SPACE}}| {other.get('details').get('provider'):<{MAX_WN}}", end="")
+            print(f"{other.get('version'):<{MAX_WV}}")
+
+    print("\n  Use -j flag to print as JSON with additional details.\n")
 
 
 def print_version_check(tools:dict, location="both", only_updates:bool=False):

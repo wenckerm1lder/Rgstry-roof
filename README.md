@@ -205,16 +205,24 @@ See [configuration for more details.](#Additional-configuration)
 
 ### Adding new provider
 
-Adding new provider is straighforward - [inherit UpstreamChecker](cincanregistry/checkers/_checker.py) class and add implementation in same folder. Existing implementations can be used as model. 
-Short idea is, that there is meta file for every tool containing upstream information, in JSON format.
+Adding new provider is straighforward - [inherit UpstreamChecker](cincanregistry/checkers/_checker.py) class and add implementation in the same folder. Existing implementations can be used as model. 
+Short idea is, that there is meta file for every tool, containing upstream information in JSON format, and based on this information, correct provider implementation is selected, and tool information is forwarded for it.
 
-New provider class should implement at least one method `_get_version()` which returns latest version of tool from provider, based on configuration.
+New provider class should implement at least one method `_get_version()` which returns latest version of tool from the provider, based on configuration.
+
+As result. this *checker* just returns latest available version in configured format. (Latest release number, latest tag, latest commit? Or something else.)
+
+Additionally, in [__init__](cincanregistry/checkers/__init__.py) file, provider name must be mapped for correct classname.
+
+JSON file is given as dictionary parameter into constructor of UpstreamChecker, so all values should be accessible in child-class.
+
+Once this is implemented, everything else should work automatically. Either tool with configuration for new provider is requred for testing, or simply add tests for it in [tests](tests) folder.
 
 ##  Additional configuration
 
 By default, configuration file is stored in $HOME/.cincan/registry.json
 
-Separate file can be used with `--config` or `-c` option.
+Different file can be used with `--config` or `-c` option.
 
 Configuration file does not have many options, but some are needed.
 

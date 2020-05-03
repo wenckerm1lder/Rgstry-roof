@@ -1,5 +1,4 @@
 from setuptools import setup
-from pathlib import Path
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -21,7 +20,7 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
-        "Operating System :: MacOS, Linux",
+        "Operating System :: Unix",
     ],
     entry_points={"console_scripts": ["cincanregistry=cincanregistry.__main__:main"],},
     python_requires=">=3.6",

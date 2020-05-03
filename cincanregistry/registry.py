@@ -21,7 +21,7 @@ LOCAL_REGISTRY = "Docker Server"
 class ToolRegistry:
     """A tool registry"""
 
-    def __init__(self, conf_file:str = ""):
+    def __init__(self, conf_file: str = ""):
         self.logger = logging.getLogger("registry")
         self.client = docker.from_env()
 
@@ -33,7 +33,11 @@ class ToolRegistry:
         self.registry_url = f"https://{self.registry_host}/{self.schema_version}"
         self.max_workers = 30
         self.max_page_size = 1000
-        self.conf_filepath = pathlib.Path(conf_file) if conf_file else pathlib.Path.home() / ".cincan/registry.json"
+        self.conf_filepath = (
+            pathlib.Path(conf_file)
+            if conf_file
+            else pathlib.Path.home() / ".cincan/registry.json"
+        )
         try:
             with open(self.conf_filepath) as f:
                 self.configuration = json.load(f)
@@ -475,7 +479,11 @@ class ToolRegistry:
         return r
 
     async def list_versions(
-        self, tool: str = "", toJSON: bool = False, only_updates: bool = False,
+        self,
+        tool: str = "",
+        toJSON: bool = False,
+        only_updates: bool = False,
+        force_refresh: bool = False,
     ):
         checker = self.configuration.get("versions", {})
         meta_filename = checker.get("metadata_filename", "meta.json")
@@ -486,6 +494,7 @@ class ToolRegistry:
             meta_filename=meta_filename,
             metafiles_location=mfile_p,
             disable_remote_download=disable_remote,
+            force_refresh=force_refresh,
         )
         versions = {}
         if tool:

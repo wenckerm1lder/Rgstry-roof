@@ -137,6 +137,7 @@ Size will be here always included in JSON regardless is it used with argument or
 | --name                  | -n | Check single tool by the name.
 | --only-updates          | -u | Lists only available updates. Excludes --name or -n
 | --with-tags             | -w | Include tag column when listing single tool; shows usable tags for that version.
+| --force-refresh         | -f | Refresh all version related cache data including meta files.
 
 These can be used with the combination of `list` options `-l` and `-r` to produce varying outputs. Arguments `-t`, `-a` and `-s` are ineffective when used with `versions` subcommand.
 

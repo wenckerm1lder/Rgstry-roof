@@ -26,6 +26,7 @@ class VersionMaintainer:
         prefix: str = "cincan/",
         metafiles_location: str = "",
         disable_remote_download: bool = False,
+        force_refresh: bool = False
     ):
         self.logger = logging.getLogger("versions")
         self.tokens = tokens or {}
@@ -44,6 +45,7 @@ class VersionMaintainer:
             self.logger.warning(
                 "Remote download disabled for meta files - using local and they are not updated automatically."
             )
+        self.force_refresh = force_refresh
         # CinCan GitLab repository details
         self.namespace = "cincan"
         self.project = "tools"
@@ -69,7 +71,7 @@ class VersionMaintainer:
 
         updated_timestamp_p = self.metafiles_location / "updated"
 
-        if updated_timestamp_p.is_file():
+        if updated_timestamp_p.is_file() and not self.force_refresh:
             with open(updated_timestamp_p, "r") as f:
                 timestamp = parse_file_time(f.read())
                 now = datetime.now()
@@ -179,7 +181,7 @@ class VersionMaintainer:
                     )
                     continue
                 cache_d = self._read_checker_cache(tool_path.stem, provider)
-                if cache_d:
+                if cache_d and not self.force_refresh:
                     ver_obj = self._handle_checker_cache_data(cache_d, tool_info)
                     if ver_obj:
                         tool.upstream_v.append(ver_obj)

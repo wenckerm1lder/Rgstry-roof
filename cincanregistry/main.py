@@ -380,15 +380,23 @@ def create_argparse(as_module: bool = False) -> argparse.ArgumentParser:
     version_parser.add_argument(
         "-w", "--with-tags", action="store_true", help="Show tags of latest version.",
     )
+    version_parser.add_argument(
+        "-f",
+        "--force-refresh",
+        action="store_true",
+        help="Refresh all version related cache data including meta files.",
+    )
+
 
     if m_parser is not None:
         return m_parser
     else:
         return list_parser
 
+
 def list_handler(args):
 
-    if (args.list_sub_command or  args.sub_command == "versions") and (
+    if (args.list_sub_command or args.sub_command == "versions") and (
         args.all or args.tag != DEFAULT_IMAGE_FILTER_TAG or args.size
     ):
         logging.getLogger(__name__).warning(
@@ -451,6 +459,7 @@ def list_handler(args):
                 tool=args.name or "",
                 toJSON=args.json or False,
                 only_updates=args.only_updates,
+                force_refresh=args.force_refresh,
             )
         )
         if args.name and not args.json:

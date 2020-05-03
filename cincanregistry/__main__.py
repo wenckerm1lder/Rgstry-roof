@@ -25,8 +25,12 @@ MAX_WS = 10
 CHARS_TO_SHOW = 20
 # Version Length
 MAX_WV = CHARS_TO_SHOW + 1
+# Provider length
+MAX_WP = 15
 # Version length with provider
-MAX_WVP = MAX_WV + 20
+MAX_WVP = MAX_WV + MAX_WP
+
+
 # Tag(s) length
 MAX_WT = 20
 # Description length
@@ -54,42 +58,65 @@ class color:
     END = "\033[0m"
 
 
-def print_single_tool_version_check(tool):
+def print_single_tool_version_check(tool, show_tags: bool = False):
 
     # Provider name lenght
     MAX_WN = 25
-
+    MAX_WV = 40
     print(f"\n{' ':<{PRE_SPACE}}{color.GREEN}  {tool.get('name')}{color.END}")
     # pre-space and text format
     print(f"\n{' ':<{PRE_SPACE}}", end="")
     # Location
-    underlined_loc = f'{color.UNDERLINE}Location{color.END}'
-    underlined_ver = f'{color.UNDERLINE}Version{color.END}'
-    # Underline "eats" padding for some reason
+    underlined_loc = f"{color.UNDERLINE}Location{color.END}"
+    underlined_ver = f"{color.UNDERLINE}Version{color.END}"
+    underlined_tags = f"{color.UNDERLINE}Tags{color.END}"
+    # Underline "eats" padding by adding extra chars
     print(f"  {underlined_loc:<{MAX_WN+8}}", end="")
-    print(f"{underlined_ver:<{MAX_WV+8}}")
-    # local
+    print(f"{underlined_ver:<{MAX_WV+8}}", end="")
+    if show_tags:
+        print(f"{underlined_tags:<{MAX_WT}}", end="")
     print()
-    print(f"{' ':<{PRE_SPACE}}", end="")
-    print(f"| {'Local':<{MAX_WN}}", end="")
-    print(f"{tool.get('versions').get('local').get('version'):0<{MAX_WV}}")
+    print()
+    # local
+    if tool.get("versions").get("local"):
+        local = tool.get("versions").get("local")
+        print(f"{' ':<{PRE_SPACE}}", end="")
+        print(f"| {'Local':<{MAX_WN}}", end="")
+        print(f"{local.get('version'):<{MAX_WV}}", end="")
+        if show_tags:
+            print(f"{','.join(local.get('tags')):<{MAX_WT}}", end="")
+        print()
     # remote
-    print(f"{' ':<{PRE_SPACE}}| {'Remote':<{MAX_WN}}", end="")
-    print(f"{tool.get('versions').get('remote').get('version'):<{MAX_WV}}")
+    if tool.get("versions").get("remote"):
+        remote = tool.get("versions").get("remote")
+        print(f"{' ':<{PRE_SPACE}}", end="")
+        print(f"| {'Remote':<{MAX_WN}}", end="")
+        print(f"{remote.get('version'):<{MAX_WV}}", end="")
+        if show_tags:
+            print(f"{','.join(remote.get('tags')):<{MAX_WT}}", end="")
+        print()
     # other
-    if tool.get('versions').get('origin'):
-        print(f"{' ':<{PRE_SPACE}}| {tool.get('versions').get('origin').get('details').get('provider'):<{MAX_WN}}", end="")
+    if tool.get("versions").get("origin"):
+        print(
+            f"{' ':<{PRE_SPACE}}| {tool.get('versions').get('origin').get('details').get('provider'):<{MAX_WN}}",
+            end="",
+        )
         print(f"{tool.get('versions').get('origin').get('version'):<{MAX_WV}}")
 
     if tool.get("versions").get("other"):
         for other in tool.get("versions").get("other"):
-            print(f"{' ':<{PRE_SPACE}}| {other.get('details').get('provider'):<{MAX_WN}}", end="")
+            print(
+                f"{' ':<{PRE_SPACE}}| {other.get('details').get('provider'):<{MAX_WN}}",
+                end="",
+            )
             print(f"{other.get('version'):<{MAX_WV}}")
 
     print("\n  Use -j flag to print as JSON with additional details.\n")
 
 
-def print_version_check(tools:dict, location="both", only_updates:bool=False):
+def print_version_check(tools: dict, location="both", only_updates: bool = False, show_tags: bool = False):
+
+    # TODO add maybe tag column somehow
 
     print(f"\n{' ':<{PRE_SPACE}}Color explanations:", end=" ")
     print(f"{color.GREEN_BACKGROUND}  {color.END} - tool up to date", end=" ")
@@ -118,7 +145,8 @@ def print_version_check(tools:dict, location="both", only_updates:bool=False):
     # origin ver
     print(f"{f'Origin Version':{MAX_WV}}", end="")
     # origin provider
-    print(f"{f'Origin Provider':{MAX_WVP}}", end="")
+    print(f"{f'Origin Provider':{MAX_WP}}", end="")
+
     # end text format
     print(f"{color.END}\n")
 
@@ -128,17 +156,18 @@ def print_version_check(tools:dict, location="both", only_updates:bool=False):
 
         tool = tools[tool_name]
 
-
         if tool.get("updates").get("local") and location in ["local", "both"]:
             coloring = color.BOLD_RED
         elif tool.get("updates").get("remote"):
             coloring = color.GRAY
         if location == "local":
+            if not tool.get("versions").get("local"):
+                continue
             if not tool.get("versions").get("local").get("version"):
                 continue
         if location == "remote" and only_updates:
             if not tool.get("updates").get("remote"):
-                continue           
+                continue
 
         # pre-space and color
         print(f"{coloring}{' ':<{PRE_SPACE}}| ", end="")
@@ -146,13 +175,15 @@ def print_version_check(tools:dict, location="both", only_updates:bool=False):
         print(f"{tool_name:<{MAX_WN}}", end="")
         # local version
         versions = tool.get("versions")
+        l_ver = versions.get("local").get("version") if versions.get("local") else ""
         print(
-            f"{versions.get('local').get('version')[:CHARS_TO_SHOW]:{MAX_WV}}", end="",
+            f"{l_ver[:CHARS_TO_SHOW]:{MAX_WV}}", end="",
         )
         # remote version
+        r_ver = versions.get("remote").get("version") if versions.get("remote") else ""
+
         print(
-            f"{versions.get('remote').get('version')[:CHARS_TO_SHOW]:<{MAX_WV}}",
-            end="",
+            f"{r_ver[:CHARS_TO_SHOW]:<{MAX_WV}}", end="",
         )
 
         ### origin check ####
@@ -167,18 +198,20 @@ def print_version_check(tools:dict, location="both", only_updates:bool=False):
             mark_as_not_source = ""
 
         # origin version
-        print(
-            f"{versions.get('origin').get('version')[:CHARS_TO_SHOW]:<{MAX_WV}}",
-            end="",
-        )
+        if versions.get("origin"):
+            print(
+                f"{versions.get('origin').get('version')[:CHARS_TO_SHOW]:<{MAX_WV}}",
+                end="",
+            )
         # origin provider
         print(
-            f"{(org_details.get('provider') + mark_as_not_source) if org_details else '':<{MAX_WVP}}",
+            f"{(org_details.get('provider') + mark_as_not_source) if org_details else '':<{MAX_WP}}",
             end="",
         )
         # end colored section
         print(f"{color.END if coloring else None}")
     print()
+
 
 def print_tools_by_location(
     tools: List[dict], location: str, filter_by: str = "", show_size=False
@@ -197,7 +230,7 @@ def print_tools_by_location(
     print(f"{f'{location.capitalize()} Tags':<{MAX_WT}}", end="")
     print(f"{color.END}\n")
     # if not filter_by:
-        # print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
+    # print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
     for tool in sorted(tools):
         lst = tools[tool]
         first_print = True
@@ -217,7 +250,9 @@ def print_tools_by_location(
             first_print = False
         else:
             if not filter_by:
-                print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
+                print(
+                    f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}"
+                )
             tags = ""
             version = ""
             for i, ver in enumerate(lst.versions):
@@ -236,8 +271,11 @@ def print_tools_by_location(
                 first_print = False
 
             if not filter_by:
-                print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
+                print(
+                    f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}"
+                )
     print()
+
 
 def print_combined_local_remote(tools: dict, show_size=False):
 
@@ -283,8 +321,7 @@ def main():
         "list", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     list_parser.add_argument(
-        "--config",
-        help="Override filepath for registry configuration file.",
+        "--config", help="Override filepath for registry configuration file.",
     )
     list_exclusive_group = list_parser.add_mutually_exclusive_group()
     list_exclusive_group.add_argument(
@@ -329,7 +366,13 @@ def main():
         "-n", "--name", help="Check single tool by the name.",
     )
     version_exclusive_group.add_argument(
-        "-u", "--only-updates", action="store_true", help="Lists only available updates.",
+        "-u",
+        "--only-updates",
+        action="store_true",
+        help="Lists only available updates.",
+    )
+    version_parser.add_argument(
+        "-w", "--with-tags", action="store_true", help="Show tags of latest version.",
     )
 
     if len(sys.argv) > 1:
@@ -348,8 +391,12 @@ def main():
         format=f"{' ':<{PRE_SPACE}}%(levelname)s - %(name)s: %(message)s",
         level=getattr(logging, log_level),
     )
-    if args.list_sub_command and (args.all or args.tag != DEFAULT_IMAGE_FILTER_TAG or args.size):
-        logging.getLogger(__name__).warning("No effect with size or tag related arguments when used with 'versions' subcommand")
+    if args.list_sub_command and (
+        args.all or args.tag != DEFAULT_IMAGE_FILTER_TAG or args.size
+    ):
+        logging.getLogger(__name__).warning(
+            "No effect with size or tag related arguments when used with 'versions' subcommand"
+        )
 
     if sub_command == "help":
         m_parser.print_help()
@@ -406,21 +453,20 @@ def main():
                 else:
                     print("No single tool available for unknown reason.")
 
-
         elif args.list_sub_command == "versions":
             loop = asyncio.get_event_loop()
             ret = loop.run_until_complete(
                 reg.list_versions(
                     tool=args.name or "",
                     toJSON=args.json or False,
-                    only_updates=args.only_updates
+                    only_updates=args.only_updates,
                 )
             )
             if args.name and not args.json:
-                print_single_tool_version_check(ret)
+                print_single_tool_version_check(ret, args.with_tags)
             elif not args.name and not args.json:
                 loc = "remote" if args.remote else "local"
-                print_version_check(ret, loc, args.only_updates)
+                print_version_check(ret, loc, args.only_updates, args.with_tags)
             if args.json:
                 print(ret)
             loop.close()

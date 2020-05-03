@@ -20,7 +20,7 @@ Tool can be installed by running following command:
 
 `pip install git+https://gitlab.com/cincan/cincan-registry`
 
-To list locally available tools, "Docker" must be installed and running on your machine.
+To be able to list locally available tools, "Docker" must be running on your machine.
 
 Tool is not currently in pip, but should be in future.
 
@@ -44,12 +44,8 @@ When running first time, output could look something like this:
 <img src="img/list_tools.svg">
 
 
-<!-- ![Example both tool list](img/local_remote_tool_list.png) -->
-
 
 By default, "latest-stable" tag is always used, unless overridden with `--tag` or `-t` argument.
-
-<!-- <img src="img/cincanreg_list.svg"  width="900" height="800"> -->
 
 
 To list only locally available tools with tag "latest-stable", argument `--local` (or `-l`) can be used. Additionally, when listing only tools for specific location, listing will show all viable tags pointing into same image.
@@ -140,7 +136,7 @@ Size will be here always included in JSON regardless is it used with argument or
 |-------------------------|----|-------------|
 | --name                  | -n | Check single tool by the name.
 | --only-updates          | -u | Lists only available updates. Excludes --name or -n
-
+| --with-tags             | -w | Include tag column when listing single tool; shows usable tags for that version.
 
 These can be used with the combination of `list` options `-l` and `-r` to produce varying outputs. Arguments `-t`, `-a` and `-s` are ineffective when used with `versions` subcommand.
 
@@ -206,7 +202,8 @@ See [configuration for more details.](#Additional-configuration)
 ### Adding new provider
 
 Adding new provider is straighforward - [inherit UpstreamChecker](cincanregistry/checkers/_checker.py) class and add implementation in the same folder. Existing implementations can be used as model. 
-Short idea is, that there is meta file for every tool, containing upstream information in JSON format, and based on this information, correct provider implementation is selected, and tool information is forwarded for it.
+
+Short idea is, that there is meta file for every tool, containing upstream information in JSON format, and based on this information, correct provider implementation is selected, and tool information is forwarded for it, and finally version information is fetched from correct place with this way.
 
 New provider class should implement at least one method `_get_version()` which returns latest version of tool from the provider, based on configuration.
 

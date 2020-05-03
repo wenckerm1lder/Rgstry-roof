@@ -299,10 +299,18 @@ class VersionMaintainer:
         tool_info = {}
         tool_info["name"] = r_tool.name if r_tool else l_tool.name
         tool_info["versions"] = {}
-        tool_info["versions"]["local"] = {
-            "version": l_tool.getLatest().version if l_tool else ""
-        }
-        tool_info["versions"]["remote"] = {"version": r_tool.getLatest().version}
+        if l_tool:
+            l_latest = l_tool.getLatest()
+            tool_info["versions"]["local"] = {
+                "version": l_latest.version,
+                "tags": list(l_latest.tags),
+            }
+        if r_tool:
+            r_latest = r_tool.getLatest()
+            tool_info["versions"]["remote"] = {
+                "version": r_latest.version,
+                "tags": list(r_latest.tags),
+            }
 
         r_tool_orig = r_tool.getOriginVersion()
         if not r_tool_orig.provider:

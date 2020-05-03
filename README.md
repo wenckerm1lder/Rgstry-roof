@@ -20,6 +20,8 @@ Tool can be installed by running following command:
 
 `pip install git+https://gitlab.com/cincan/cincan-registry`
 
+To list locally available tools, "Docker" must be installed and running on your machine.
+
 Tool is not currently in pip, but should be in future.
 
 ## Usage
@@ -106,7 +108,7 @@ As seen in the above image, green should indicate, that at least for that line, 
 
 Argument `--name` (or `-n`) can be used to check updates for single tool, and exclusive argument `--only-updates` or `-u` can be used to show only tools where there are updates available.
 
-It should be noted, that tool is not able to directly tell, if there is update available. It only detects deviations. 
+It should be noted, that tool is not able to directly tell, if there is actually newer version available. It only detects deviations. 
 
 They ways how versions are marked in global level, are varying too much. However tool is very good at detecting same versions, even if they are marked bit differently.
 
@@ -142,6 +144,7 @@ Size will be here always included in JSON regardless is it used with argument or
 
 These can be used with the combination of `list` options `-l` and `-r` to produce varying outputs. Arguments `-t`, `-a` and `-s` are ineffective when used with `versions` subcommand.
 
+Tool is attempting to always find the latest available version among all tags.
 
 ## Upstream checker
 
@@ -157,7 +160,7 @@ Currently supported providers are:
 * `PyPi` - latest release for any package
 * `Tools by Didier Stevens` - latest release for any published tool in his GitHub repository with similar versioning
  
-Multiple origins can be configured for every tool, however two should be enough, and in most cases just one: one for source of the tool (e.g. GitHub) and second origin for installation method in Dockerfile (e.g. tool installed as Alpine package into Dockerfile). Only one is needed and is ideal; hopefully tool is installed from direct source in Dockerfile.
+Multiple origins can be configured for every tool, however two should be enough, and in most cases just one. One for source of the tool (e.g. GitHub) and second origin for installation method in Dockerfile (e.g. tool installed as Alpine package into Dockerfile). Only one is needed and is ideal; hopefully tool is installed from direct source in Dockerfile.
 
 ### Configuring tool to be checked for origin version updates
 
@@ -191,11 +194,11 @@ Required attributes depends on provider, but usually at least repository, tool, 
 
 (TODO add provider  specific documentation)
 
-Currently tool is looking these files directly from GitLab repository and caching them after first download, so debugging and development might be hard sometimes. Cache is refreshed every 24 hours.
+Currently tool is looking these files directly from tools' GitLab repository and caching them after first download, so debugging and development might be hard sometimes. Cache is refreshed every 24 hours.
 
 By default, these files are stored into folder `$HOME/.cincan/version_cache` 
 
-However, there is option make tool use of different local path, and disable remote downloading. Path could be for example place, where you clone `tools` repository.
+However, there is option make tool to use different local path, and disable remote downloading to help development. Path could be for example place, where you clone `tools` repository.
 
 See [configuration for more details.](#Additional-configuration)
 

@@ -323,9 +323,8 @@ def main():
         format=f"{' ':<{PRE_SPACE}}%(levelname)s - %(name)s: %(message)s",
         level=getattr(logging, log_level),
     )
-
-    if args.list_sub_command and (args.all or args.tag or args.size):
-            logging.getLogger(__name__).warning("No effect with size or tag related arguments when used with 'versions' subcommand")
+    if args.list_sub_command and (args.all or args.tag != DEFAULT_IMAGE_FILTER_TAG or args.size):
+        logging.getLogger(__name__).warning("No effect with size or tag related arguments when used with 'versions' subcommand")
 
     if sub_command == "help":
         m_parser.print_help()

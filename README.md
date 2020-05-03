@@ -33,7 +33,7 @@ We are also able to list upstream versions of tools, for those where this featur
 
 To list both available local and remote tools with tag "latest-stable", simply write
 ```
-cincanegistry list
+cincanregistry list
 
 ```
 
@@ -79,6 +79,7 @@ For `local` images, size is as *uncompressed* and for remote images, as *compres
 By adding size column for regular listing, `--size` (or `-s`) argument can be used.
 
 To list local images with all tags and size column included:
+
 ```
 cincanregistry list -lsa
 ```

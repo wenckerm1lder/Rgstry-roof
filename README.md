@@ -67,7 +67,7 @@ cincanregistry list -ljt latest
 ```
 This lists locally available tools with 'latest' tag in JSON format.
 
-JSON will contain also size of the images. For `local` images, size is *uncompressed* and for remote images, it is *compressed* size. 
+JSON will contain also size of the images. For `local` images, size is as *uncompressed* and for remote images, as *compressed* size. 
 
 By adding size column for regular listing, `--size` (or `-s`) argument can be used.
 
@@ -100,7 +100,7 @@ Argument `--name` (or `-n`) can be used to check updates for single tool, and ex
 
 It should be noted, that tool is not able to directly tell, if there is update available. It only detects deviations. 
 
-They ways how versions are marked, are differing too much. However tool is very good at detecting same versions, even if they are marked bit differently.
+They ways how versions are marked in gloab lever, are varying too much. However tool is very good at detecting same versions, even if they are marked bit differently.
 
 Most of the preceeding arguments with `list` subcommand will change the behaviour of `versions` subcommand as well.
 
@@ -130,9 +130,35 @@ Size will be here always included in JSON regardless is it used with it or not.
 |-------------------------|----|-------------|
 | --name                  | -n | Check single tool by the name.
 | --only-updates          | -u | Lists only available updates. Excludes --name or -n
-|
+
 
 These can be used with the combination of `list` options to produce varying outputs.
+
+
+
+
+## Upstream checker
+
+CinCan Registry has feature to check available new versions for tool, if this feature is just configured for selected tool and there is implementation for provider.
+
+Currently supported providers are:
+
+* `GitHub` - versions by release, tag-release or commit
+* `GitLab` - versions by release or tag-release
+* `BitBucket` - versions by release or tag-release
+* `Debian packages` - latest package version for any suite
+* `Alpine packages` - latest package version for any Alpine version
+* `PyPi` - latest release for any package
+* `Tools by Didier Stevens` - latest release for any publised tool in his GitHub repository with similar versioning
+ 
+Multiple origins can be configured for every tool, however two should be enough, and in most cases just one: one for source of the tool(e.g. GitHub) and second origin for installation method in Dockerfile (e.g. tool installed as Alpine package into Dockerfile). Only one is needed and is ideal, when installing from source in Dockerfile.
+
+### Adding new provider
+
+Adding new provider is straighforward - [inherit UpstreamChecker](cincanregistry/checkers/_checker.py) class and add implemention in same folder. Existing implementations can be used as model. 
+Short idea is, that there is meta file for every tool containing upstream information, in JSON format.
+
+New provider class should implement at least one method `_get_version()` which returns latest version of tool from provider, based on configuration.
 
 
 ## More in depth
@@ -142,9 +168,3 @@ This tool takes advantage of Docker Hub's Registry API, when listing remote tool
 This same variable is used for acquiring the version information on local as well, however we are using configuration information provided by `Docker Engine`.
 
 Docker Images should have been build by using this variable, so the information is correct.
-
-## Upstream checker
-
-CinCan Registry has feature to check available new versions for tool, if this feature is just configured for selected tool.
-
-This is based on looking for latest available release, tag-release, commit or other means of providing version information in original sources.

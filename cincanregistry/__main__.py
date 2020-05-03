@@ -43,8 +43,8 @@ class color:
     GREEN = "\033[92m"
     GREEN_BACKGROUND = "\033[102m"
     YELLOW = "\033[93m"
-    GRAY = "\033[37m"
-    GRAY_BACKGROUND = "\033[47m"
+    GRAY = "\033[90m"
+    GRAY_BACKGROUND = "\033[100m"
     RED = "\033[31m"
     RED_BACKGROUND = "\033[41m"
     BOLD_RED = "\033[1m\033[31m"
@@ -299,10 +299,11 @@ def main():
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         help="List all versions of the tools.",
     )
-    version_parser.add_argument(
+    version_exclusive_group = version_parser.add_mutually_exclusive_group()
+    version_exclusive_group.add_argument(
         "-n", "--name", help="Check single tool by the name.",
     )
-    version_parser.add_argument(
+    version_exclusive_group.add_argument(
         "-u", "--only-updates", action="store_true", help="Lists only available updates.",
     )
 
@@ -322,6 +323,9 @@ def main():
         format=f"{' ':<{PRE_SPACE}}%(levelname)s - %(name)s: %(message)s",
         level=getattr(logging, log_level),
     )
+
+    if args.list_sub_command and (args.all or args.tag or args.size):
+            logging.getLogger(__name__).warning("No effect with size or tag related arguments when used with 'versions' subcommand")
 
     if sub_command == "help":
         m_parser.print_help()

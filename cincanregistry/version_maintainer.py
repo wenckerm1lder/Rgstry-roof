@@ -67,7 +67,7 @@ class VersionMaintainer:
             )
         return able_to_check
 
-    def get_checker_meta_files_from_gitlab(self, branch: str = "add-meta-files"):
+    def get_checker_meta_files_from_gitlab(self, branch: str = "master"):
 
         updated_timestamp_p = self.metafiles_location / "updated"
 

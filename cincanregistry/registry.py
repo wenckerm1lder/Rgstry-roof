@@ -12,6 +12,8 @@ from typing import Dict, Any, Iterable, Tuple
 from . import ToolInfo, VersionInfo, VersionMaintainer, ToolInfoEncoder
 from .utils import parse_file_time, format_time, split_tool_tag
 from urllib.parse import quote_plus
+import sys
+
 
 VER_UNDEFINED = "undefined"
 REMOTE_REGISTRY = "Dockerhub"
@@ -57,7 +59,9 @@ class ToolRegistry:
             if self.configuration.get("tools_cache_path")
             else pathlib.Path.home() / ".cincan" / "tools.json"
         )
-        self.tools_repo_path = pathlib.Path(tools_repo_path) or (
+        self.tools_repo_path = (
+            pathlib.Path(tools_repo_path) if tools_repo_path else None
+        ) or (
             pathlib.Path(self.configuration.get("tools_repo_path"))
             if self.configuration.get("tools_repo_path")
             else ""
@@ -590,6 +594,7 @@ class ToolRegistry:
         """
 
         MAX_SIZE = 25000
+        MAX_DESCRIPTION_LENGTH = 100
         LOGIN_URI = self.hub_url + "/users/login/"
         REPOSITORY_URI = self.hub_url + f"/repositories/{prefix + tool_name}/"
         readme_path = self.tools_repo_path / tool_name / "README.md"
@@ -608,10 +613,9 @@ class ToolRegistry:
                         .split(":", 1)
                     )
                 else:
-                    self.logger.error(
+                    raise PermissionError(
                         "Unable to find credentials. Please use 'docker login' to log in."
                     )
-                    return False
                 # using with requests.Session() leads for invalid CSRF tokens
                 data = {"username": username, "password": password}
                 headers = {
@@ -629,7 +633,11 @@ class ToolRegistry:
                                 if line.lstrip().startswith("# "):
                                     description = line.lstrip()[2:]
                                     break
-
+                            if len(description) > MAX_DESCRIPTION_LENGTH:
+                                description = ""
+                                self.logger.warning(
+                                    f"Too long description for tool {tool_name}"
+                                )
                             data = {
                                 "full_description": content,
                                 "description": description,
@@ -645,7 +653,7 @@ class ToolRegistry:
                                 return True
                             else:
                                 self.logger.error(
-                                    f"Something went wrong with updating: {resp.status_code} : {resp.content}"
+                                    f"Something went wrong with updating tool {tool_name}: {resp.status_code} : {resp.content}"
                                 )
                     else:
                         self.logger.error(
@@ -658,11 +666,9 @@ class ToolRegistry:
 
             else:
                 self.logger.error(
-                    f"README size of {readme_path.parent.stem} exceeds the maximum allowed {MAX_SIZE} bytes"
+                    f"README size of {tool_name} exceeds the maximum allowed {MAX_SIZE} bytes for tool {tool_name}"
                 )
         else:
-            self.logger.warning(
-                f"No README file found for tool {readme_path.parent.stem}."
-            )
+            self.logger.warning(f"No README file found for tool {tool_name}.")
         self.logger.warning(f"README not updated for tool {tool_name}")
         return False

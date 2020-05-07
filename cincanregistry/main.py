@@ -329,6 +329,23 @@ def create_utils_argparse(subparsers: argparse._SubParsersAction):
     utility_parser.add_argument(
         "--config", help="Override filepath for registry configuration file.",
     )
+    sub_utils_parser = utility_parser.add_subparsers(dest="utils_sub_command")
+    readme_parser = sub_utils_parser.add_parser(
+        "update-readme",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        help="Update README of tool(s) in Docker Hub. Uses local 'tools' repository as source.",
+    )
+    readme_exclusive_group = readme_parser.add_mutually_exclusive_group()
+    readme_exclusive_group.add_argument(
+        "--all",
+        help="Update all README files of 'tools' repository into DockerHub.",
+        action="store_true",
+    )
+    readme_exclusive_group.add_argument(
+        "-n",
+        "--name",
+        help="Name of the tool to update README in Docker Hub.",
+    )
 
 
 def create_list_argparse(subparsers: argparse._SubParsersAction,):
@@ -479,7 +496,12 @@ def list_handler(args):
 
 def utils_handler(args):
     reg = ToolRegistry(args.config, args.tools)
-    reg.update_tool_readme("radare2")
+    if args.all:
+        reg.update_readme_all_tools()
+    elif args.name:
+        reg.update_readme_single_tool(args.name)
+    else:
+        raise NotImplementedError
 
 
 def main():

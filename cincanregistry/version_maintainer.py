@@ -76,7 +76,7 @@ class VersionMaintainer:
                 timestamp = parse_file_time(f.read())
                 now = datetime.now()
                 if now - timedelta(hours=self.cache_lifetime) <= timestamp <= now:
-                    self.logger.info(
+                    self.logger.debug(
                         f"Using old metafiles: they have been updated in past {self.cache_lifetime} hours."
                     )
                     return

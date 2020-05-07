@@ -12,7 +12,6 @@ from . import ToolInfo, VersionInfo, VersionMaintainer, ToolInfoEncoder
 from .utils import parse_file_time, format_time, split_tool_tag
 
 
-VERSION_VARIABLE = "TOOL_VERSION"
 VER_UNDEFINED = "undefined"
 REMOTE_REGISTRY = "Dockerhub"
 LOCAL_REGISTRY = "Docker Server"
@@ -21,7 +20,7 @@ LOCAL_REGISTRY = "Docker Server"
 class ToolRegistry:
     """A tool registry"""
 
-    def __init__(self, conf_file: str = ""):
+    def __init__(self, conf_file: str = "", version_var = "TOOL_VERSION"):
         self.logger = logging.getLogger("registry")
         self.client = docker.from_env()
 
@@ -33,6 +32,7 @@ class ToolRegistry:
         self.registry_url = f"https://{self.registry_host}/{self.schema_version}"
         self.max_workers = 30
         self.max_page_size = 1000
+        self.version_var = version_var
         self.conf_filepath = (
             pathlib.Path(conf_file)
             if conf_file
@@ -51,6 +51,15 @@ class ToolRegistry:
             if self.configuration.get("tools_cache_path")
             else pathlib.Path.home() / ".cincan" / "tools.json"
         )
+
+    def _is_docker_running(self):
+        try:
+            self.client.ping()
+            return True
+        except:
+            self.logger.error("Failed to connect to Docker Server. Is it running?")
+            self.logger.error("Not able to list local tools.")
+            return False
 
     def _docker_registry_API_error(
         self, r: requests.Response, custom_error_msg: str = ""
@@ -84,7 +93,7 @@ class ToolRegistry:
             return token_req.json().get("token", "")
 
     def _get_version_from_manifest(
-        self, manifest: dict, ver_variable: str = VERSION_VARIABLE
+        self, manifest: dict,
     ):
         """
         Parses value from defined variable from container's environment variables.
@@ -99,7 +108,7 @@ class ToolRegistry:
         version = ""
         try:
             for i in v1_comp.get("config").get("Env"):
-                if "".join(i).split("=")[0] == ver_variable:
+                if "".join(i).split("=")[0] == self.version_var:
                     version = "".join(i).split("=")[1]
                     break
         except IndexError as e:
@@ -181,11 +190,30 @@ class ToolRegistry:
             self.logger.info(f"No single tool found with tag `{defined_tag}`.")
         return use_tools
 
+
+    def _get_version_from_containerconfig_env(self, attrs:dict) -> str:
+        """
+        Parse version informatioon ENV from local image attributes
+        """
+        environment = attrs.get("ContainerConfig").get("Env")
+        for var in environment:
+            if "".join(var).split("=")[0] == self.version_var:
+                version = "".join(var).split("=")[1]
+                return version
+        return ""
+
+    def get_version_by_image_id(self, image_id: str) -> str:
+        """Get version of local image by ID"""
+        if not self._is_docker_running():
+            return ""
+        image = self.client.images.get(image_id)
+        version = self._get_version_from_containerconfig_env(image.attrs)
+        return version
+
     async def list_tools_local_images(
         self,
         defined_tag: str = "",
         prefix: str = "cincan/",
-        version_var: str = VERSION_VARIABLE,
         default_ver: str = VER_UNDEFINED,
     ) -> Dict[str, ToolInfo]:
         """
@@ -194,11 +222,7 @@ class ToolRegistry:
         Additionally, if tag is defined, tool must have this tag
         before it is listed.
         """
-        try:
-            self.client.ping()
-        except:
-            self.logger.error("Failed to connect to Docker Server. Is it running?")
-            self.logger.error("Not able to list local tools.")
+        if not self._is_docker_running():
             return {}
         images = self.client.images.list(filters={"dangling": False})
         # images oldest first (tags are listed in proper order)
@@ -219,11 +243,7 @@ class ToolRegistry:
                 name, tag = split_tool_tag(t)
                 if name.startswith(prefix):
                     if not defined_tag or tag == defined_tag:
-                        environment = i.attrs.get("ContainerConfig").get("Env")
-                        for var in environment:
-                            if "".join(var).split("=")[0] == version_var:
-                                version = "".join(var).split("=")[1]
-                                break
+                        version = self._get_version_from_containerconfig_env(i.attrs)
                         if name in ret:
                             for j, v in enumerate(ret[name].versions):
                                 if v.version == version:

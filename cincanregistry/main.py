@@ -302,29 +302,44 @@ def print_combined_local_remote(tools: dict, show_size=False):
         print(f"{description:<{MAX_WD}}")
 
 
-def create_argparse(as_module: bool = False) -> argparse.ArgumentParser:
+def create_head_argparse() -> argparse.ArgumentParser:
 
-    m_parser = None
+    m_parser = argparse.ArgumentParser()
+    m_parser.add_argument(
+        "-l",
+        "--log",
+        dest="log_level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging level",
+        default=None,
+    )
+    m_parser.add_argument("-q", "--quiet", action="store_true", help="Be quite quiet")
+    subparsers = m_parser.add_subparsers(dest="sub_command")
+    create_list_argparse(subparsers)
+    create_utils_argparse(subparsers)
+    return m_parser
 
-    if not as_module:
-        m_parser = argparse.ArgumentParser()
-        m_parser.add_argument(
-            "-l",
-            "--log",
-            dest="log_level",
-            choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-            help="Set the logging level",
-            default=None,
-        )
-        m_parser.add_argument(
-            "-q", "--quiet", action="store_true", help="Be quite quiet"
-        )
-        subparsers = m_parser.add_subparsers(dest="sub_command")
-        list_parser = subparsers.add_parser(
-            "list", formatter_class=argparse.ArgumentDefaultsHelpFormatter
-        )
-    else:
-        list_parser = argparse.ArgumentParser(add_help=False)
+
+def create_utils_argparse(subparsers: argparse._SubParsersAction):
+
+    utility_parser = subparsers.add_parser(
+        "utils", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    utility_parser.add_argument(
+        "-t", "--tools", help="Path to 'tools' repository locally.",
+    )
+    utility_parser.add_argument(
+        "--config", help="Override filepath for registry configuration file.",
+    )
+
+
+def create_list_argparse(
+    subparsers: argparse._SubParsersAction,
+) -> argparse.ArgumentParser:
+
+    list_parser = subparsers.add_parser(
+        "list", formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
 
     list_parser.add_argument(
         "--config", help="Override filepath for registry configuration file.",
@@ -386,12 +401,6 @@ def create_argparse(as_module: bool = False) -> argparse.ArgumentParser:
         action="store_true",
         help="Refresh all version related cache data including meta files.",
     )
-
-
-    if m_parser is not None:
-        return m_parser
-    else:
-        return list_parser
 
 
 def list_handler(args):
@@ -472,9 +481,15 @@ def list_handler(args):
         loop.close()
 
 
+def utils_handler(args):
+    pass
+    reg = ToolRegistry(args.config)
+    reg.update_tool_readme("radare2", args.tools)
+
+
 def main():
 
-    m_parser = create_argparse()
+    m_parser = create_head_argparse()
 
     if len(sys.argv) > 1:
         args = m_parser.parse_args(args=sys.argv[1:])
@@ -498,3 +513,6 @@ def main():
 
     elif sub_command == "list":
         list_handler(args)
+
+    elif sub_command == "utils":
+        utils_handler(args)

@@ -25,8 +25,9 @@ class VersionMaintainer:
         meta_filename: str = "meta.json",
         prefix: str = "cincan/",
         metafiles_location: str = "",
+        cachefiles_location: str = "",
         disable_remote_download: bool = False,
-        force_refresh: bool = False
+        force_refresh: bool = False,
     ):
         self.logger = logging.getLogger("versions")
         self.tokens = tokens or {}
@@ -35,15 +36,24 @@ class VersionMaintainer:
         # prefix, mostly meaning the owner of possible Docker image
         self.prefix = prefix
         self.meta_filename = meta_filename
+        # Used when storing metafiles in different place than cache
         self.metafiles_location = (
             pathlib.Path(metafiles_location)
             if metafiles_location
             else pathlib.Path.home() / ".cincan" / "version_cache"
         )
+        # Path where metafiles are downloaded
+        # Or version cache kept
+        self.cachefiles_location = (
+            pathlib.Path(cachefiles_location)
+            if cachefiles_location
+            else pathlib.Path.home() / ".cincan" / "version_cache"
+        )
+
         self.disable_remote_download = disable_remote_download
         if self.disable_remote_download:
             self.logger.warning(
-                "Remote download disabled for meta files - using local and they are not updated automatically."
+                "Remote download disabled for meta files - using local files and they are not updated automatically."
             )
         self.force_refresh = force_refresh
         # CinCan GitLab repository details
@@ -69,7 +79,7 @@ class VersionMaintainer:
 
     def get_checker_meta_files_from_gitlab(self, branch: str = "master"):
 
-        updated_timestamp_p = self.metafiles_location / "updated"
+        updated_timestamp_p = self.cachefiles_location / "updated"
 
         if updated_timestamp_p.is_file() and not self.force_refresh:
             with open(updated_timestamp_p, "r") as f:
@@ -84,7 +94,7 @@ class VersionMaintainer:
                     self.logger.info("Metafiles outdated...updating")
 
         self.logger.info(
-            f"Downloading upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project}) into path '{self.metafiles_location}'"
+            f"Downloading upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project}) into path '{self.cachefiles_location}'"
         )
         gitlab_client = GitLabAPI(
             self.tokens.get("gitlab"), self.namespace, self.project
@@ -105,7 +115,7 @@ class VersionMaintainer:
             )
         else:
             # Create store location directory
-            self.metafiles_location.mkdir(parents=True, exist_ok=True)
+            self.cachefiles_location.mkdir(parents=True, exist_ok=True)
             with open(updated_timestamp_p, "w") as f:
                 time_str = format_time(datetime.now())
                 self.logger.debug(f"Metafiles' timestamp updated to be {time_str}")
@@ -136,14 +146,12 @@ class VersionMaintainer:
                     f"File {path} in wrong place at repository, skipping..."
                 )
                 return
-            file_path = self.metafiles_location / path
+            file_path = self.cachefiles_location / path
             # Make subdirectory - should be tool name
             file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.metafiles_location / path, "wb") as f:
+            with open(file_path, "wb") as f:
                 f.write(file_data)
-                self.logger.info(
-                    f"Meta file written into {self.metafiles_location / path}"
-                )
+                self.logger.info(f"Meta file written into {file_path}")
         else:
             self.logger.debug(f"No file content found for file {path}")
 
@@ -219,7 +227,7 @@ class VersionMaintainer:
 
     def _read_checker_cache(self, tool_name: str, provider: str) -> dict:
 
-        path = self.metafiles_location / tool_name / f"{provider}_cache.json"
+        path = self.cachefiles_location / tool_name / f"{provider}_cache.json"
         if path.is_file():
             with open(path, "r") as f:
                 try:
@@ -254,7 +262,7 @@ class VersionMaintainer:
         return None
 
     def _write_checker_cache(self, tool_name: str, provider: str, data: dict):
-        path = self.metafiles_location / tool_name / f"{provider}_cache.json"
+        path = self.cachefiles_location / tool_name / f"{provider}_cache.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:
             json.dump(data, f)

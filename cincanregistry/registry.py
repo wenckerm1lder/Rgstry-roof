@@ -5,12 +5,13 @@ import pathlib
 import requests
 import json
 import timeit
+import base64
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Any, Iterable, Tuple
 from . import ToolInfo, VersionInfo, VersionMaintainer, ToolInfoEncoder
 from .utils import parse_file_time, format_time, split_tool_tag
-
+from urllib.parse import quote_plus
 
 VER_UNDEFINED = "undefined"
 REMOTE_REGISTRY = "Dockerhub"
@@ -20,7 +21,12 @@ LOCAL_REGISTRY = "Docker Server"
 class ToolRegistry:
     """A tool registry"""
 
-    def __init__(self, conf_file: str = "", version_var = "TOOL_VERSION"):
+    def __init__(
+        self,
+        config_path: str = "",
+        tools_repo_path: str = "",
+        version_var="TOOL_VERSION",
+    ):
         self.logger = logging.getLogger("registry")
         self.client = docker.from_env()
 
@@ -34,8 +40,8 @@ class ToolRegistry:
         self.max_page_size = 1000
         self.version_var = version_var
         self.conf_filepath = (
-            pathlib.Path(conf_file)
-            if conf_file
+            pathlib.Path(config_path)
+            if config_path
             else pathlib.Path.home() / ".cincan/registry.json"
         )
         try:
@@ -51,12 +57,17 @@ class ToolRegistry:
             if self.configuration.get("tools_cache_path")
             else pathlib.Path.home() / ".cincan" / "tools.json"
         )
+        self.tools_repo_path = tools_repo_path or (
+            pathlib.Path(self.configuration.get("tools_repo_path"))
+            if self.configuration.get("tools_repo_path")
+            else ""
+        )
 
     def _is_docker_running(self):
         try:
             self.client.ping()
             return True
-        except:
+        except requests.exceptions.ConnectionError:
             self.logger.error("Failed to connect to Docker Server. Is it running?")
             self.logger.error("Not able to list local tools.")
             return False
@@ -190,8 +201,7 @@ class ToolRegistry:
             self.logger.info(f"No single tool found with tag `{defined_tag}`.")
         return use_tools
 
-
-    def _get_version_from_containerconfig_env(self, attrs:dict) -> str:
+    def _get_version_from_containerconfig_env(self, attrs: dict) -> str:
         """
         Parse version informatioon ENV from local image attributes
         """
@@ -505,6 +515,7 @@ class ToolRegistry:
         only_updates: bool = False,
         force_refresh: bool = False,
     ):
+        tools_loc = self.configuration.get("tools_repo_path", "")
         checker = self.configuration.get("versions", {})
         meta_filename = checker.get("metadata_filename", "meta.json")
         disable_remote = checker.get("disable_remote", False)
@@ -512,7 +523,8 @@ class ToolRegistry:
         maintainer = VersionMaintainer(
             self.configuration.get("tokens", None),
             meta_filename=meta_filename,
-            metafiles_location=mfile_p,
+            metafiles_location=tools_loc,
+            cachefiles_location=mfile_p,
             disable_remote_download=disable_remote,
             force_refresh=force_refresh,
         )
@@ -548,3 +560,91 @@ class ToolRegistry:
             return json.dumps(versions)
         else:
             return versions
+
+    def readme_description_sync(self,):
+        pass
+
+    def update_tool_readme(
+        self, tool_name: str, tools_path: str = "", prefix="cincan/"
+    ):
+        """
+        Upload README  and description of tool into Docker Hub.
+        Description is first header (H1) of README.
+        """
+        root_path = (
+            pathlib.Path(tools_path) if tools_path else pathlib.Path.cwd() / "tools"
+        )
+        MAX_SIZE = 25000
+        LOGIN_URI = self.hub_url + "/users/login/"
+        REPOSITORY_URI = self.hub_url + f"/repositories/{prefix + tool_name}/"
+        readme_path = root_path / tool_name / "README.md"
+        if readme_path.is_file():
+            if readme_path.stat().st_size <= MAX_SIZE:
+                config = docker.utils.config.load_general_config()
+                auths = (
+                    next(iter(config.get("auths").values()))
+                    if config.get("auths")
+                    else None
+                )
+                if auths:
+                    username, password = (
+                        base64.b64decode(auths.get("auth"))
+                        .decode("utf-8")
+                        .split(":", 1)
+                    )
+                else:
+                    self.logger.error(
+                        "Unable to find credentials. Please use 'docker login' to log in."
+                    )
+                    return
+                # using with requests.Session() leads for invalid CSRF tokens
+                data = {"username": username, "password": password}
+                headers = {
+                    "Content-Type": "application/json",  # redundant because json as data parameter
+                }
+                resp = requests.post(LOGIN_URI, json=data, headers=headers)
+                if resp.status_code == 200:
+                    token = resp.json().get("token")
+                    if token:
+                        with open(readme_path, "r") as f:
+                            content = f.read()
+                            headers = {"Authorization": f"JWT {token}"}
+                            description = ""
+                            for line in content.splitlines():
+                                if line.lstrip().startswith("# "):
+                                    description = line.lstrip()[2:]
+                                    break
+
+                            data = {
+                                "full_description": content,
+                                "description": description,
+                            }
+
+                            resp = requests.patch(
+                                REPOSITORY_URI, json=data, headers=headers
+                            )
+                            if resp.status_code == 200:
+                                self.logger.info(
+                                    f"README and description updated for {tool_name}"
+                                )
+                            else:
+                                self.logger.error(
+                                    f"Something went wrong with updating: {resp.status_code} : {resp.content}"
+                                )
+                    else:
+                        self.logger.error(
+                            "200 status code but no token in response? :( Please, try later again."
+                        )
+                else:
+                    self.logger.error(
+                        f"Failed to authenticate for Docker Hub: {resp.status_code} {resp.content}"
+                    )
+
+            else:
+                self.logger.warning(
+                    f"README size of {readme_path.parent.stem} exceeds the maximum allowed {MAX_SIZE} bytes"
+                )
+        else:
+            self.logger.warning(
+                f"No README file found for tool {readme_path.parent.stem}."
+            )

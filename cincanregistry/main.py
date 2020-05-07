@@ -1,14 +1,10 @@
-from . import ToolRegistry
-from . import VersionInfo
-from . import ToolInfoEncoder
+from . import ToolRegistry, ToolInfoEncoder
 import argparse
 import sys
 import logging
 import asyncio
-import pathlib
-from typing import List
 import json
-import os
+from typing import List
 
 DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
 
@@ -314,6 +310,11 @@ def create_head_argparse() -> argparse.ArgumentParser:
         default=None,
     )
     m_parser.add_argument("-q", "--quiet", action="store_true", help="Be quite quiet")
+    m_parser.add_argument(
+        "-t",
+        "--tools",
+        help="Path for 'tools' repository locally. Optionally used for meta files, README updating etc.",
+    )
     subparsers = m_parser.add_subparsers(dest="sub_command")
     create_list_argparse(subparsers)
     create_utils_argparse(subparsers)
@@ -326,16 +327,11 @@ def create_utils_argparse(subparsers: argparse._SubParsersAction):
         "utils", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     utility_parser.add_argument(
-        "-t", "--tools", help="Path to 'tools' repository locally.",
-    )
-    utility_parser.add_argument(
         "--config", help="Override filepath for registry configuration file.",
     )
 
 
-def create_list_argparse(
-    subparsers: argparse._SubParsersAction,
-) -> argparse.ArgumentParser:
+def create_list_argparse(subparsers: argparse._SubParsersAction,):
 
     list_parser = subparsers.add_parser(
         "list", formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -482,9 +478,8 @@ def list_handler(args):
 
 
 def utils_handler(args):
-    pass
-    reg = ToolRegistry(args.config)
-    reg.update_tool_readme("radare2", args.tools)
+    reg = ToolRegistry(args.config, args.tools)
+    reg.update_tool_readme("radare2")
 
 
 def main():

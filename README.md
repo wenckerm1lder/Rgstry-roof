@@ -2,7 +2,7 @@
 
 # CinCan Registry
 
-CinCan registry is  a tool for listing available CinCan tools, their versions, sizes and possible updates up into their original source! 
+CinCan registry is  a tool for listing available CinCan tools, their versions, sizes and possible updates as far as into their original source! 
 
  Available tools can be found in the CinCan's [tool repository.](https://gitlab.com/CinCan/tools) Source code for tools' Dockerfiles is available in there.
 
@@ -16,19 +16,21 @@ When checking versions beyond remote (Docker Hub), tool is using multiple differ
 
 ## Installation
 
-Tool can be installed by running following command:
+Latest release can be installed from PyPi as:
 
-`pip install git+https://gitlab.com/cincan/cincan-registry`
+`pip install cincan-registry`
 
-To be able to list locally available tools, "Docker" must be running on your machine.
+To be able to list information from locally available tools, "Docker" must be running on your machine.
 
-Tool is not currently in pip, but should be in future.
+Tool is part of the [cincan-command](https://gitlab.com/CinCan/cincan-command) in the future.
+
+Make sure that your PATH is working as intended, if not installing as 'sudo'.
 
 ## Usage
 
 ### Regular listing
 
-The main purpose is to list available local or remote CinCan tools and their sizes and versions.
+General purpose is to list available local or remote CinCan tools with their sizes and versions.
 
 We are also able to list upstream versions of tools, for those where this feature is configured. This is handled more thoroughly in [Upstream Checker section.](#upstream-checker)
 
@@ -45,17 +47,17 @@ When running first time, output could look something like this:
 
 
 
-By default, "latest-stable" tag is always used, unless overridden with `--tag` or `-t` argument.
+By default, "latest-stable" tag is always used, unless over-written with `--tag` or `-t` argument.
 
 
 To list only locally available tools with tag "latest-stable", argument `--local` (or `-l`) can be used. Additionally, when listing only tools for specific location, listing will show all viable tags pointing into same image.
 
+For example if version '0.1' of the tool is tagged with 'dev' tag, that specific tag should be used to use version '0.1' of the tool. 
+
 ```
 cincanregistry list --local
 ```
-Example output should look something like this:
-
-![Example local tool list](https://gitlab.com/CinCan/cincan-registry/-/raw/master/img/local_tool_list.png)
+Example output should look something like [this.](https://gitlab.com/CinCan/cincan-registry/-/raw/master/img/local_tool_list.png)
 
 
 To do same for remote, use `--remote` (or `-r`) argument. By adding flag `-a`, this shows tools with all possible tags.

@@ -57,7 +57,7 @@ class ToolRegistry:
             if self.configuration.get("tools_cache_path")
             else pathlib.Path.home() / ".cincan" / "tools.json"
         )
-        self.tools_repo_path = tools_repo_path or (
+        self.tools_repo_path = pathlib.Path(tools_repo_path) or (
             pathlib.Path(self.configuration.get("tools_repo_path"))
             if self.configuration.get("tools_repo_path")
             else ""
@@ -561,23 +561,38 @@ class ToolRegistry:
         else:
             return versions
 
-    def readme_description_sync(self,):
-        pass
+    def update_readme_all_tools(self,):
+        """
+        Iterate over all directories, and attempt to push
+        README for corresponding repository in DockerHub
 
-    def update_tool_readme(
-        self, tool_name: str, tools_path: str = "", prefix="cincan/"
-    ):
+        """
+        if not self.tools_repo_path:
+            raise RuntimeError("'Tools' repository path must be defined.'")
+
+        fails = []
+        for tool_path in self.tools_repo_path.iterdir():
+            if tool_path.is_dir() and not (tool_path.stem.startswith(("_", "."))):
+                tool_name = tool_path.stem
+                if not self.update_readme_single_tool(tool_name):
+                    fails.append(tool_name)
+        if fails:
+            self.logger.info(f"Not every README updated: {','.join(fails)}")
+        else:
+            self.logger.info("README of every tool updated.")
+
+    def update_readme_single_tool(self, tool_name: str, prefix="cincan/") -> bool:
         """
         Upload README  and description of tool into Docker Hub.
         Description is first header (H1) of README.
+
+        Return True on successful update, False otherwise
         """
-        root_path = (
-            pathlib.Path(tools_path) if tools_path else pathlib.Path.cwd() / "tools"
-        )
+
         MAX_SIZE = 25000
         LOGIN_URI = self.hub_url + "/users/login/"
         REPOSITORY_URI = self.hub_url + f"/repositories/{prefix + tool_name}/"
-        readme_path = root_path / tool_name / "README.md"
+        readme_path = self.tools_repo_path / tool_name / "README.md"
         if readme_path.is_file():
             if readme_path.stat().st_size <= MAX_SIZE:
                 config = docker.utils.config.load_general_config()
@@ -596,7 +611,7 @@ class ToolRegistry:
                     self.logger.error(
                         "Unable to find credentials. Please use 'docker login' to log in."
                     )
-                    return
+                    return False
                 # using with requests.Session() leads for invalid CSRF tokens
                 data = {"username": username, "password": password}
                 headers = {
@@ -627,6 +642,7 @@ class ToolRegistry:
                                 self.logger.info(
                                     f"README and description updated for {tool_name}"
                                 )
+                                return True
                             else:
                                 self.logger.error(
                                     f"Something went wrong with updating: {resp.status_code} : {resp.content}"
@@ -641,10 +657,12 @@ class ToolRegistry:
                     )
 
             else:
-                self.logger.warning(
+                self.logger.error(
                     f"README size of {readme_path.parent.stem} exceeds the maximum allowed {MAX_SIZE} bytes"
                 )
         else:
             self.logger.warning(
                 f"No README file found for tool {readme_path.parent.stem}."
             )
+        self.logger.warning(f"README not updated for tool {tool_name}")
+        return False

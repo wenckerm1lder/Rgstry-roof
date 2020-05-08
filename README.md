@@ -22,7 +22,7 @@ Latest release can be installed from PyPi as:
 
 To be able to list information from locally available tools, "Docker" must be running on your machine.
 
-Tool is part of the [cincan-command](https://gitlab.com/CinCan/cincan-command) in the future.
+Tool is part of the [cincan-command](https://gitlab.com/CinCan/cincan-command) in the future. Command `cincanregistry` in future examples can be replaced with `cincan` when using in there.
 
 Make sure that your PATH is working as intended, if not installing as 'sudo'.
 
@@ -30,12 +30,12 @@ Make sure that your PATH is working as intended, if not installing as 'sudo'.
 
 ### Regular listing
 
-General purpose is to list available local or remote CinCan tools with their sizes and versions.
+Listing available local or remote CinCan tools with their sizes and versions is the general purpose of this program.
 
 We are also able to list upstream versions of tools, for those where this feature is configured. This is handled more thoroughly in [Upstream Checker section.](#upstream-checker)
 
 
-To list both available local and remote tools with tag "latest-stable", simply write
+To list both available local and remote tools with tag "latest-stable":
 ```
 cincanregistry list
 
@@ -144,6 +144,43 @@ Size will be here always included in JSON regardless is it used with argument or
 These can be used with the combination of `list` options `-l` and `-r` to produce varying outputs. Arguments `-t`, `-a` and `-s` are ineffective when used with `versions` subcommand.
 
 Tool is attempting to always find the latest available version among all tags.
+
+
+
+### Utilities
+
+> Only for development purpose
+
+There is available feature to update description and README of tool(s) in Docker Hub.
+
+This requires locally cloned CinCan tools repository - README's from there are used.
+
+For example command
+```
+cincanregistry -t ../tools utils update-readme --all
+```
+
+Uploads every README file for corresponding repository in CinCan's Docker Hub. The first header (# ) of README is used as *description* of image.
+
+#### Providing credentials
+
+```
+docker login
+```
+
+Must be used beforehand to log in for Docker Hub - same credentials will be used on upload process.
+
+#### All available options for 'utils'
+
+| Specific to `utils`      |    | Description |
+|-------------------------|----|-------------|
+| --config                | -c | Path to configuration file |
+
+
+| Specific to `utils update-readme` |    | Description
+|-------------------------|----|-------------|
+| --name                  | -n | Update README and description of single tool by the name.
+| --all          |  | Attempt to update README and description of every tool from 'tools' folder, matching the repository on Docker Hub
 
 ## Upstream checker
 

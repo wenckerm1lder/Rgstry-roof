@@ -1,19 +1,20 @@
-import docker
-import docker.errors
+import asyncio
+import base64
+import json
 import logging
 import pathlib
-import requests
-import json
-import timeit
-import base64
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from typing import Dict, Any, Iterable, Tuple
-from . import ToolInfo, VersionInfo, VersionMaintainer, ToolInfoEncoder
-from .utils import parse_file_time, format_time, split_tool_tag
-from urllib.parse import quote_plus
 import sys
+import timeit
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Dict, Iterable, Tuple
+from urllib.parse import quote_plus
 
+import docker
+import docker.errors
+import requests
+
+from . import ToolInfo, ToolInfoEncoder, VersionInfo, VersionMaintainer
+from .utils import format_time, parse_file_time, split_tool_tag
 
 VER_UNDEFINED = "undefined"
 REMOTE_REGISTRY = "Dockerhub"
@@ -565,105 +566,104 @@ class ToolRegistry:
         else:
             return versions
 
+    def _get_hub_session_cookies(self, s: requests.Session):
+        """
+        Gets JWT and CSRF token for making authorized requests
+        Updates request Session object with valid header
+
+        It seems Docker Hub is using cookie-to-header pattern as
+        extra CSRF protection, header named as 'X-CSRFToken'
+        """
+
+        LOGIN_URI = self.hub_url + "/users/login/"
+        config = docker.utils.config.load_general_config()
+        auths = (
+            next(iter(config.get("auths").values())) if config.get("auths") else None
+        )
+        if auths:
+            username, password = (
+                base64.b64decode(auths.get("auth")).decode("utf-8").split(":", 1)
+            )
+        else:
+            raise PermissionError(
+                "Unable to find credentials. Please use 'docker login' to log in."
+            )
+        data = {"username": username, "password": password}
+        headers = {
+            "Content-Type": "application/json",  # redundant because json as data parameter
+        }
+        resp = s.post(LOGIN_URI, json=data, headers=headers)
+        if resp.status_code == 200:
+            s.headers.update({"X-CSRFToken": s.cookies.get("csrftoken")})
+        else:
+            raise PermissionError(f"Failed to fetch JWT and CSRF Token: {resp.content}")
+
     def update_readme_all_tools(self,):
         """
         Iterate over all directories, and attempt to push
         README for corresponding repository in DockerHub
-
         """
         if not self.tools_repo_path:
             raise RuntimeError("'Tools' repository path must be defined.'")
-
         fails = []
-        for tool_path in self.tools_repo_path.iterdir():
-            if tool_path.is_dir() and not (tool_path.stem.startswith(("_", "."))):
-                tool_name = tool_path.stem
-                if not self.update_readme_single_tool(tool_name):
-                    fails.append(tool_name)
-        if fails:
-            self.logger.info(f"Not every README updated: {','.join(fails)}")
-        else:
-            self.logger.info("README of every tool updated.")
+        with requests.Session() as s:
+            self._get_hub_session_cookies(s)
+            for tool_path in self.tools_repo_path.iterdir():
+                if tool_path.is_dir() and not (tool_path.stem.startswith(("_", "."))):
+                    tool_name = tool_path.stem
+                    if not self.update_readme_single_tool(tool_name, s):
+                        fails.append(tool_name)
+            if fails:
+                self.logger.info(f"Not every README updated: {','.join(fails)}")
+            else:
+                self.logger.info("README of every tool updated.")
 
-    def update_readme_single_tool(self, tool_name: str, prefix="cincan/") -> bool:
+    def update_readme_single_tool(
+        self, tool_name: str, s: requests.Session = None, prefix="cincan/"
+    ) -> bool:
         """
         Upload README  and description of tool into Docker Hub.
         Description is first header (H1) of README.
 
         Return True on successful update, False otherwise
         """
+        if not s:
+            s = requests.Session()
+            self._get_hub_session_cookies(s)
 
         MAX_SIZE = 25000
         MAX_DESCRIPTION_LENGTH = 100
-        LOGIN_URI = self.hub_url + "/users/login/"
         REPOSITORY_URI = self.hub_url + f"/repositories/{prefix + tool_name}/"
         readme_path = self.tools_repo_path / tool_name / "README.md"
         if readme_path.is_file():
             if readme_path.stat().st_size <= MAX_SIZE:
-                config = docker.utils.config.load_general_config()
-                auths = (
-                    next(iter(config.get("auths").values()))
-                    if config.get("auths")
-                    else None
-                )
-                if auths:
-                    username, password = (
-                        base64.b64decode(auths.get("auth"))
-                        .decode("utf-8")
-                        .split(":", 1)
-                    )
-                else:
-                    raise PermissionError(
-                        "Unable to find credentials. Please use 'docker login' to log in."
-                    )
-                # using with requests.Session() leads for invalid CSRF tokens
-                data = {"username": username, "password": password}
-                headers = {
-                    "Content-Type": "application/json",  # redundant because json as data parameter
-                }
-                resp = requests.post(LOGIN_URI, json=data, headers=headers)
-                if resp.status_code == 200:
-                    token = resp.json().get("token")
-                    if token:
-                        with open(readme_path, "r") as f:
-                            content = f.read()
-                            headers = {"Authorization": f"JWT {token}"}
-                            description = ""
-                            for line in content.splitlines():
-                                if line.lstrip().startswith("# "):
-                                    description = line.lstrip()[2:]
-                                    break
-                            if len(description) > MAX_DESCRIPTION_LENGTH:
-                                description = ""
-                                self.logger.warning(
-                                    f"Too long description for tool {tool_name}"
-                                )
-                            data = {
-                                "full_description": content,
-                                "description": description,
-                            }
+                with open(readme_path, "r") as f:
+                    content = f.read()
+                    description = ""
+                    for line in content.splitlines():
+                        if line.lstrip().startswith("# "):
+                            description = line.lstrip()[2:]
+                            break
+                    if len(description) > MAX_DESCRIPTION_LENGTH:
+                        description = ""
+                        self.logger.warning(
+                            f"Too long description for tool {tool_name}. Not set."
+                        )
+                    data = {
+                        "full_description": content,
+                        "description": description,
+                    }
 
-                            resp = requests.patch(
-                                REPOSITORY_URI, json=data, headers=headers
-                            )
-                            if resp.status_code == 200:
-                                self.logger.info(
-                                    f"README and description updated for {tool_name}"
-                                )
-                                return True
-                            else:
-                                self.logger.error(
-                                    f"Something went wrong with updating tool {tool_name}: {resp.status_code} : {resp.content}"
-                                )
+                    resp = s.patch(REPOSITORY_URI, json=data)
+                    if resp.status_code == 200:
+                        self.logger.info(
+                            f"README and description updated for {tool_name}"
+                        )
+                        return True
                     else:
                         self.logger.error(
-                            "200 status code but no token in response? :( Please, try later again."
+                            f"Something went wrong with updating tool {tool_name}: {resp.status_code} : {resp.content}"
                         )
-                else:
-                    self.logger.error(
-                        f"Failed to authenticate for Docker Hub: {resp.status_code} {resp.content}"
-                    )
-
             else:
                 self.logger.error(
                     f"README size of {tool_name} exceeds the maximum allowed {MAX_SIZE} bytes for tool {tool_name}"

@@ -1,4 +1,4 @@
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 from .tool_info import ToolInfo
 from .version_info import VersionInfo
 from .checkers import classmap
@@ -121,7 +121,7 @@ class VersionMaintainer:
                 f.write(file_data)
                 self.logger.info(f"Metafile generated into {file_path}")
         else:
-            self.logger.debug(f"No file content found for file {path} from GitLab")
+            self.logger.info(f"No metafile for {path.parent} from GitLab")
         return file_path
 
     def _get_checker_meta_files_from_gitlab(
@@ -198,22 +198,18 @@ class VersionMaintainer:
         self._set_available_checkers()
 
     def get_versions_single_tool(
-        self, tool: str, local_tools: dict, remote_tools: dict
-    ):
-        self.generate_metafiles(tool)
-        l_tool = local_tools.get(tool, "")
-        r_tool = remote_tools.get(tool, "")
-        if l_tool or r_tool:
-            tool_path = self.able_to_check.get(tool)
-            if not tool_path:
-                raise FileNotFoundError(f"Upstream check not implemented for {tool}.")
-            if r_tool:
-                self._set_single_tool_upstream_versions(tool_path, r_tool)
-            else:
-                self._set_single_tool_upstream_versions(tool_path, l_tool)
+        self, tool_name: str, local_tool: ToolInfo, remote_tool: ToolInfo
+    ) -> Tuple[ToolInfo, ToolInfo]:
+        self.generate_metafiles(tool_name)
+        tool_path = self.able_to_check.get(tool_name)
+        if not tool_path:
+            raise FileNotFoundError(f"Upstream check not implemented for {tool_name}.")
+        if remote_tool:
+            self._set_single_tool_upstream_versions(tool_path, remote_tool)
         else:
-            raise FileNotFoundError(f"Given tool {tool} not found locally or remotely.")
-        return l_tool, r_tool
+            self._set_single_tool_upstream_versions(tool_path, local_tool)
+
+        return local_tool, remote_tool
 
     def _set_single_tool_upstream_versions(self, tool_path: str, tool: ToolInfo) -> str:
 

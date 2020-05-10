@@ -1,11 +1,10 @@
-from typing import Dict, List, Union, Tuple
+from typing import Dict, List, Tuple
 from .tool_info import ToolInfo
 from .version_info import VersionInfo
 from .checkers import classmap
 from .gitlab_utils import GitLabAPI
 from .utils import parse_file_time, format_time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from threading import Thread
 import pathlib
 import json
 from datetime import datetime, timedelta
@@ -155,7 +154,7 @@ class VersionMaintainer:
         # meta_tools contain only tools with meta files - no extra 404 later
         if len(tools) > 1:
             files = gitlab_client.get_full_tree(per_page=100, recursive=True, ref=branch)
-            #Get paths of each meta file
+            # Get paths of each meta file
             meta_paths = []
             for file in files:
                 if file.get("name") == self.meta_filename:

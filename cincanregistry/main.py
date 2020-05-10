@@ -342,9 +342,7 @@ def create_utils_argparse(subparsers: argparse._SubParsersAction):
         action="store_true",
     )
     readme_exclusive_group.add_argument(
-        "-n",
-        "--name",
-        help="Name of the tool to update README in Docker Hub.",
+        "-n", "--name", help="Name of the tool to update README in Docker Hub.",
     )
 
 
@@ -495,13 +493,17 @@ def list_handler(args):
 
 
 def utils_handler(args):
-    reg = ToolRegistry(args.config, args.tools)
-    if args.all:
-        reg.update_readme_all_tools()
-    elif args.name:
-        reg.update_readme_single_tool(args.name)
+    if args.utils_sub_command == "update-readme":
+        reg = ToolRegistry(args.config, args.tools)
+        if args.all:
+            reg.update_readme_all_tools()
+        elif args.name:
+            reg.update_readme_single_tool(args.name)
+        else:
+            raise NotImplementedError
     else:
-        raise NotImplementedError
+        print("Available subcommands: update-readme")
+        sys.exit(1)
 
 
 def main():

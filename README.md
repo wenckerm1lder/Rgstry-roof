@@ -151,16 +151,16 @@ Tool is attempting to always find the latest available version among all tags.
 
 > Only for development purpose
 
-There is available feature to update description and README of tool(s) in Docker Hub.
+There is available feature to update description and README of the tool(s) in Docker Hub.
 
-This requires locally cloned CinCan tools repository - README's from there are used.
+This requires locally cloned CinCan tools repository - READMEs from there are used.
 
 For example command
 ```
 cincanregistry -t ../tools utils update-readme --all
 ```
 
-Uploads every README file for corresponding repository in CinCan's Docker Hub. The first header (# ) of README is used as *description* of image.
+Uploads every README file for corresponding repository in CinCan's Docker Hub. The first header (# ) of the README is used as *description* of image.
 
 #### Providing credentials
 

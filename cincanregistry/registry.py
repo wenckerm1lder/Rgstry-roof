@@ -536,12 +536,17 @@ class ToolRegistry:
         versions = {}
         if tool:
             local_tools, remote_tools = await self.get_local_remote_tools()
-            l_tool, r_tool = maintainer.get_versions_single_tool(
-                tool, local_tools, remote_tools
-            )
-            versions = await maintainer._list_versions_single(
-                l_tool, r_tool, only_updates
-            )
+            l_tool = local_tools.get(tool, "")
+            r_tool = remote_tools.get(tool, "")
+            if l_tool or r_tool:
+                l_tool, r_tool = maintainer.get_versions_single_tool(
+                    tool, l_tool, r_tool
+                )
+                versions = await maintainer._list_versions_single(
+                    l_tool, r_tool, only_updates
+                )
+            else:
+                raise FileNotFoundError(f"Given tool {tool} not found locally or remotely.")
         else:
             remote_tools = await self.list_tools_registry()
             # Remote tools, with included upstream version information
@@ -568,7 +573,7 @@ class ToolRegistry:
 
     def _get_hub_session_cookies(self, s: requests.Session):
         """
-        Gets JWT and CSRF token for making authorized requests
+        Gets JWT and CSRF token for making authorized requests for Docker Hub
         Updates request Session object with valid header
 
         It seems Docker Hub is using cookie-to-header pattern as

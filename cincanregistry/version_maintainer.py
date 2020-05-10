@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 from .tool_info import ToolInfo
 from .version_info import VersionInfo
 from .checkers import classmap
@@ -59,56 +59,93 @@ class VersionMaintainer:
         # CinCan GitLab repository details
         self.namespace = "cincan"
         self.project = "tools"
-        if not self.disable_remote_download:
-            self.get_checker_meta_files_from_gitlab()
-        self.able_to_check = self.get_available_checkers()
 
-    def get_available_checkers(self) -> Dict:
+        self.able_to_check = {}
+
+    def _set_available_checkers(self) -> Dict:
         """
         Gets dictionary of tools, whereas upstream/origin check is supported.
 
         """
-        able_to_check = {}
         for tool_path in self.metafiles_location.iterdir():
-            able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path
-        if not able_to_check:
+            self.able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path
+        if not self.able_to_check:
             self.logger.error(
                 f"No single configuration for upstream check found. Something is wrong in path {self.metafiles_location}"
             )
-        return able_to_check
 
-    def get_checker_meta_files_from_gitlab(self, branch: str = "master"):
+    def _is_old_metafile_usable(self, local_path: pathlib.Path) -> bool:
 
-        updated_timestamp_p = self.cachefiles_location / "updated"
+        if isinstance(local_path, pathlib.Path):
+            local_path = self.cachefiles_location / local_path
+        else:
+            raise AttributeError("Given path is not string.")
+        if not local_path.is_file():
+            self.logger.debug(
+                f"No existing metafile found for {local_path.parent.stem}"
+            )
+            return False
+        mtime = datetime.fromtimestamp(local_path.stat().st_mtime)
+        now = datetime.now()
+        if now - timedelta(hours=self.cache_lifetime) <= mtime <= now:
+            self.logger.debug(
+                f"Using old metafile for {local_path.parent.stem} : updated in past {self.cache_lifetime} hours."
+            )
+            return True
+        else:
+            self.logger.info(
+                f"Outdated metafile for {local_path.parent.stem}. Updating..."
+            )
+            return False
 
-        if updated_timestamp_p.is_file() and not self.force_refresh:
-            with open(updated_timestamp_p, "r") as f:
-                timestamp = parse_file_time(f.read())
-                now = datetime.now()
-                if now - timedelta(hours=self.cache_lifetime) <= timestamp <= now:
-                    self.logger.debug(
-                        f"Using old metafiles: they have been updated in past {self.cache_lifetime} hours."
-                    )
-                    return
-                else:
-                    self.logger.info("Metafiles outdated...updating")
+    def _fetch_write_metafile_by_path(self, client: GitLabAPI, path: str, ref: str):
+
+        if self._is_old_metafile_usable(path):
+            return
+        resp = client.get_file_by_path(str(path), ref=ref)
+        file_path = None
+        if resp:
+            file_data = base64.b64decode(resp.get("content"))
+            if str(path).count("/") > 1 or str(path).startswith("_"):
+                self.logger.warning(
+                    f"File {str(path)} in wrong place at GitLab repository, skipping..."
+                )
+                return
+            file_path = self.cachefiles_location / path
+            # Make subdirectory - should be tool name
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(file_path, "wb") as f:
+                f.write(file_data)
+                self.logger.info(f"Metafile generated into {file_path}")
+        else:
+            self.logger.debug(f"No file content found for file {path} from GitLab")
+        return file_path
+
+    def _get_checker_meta_files_from_gitlab(
+        self, tools: [List, str], branch: str = "master", prefix="cincan"
+    ):
 
         self.logger.info(
-            f"Downloading upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project}) into path '{self.cachefiles_location}'"
+            f"Checking upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project}) into path '{self.cachefiles_location}'"
         )
         gitlab_client = GitLabAPI(
             self.tokens.get("gitlab"), self.namespace, self.project
         )
-
         # Get list of all files in repository
         files = gitlab_client.get_full_tree(per_page=100, recursive=True, ref=branch)
+
+        if isinstance(tools, str):
+            tools = [tools]
+        # tools without 'cincan' prefix
+        tools = [i.split("/", 1)[1] for i in tools if i.startswith(prefix)]
 
         # Get paths of each meta file
         meta_paths = []
         for file in files:
             if file.get("name") == self.meta_filename:
-                meta_paths.append(file.get("path"))
-
+                p = pathlib.Path(file.get("path"))
+                if str(p.parent) in tools:
+                    meta_paths.append(p)
         if not meta_paths:
             raise FileNotFoundError(
                 f"No single meta file ({self.meta_filename}) found from GitLab ({self.namespace}/{self.project})"
@@ -116,16 +153,12 @@ class VersionMaintainer:
         else:
             # Create store location directory
             self.cachefiles_location.mkdir(parents=True, exist_ok=True)
-            with open(updated_timestamp_p, "w") as f:
-                time_str = format_time(datetime.now())
-                self.logger.debug(f"Metafiles' timestamp updated to be {time_str}")
-                f.write(time_str)
 
         # Write each file
         threads = []
         for path in meta_paths:
             t = Thread(
-                target=self.fetch_write_metafile_by_path,
+                target=self._fetch_write_metafile_by_path,
                 args=(gitlab_client, path, branch),
             )
             t.daemon = True
@@ -135,29 +168,20 @@ class VersionMaintainer:
         for t in threads:
             t.join()
 
-        self.logger.info("All files generated.")
+        self.logger.info("Required metafiles are up-to-date.")
 
-    def fetch_write_metafile_by_path(self, client, path, ref):
-        resp = client.get_file_by_path(path, ref=ref)
-        if resp:
-            file_data = base64.b64decode(resp.get("content"))
-            if path.count("/") > 1 or path.startswith("_"):
-                self.logger.warning(
-                    f"File {path} in wrong place at repository, skipping..."
-                )
-                return
-            file_path = self.cachefiles_location / path
-            # Make subdirectory - should be tool name
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(file_path, "wb") as f:
-                f.write(file_data)
-                self.logger.info(f"Meta file written into {file_path}")
+    def generate_metafiles(self, tools: [List, str]):
+
+        if not self.disable_remote_download:
+            self._get_checker_meta_files_from_gitlab(tools)
         else:
-            self.logger.debug(f"No file content found for file {path}")
+            self.logger.debug("Download disabled, nothing to generate.")
+        self._set_available_checkers()
 
     def get_versions_single_tool(
         self, tool: str, local_tools: dict, remote_tools: dict
     ):
+        self.generate_metafiles(tool)
         l_tool = local_tools.get(tool, "")
         r_tool = remote_tools.get(tool, "")
         if l_tool or r_tool:
@@ -275,6 +299,7 @@ class VersionMaintainer:
         Checks for available versions in upstream
         """
         tasks = []
+        self.generate_metafiles(tools)
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             for t in tools:
                 tool_path = self.able_to_check.get(t)

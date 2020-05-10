@@ -568,7 +568,7 @@ class ToolRegistry:
 
     def _get_hub_session_cookies(self, s: requests.Session):
         """
-        Gets JWT and CSRF token for making authorized requests
+        Gets JWT and CSRF token for making authorized requests for Docker Hub
         Updates request Session object with valid header
 
         It seems Docker Hub is using cookie-to-header pattern as

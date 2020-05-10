@@ -4,7 +4,7 @@ from .version_info import VersionInfo
 from .checkers import classmap
 from .gitlab_utils import GitLabAPI
 from .utils import parse_file_time, format_time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from threading import Thread
 import pathlib
 import json
@@ -79,7 +79,7 @@ class VersionMaintainer:
         if isinstance(local_path, pathlib.Path):
             local_path = self.cachefiles_location / local_path
         else:
-            raise AttributeError("Given path is not string.")
+            raise AttributeError("Given path is not Path object.")
         if not local_path.is_file():
             self.logger.debug(
                 f"No existing metafile found for {local_path.parent.stem}"
@@ -98,10 +98,13 @@ class VersionMaintainer:
             )
             return False
 
-    def _fetch_write_metafile_by_path(self, client: GitLabAPI, path: str, ref: str):
+    def _fetch_write_metafile_by_path(
+        self, client: GitLabAPI, path: pathlib.Path, ref: str
+    ) -> pathlib.Path:
 
-        if self._is_old_metafile_usable(path):
-            return
+        if not self.force_refresh:
+            if self._is_old_metafile_usable(path):
+                return
         resp = client.get_file_by_path(str(path), ref=ref)
         file_path = None
         if resp:
@@ -125,50 +128,66 @@ class VersionMaintainer:
         self, tools: [List, str], branch: str = "master", prefix="cincan"
     ):
 
+        if tools:
+            # Create store location directory
+            self.cachefiles_location.mkdir(parents=True, exist_ok=True)
+        else:
+            raise ValueError("Empty 'tools' attribute provided to metafiles fetch.")
+
         self.logger.info(
             f"Checking upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project}) into path '{self.cachefiles_location}'"
         )
         gitlab_client = GitLabAPI(
             self.tokens.get("gitlab"), self.namespace, self.project
         )
-        # Get list of all files in repository
-        files = gitlab_client.get_full_tree(per_page=100, recursive=True, ref=branch)
 
         if isinstance(tools, str):
             tools = [tools]
         # tools without 'cincan' prefix
-        tools = [i.split("/", 1)[1] for i in tools if i.startswith(prefix)]
+        tools = [
+            (pathlib.Path(i.split("/", 1)[1]) / self.meta_filename)
+            for i in tools
+            if i.startswith(prefix)
+        ]
 
-        # Get paths of each meta file
-        meta_paths = []
-        for file in files:
-            if file.get("name") == self.meta_filename:
-                p = pathlib.Path(file.get("path"))
-                if str(p.parent) in tools:
-                    meta_paths.append(p)
-        if not meta_paths:
-            raise FileNotFoundError(
-                f"No single meta file ({self.meta_filename}) found from GitLab ({self.namespace}/{self.project})"
-            )
+        # NOTE slower at lower tool amounts but safer method
+        # Get list of all files in repository
+        # meta_tools contain only tools with meta files - no extra 404 later
+        if len(tools) > 1:
+            files = gitlab_client.get_full_tree(per_page=100, recursive=True, ref=branch)
+            #Get paths of each meta file
+            meta_paths = []
+            for file in files:
+                if file.get("name") == self.meta_filename:
+                    p = pathlib.Path(file.get("path"))
+                    if p in tools:
+                        meta_paths.append(p)
+            if not meta_paths:
+                raise FileNotFoundError(
+                    f"No single meta file ({self.meta_filename}) found from GitLab ({self.namespace}/{self.project})"
+                )
         else:
-            # Create store location directory
-            self.cachefiles_location.mkdir(parents=True, exist_ok=True)
+            meta_paths = tools
 
-        # Write each file
-        threads = []
-        for path in meta_paths:
-            t = Thread(
-                target=self._fetch_write_metafile_by_path,
-                args=(gitlab_client, path, branch),
-            )
-            t.daemon = True
-            threads.append(t)
-            t.start()
+        # Write and fetch each file from GitLab
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            # Start the load operations and mark each future with its path
+            future_to_fetch = {
+                executor.submit(
+                    self._fetch_write_metafile_by_path, gitlab_client, path, branch
+                ): path
+                for path in meta_paths
+            }
+            for future in as_completed(future_to_fetch):
+                path = future_to_fetch[future]
+                try:
+                    future.result()
+                except Exception as exc:
+                    self.logger.error(f"{path} generated an exception: {exc}")
+                else:
+                    pass
 
-        for t in threads:
-            t.join()
-
-        self.logger.info("Required metafiles are up-to-date.")
+            self.logger.info("Required metafiles checked.")
 
     def generate_metafiles(self, tools: [List, str]):
 

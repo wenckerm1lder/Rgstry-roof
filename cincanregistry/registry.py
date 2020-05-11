@@ -67,7 +67,6 @@ class ToolRegistry:
             if self.configuration.get("tools_repo_path")
             else ""
         )
-
     def _is_docker_running(self):
         try:
             self.client.ping()
@@ -520,7 +519,7 @@ class ToolRegistry:
         only_updates: bool = False,
         force_refresh: bool = False,
     ):
-        tools_loc = self.configuration.get("tools_repo_path", "")
+        tools_loc = self.tools_repo_path
         checker = self.configuration.get("versions", {})
         meta_filename = checker.get("metadata_filename", "meta.json")
         disable_remote = checker.get("disable_remote", False)

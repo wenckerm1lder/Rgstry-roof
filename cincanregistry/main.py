@@ -424,8 +424,7 @@ def list_handler(args):
         logging.getLogger(__name__).warning(
             "No effect with size or tag related arguments when used with 'versions' subcommand"
         )
-
-    reg = ToolRegistry(args.config)
+    reg = ToolRegistry(args.config, args.tools)
 
     if not args.list_sub_command:
 

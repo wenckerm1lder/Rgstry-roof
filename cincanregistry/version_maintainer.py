@@ -138,7 +138,7 @@ class VersionMaintainer:
             raise ValueError("Empty 'tools' attribute provided to metafiles fetch.")
 
         self.logger.info(
-            f"Checking upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project}) into path '{self.cachefiles_location}'"
+            f"Fetching upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project}) into path '{self.cachefiles_location}'"
         )
         gitlab_client = GitLabAPI(
             self.tokens.get("gitlab"), self.namespace, self.project

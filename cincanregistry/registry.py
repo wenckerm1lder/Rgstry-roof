@@ -51,7 +51,7 @@ class ToolRegistry:
             with open(self.conf_filepath) as f:
                 self.configuration = json.load(f)
         except IOError:
-            self.logger.warning(
+            self.logger.debug(
                 f"No configuration file found for registry in location: {self.conf_filepath}"
             )
             self.configuration = {}

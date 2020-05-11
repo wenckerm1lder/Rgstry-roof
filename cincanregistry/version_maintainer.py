@@ -49,7 +49,10 @@ class VersionMaintainer:
             else pathlib.Path.home() / ".cincan" / "version_cache"
         )
 
-        self.disable_remote_download = disable_remote_download
+        self.disable_remote_download = (
+            disable_remote_download if not metafiles_location else True
+        )
+
         if self.disable_remote_download:
             self.logger.warning(
                 "Remote download disabled for meta files - using local files and they are not updated automatically."
@@ -67,7 +70,8 @@ class VersionMaintainer:
 
         """
         for tool_path in self.metafiles_location.iterdir():
-            self.able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path
+            if (tool_path / self.meta_filename).is_file():
+                self.able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path
         if not self.able_to_check:
             self.logger.error(
                 f"No single configuration for upstream check found. Something is wrong in path {self.metafiles_location}"
@@ -153,7 +157,9 @@ class VersionMaintainer:
         # Get list of all files in repository
         # meta_tools contain only tools with meta files - no extra 404 later
         if len(tools) > 1:
-            files = gitlab_client.get_full_tree(per_page=100, recursive=True, ref=branch)
+            files = gitlab_client.get_full_tree(
+                per_page=100, recursive=True, ref=branch
+            )
             # Get paths of each meta file
             meta_paths = []
             for file in files:

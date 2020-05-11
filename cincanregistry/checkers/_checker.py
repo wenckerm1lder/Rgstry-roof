@@ -3,6 +3,7 @@ import re
 from abc import ABCMeta, abstractmethod
 from typing import List, Dict
 from requests.exceptions import Timeout, ConnectionError
+import json
 
 NO_VERSION = "Not found"
 __name__ = "checker"
@@ -68,7 +69,6 @@ class UpstreamChecker(metaclass=ABCMeta):
         Split versions by dot to generate map, sort.
         Returns whole dictionary with potentially latest tag.
         """
-
         return next(
             iter(
                 sorted(
@@ -77,7 +77,7 @@ class UpstreamChecker(metaclass=ABCMeta):
                     key=lambda s: list(
                         map(
                             int,
-                            re.sub(r"[^0-9.]+", "", s.get(tag_key), re.I).split("."),
+                            filter(None, re.sub(r"[^0-9.]+", "", s.get(tag_key), re.I).split(".")),
                         )
                     )
                     if "." in s.get(tag_key)

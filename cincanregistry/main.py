@@ -422,6 +422,11 @@ def list_handler(args):
         logging.getLogger(__name__).warning(
             "No effect with size or tag related arguments when used with 'versions' subcommand"
         )
+
+    # If exported as module and parent parser of 'list' not defining
+    if not hasattr(args, "tools"):
+        args.tools = ""
+
     reg = ToolRegistry(args.config, args.tools)
 
     if not args.list_sub_command:

@@ -9,7 +9,7 @@ from typing import Any, Dict, Tuple
 import docker
 import docker.errors
 import requests
-
+from datetime import datetime, timedelta
 from . import ToolInfo, ToolInfoEncoder, VersionInfo, VersionMaintainer
 from .utils import parse_file_time, split_tool_tag
 
@@ -222,6 +222,37 @@ class ToolRegistry:
         version = self._get_version_from_containerconfig_env(image.attrs)
         return version
 
+    def create_local_toolinfo_by_name(self, name: str) -> ToolInfo:
+        """Find local images by name, return ToolInfo object with version list"""
+        images = self.client.images.list(name, filters={"dangling": False})
+        if not images:
+            return None
+        source = "local"
+        name, tag = split_tool_tag(name)
+        tool = ToolInfo(name, datetime.now(), source)
+        images.sort(key=lambda x: parse_file_time(x.attrs["Created"]), reverse=True)
+        versions = []
+        for i in images:
+            updated = parse_file_time(i.attrs["Created"])
+            version = self._get_version_from_containerconfig_env(i.attrs)
+            if not version:
+                version = VER_UNDEFINED
+            tags = set(i.tags)
+            size = i.attrs.get("Size")
+            if not versions:
+                versions.append(VersionInfo(version, source, tags, updated, size=size))
+                continue
+            for v in versions:
+                if v == version:
+                    v.tags.union(tags)
+                    break
+                else:
+                    versions.append(
+                        VersionInfo(version, source, tags, updated, size=size)
+                    )
+        tool.versions = versions
+        return tool
+
     async def list_tools_local_images(
         self,
         defined_tag: str = "",
@@ -297,10 +328,12 @@ class ToolRegistry:
                         continue
         return ret
 
-    def fetch_tags(self, session: requests.Session, tool: ToolInfo) -> Dict[str, Any]:
+    def fetch_tags(
+        self, session: requests.Session, tool: ToolInfo, update_cache: bool = False
+    ) -> Dict[str, Any]:
         """Fetch remote data to update a tool info"""
-        available_versions = []
 
+        available_versions = []
         self.logger.info("fetch %s...", tool.name)
 
         tool_name, tool_tag = split_tool_tag(tool.name)
@@ -375,6 +408,9 @@ class ToolRegistry:
         manifest_latest["all_tags"] = tags  # adding tags to manifest data
         manifest_latest["sorted_tags"] = tag_names
         tool.versions = available_versions
+        tool.updated = datetime.now()
+        if update_cache:
+            self.update_cache_by_tool(tool)
         return manifest_latest
 
     def fetch_manifest(
@@ -482,32 +518,31 @@ class ToolRegistry:
             )
             return self.read_tool_cache()
 
-    def read_tool_cache(self) -> Dict[str, ToolInfo]:
-        """Read the local tool cache file"""
+    def update_cache_by_tool(self, tool: ToolInfo):
+        self.tool_cache.parent.mkdir(parents=True, exist_ok=True)
+        tools = {}
+        if self.tool_cache.is_file():
+            with self.tool_cache.open("r") as f:
+                tools = json.load(f)
+        with self.tool_cache.open("w") as f:
+            tools[tool.name] = dict(tool)
+            self.logger.debug(f"Updating tool cache for tool {tool.name}")
+            json.dump(tools, f, cls=ToolInfoEncoder)
+
+    def read_tool_cache(self, tool_name: str = "") -> Dict[str, ToolInfo]:
+        """
+        Read the local tool cache file
+        Returns all as dictionary, or single tool as ToolInfo object
+        """
         if not self.tool_cache.exists():
             return {}
         r = {}
         with self.tool_cache.open("r") as f:
             root_json = json.load(f)
+            if tool_name:
+                return ToolInfo.from_dict(root_json.get(tool_name))
             for name, j in root_json.items():
-                r[name] = ToolInfo(
-                    name,
-                    updated=parse_file_time(j["updated"]),
-                    location=j.get("location"),
-                    versions=[
-                        VersionInfo(
-                            ver.get("version"),
-                            ver.get("source"),
-                            set(ver.get("tags")),
-                            ver.get("updated"),
-                            size=ver.get("size"),
-                        )
-                        for ver in j.get("versions")
-                    ]
-                    if j.get("versions")
-                    else [],
-                    description=j.get("description", ""),
-                )
+                r[name] = ToolInfo.from_dict(j)
         return r
 
     async def list_versions(
@@ -532,10 +567,17 @@ class ToolRegistry:
         )
         versions = {}
         if tool:
-            local_tools, remote_tools = await self.get_local_remote_tools()
-            l_tool = local_tools.get(tool, "")
-            r_tool = remote_tools.get(tool, "")
-            if l_tool or r_tool:
+            l_tool = self.create_local_toolinfo_by_name(tool)
+            r_tool = self.read_tool_cache(tool)
+            now = datetime.now()
+            if not r_tool:
+                r_tool = ToolInfo(tool, datetime.min, "remote")
+            if not r_tool.updated or not (
+                now - timedelta(hours=24) <= r_tool.updated <= now
+            ):
+                with requests.Session() as s:
+                    self.fetch_tags(s, r_tool, update_cache=True)
+            if l_tool or (r_tool and not r_tool.updated == datetime.min):
                 l_tool, r_tool = maintainer.get_versions_single_tool(
                     tool, l_tool, r_tool
                 )

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Union
+from typing import List
 from .version_info import VersionInfo
 from .utils import format_time
 from json import JSONEncoder

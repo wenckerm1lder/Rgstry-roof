@@ -3,18 +3,15 @@ import base64
 import json
 import logging
 import pathlib
-import sys
 import timeit
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, Iterable, Tuple
-from urllib.parse import quote_plus
-
+from typing import Any, Dict, Tuple
 import docker
 import docker.errors
 import requests
 
 from . import ToolInfo, ToolInfoEncoder, VersionInfo, VersionMaintainer
-from .utils import format_time, parse_file_time, split_tool_tag
+from .utils import parse_file_time, split_tool_tag
 
 VER_UNDEFINED = "undefined"
 REMOTE_REGISTRY = "Dockerhub"
@@ -67,6 +64,7 @@ class ToolRegistry:
             if self.configuration.get("tools_repo_path")
             else ""
         )
+
     def _is_docker_running(self):
         try:
             self.client.ping()
@@ -207,7 +205,7 @@ class ToolRegistry:
 
     def _get_version_from_containerconfig_env(self, attrs: dict) -> str:
         """
-        Parse version informatioon ENV from local image attributes
+        Parse version information ENV from local image attributes
         """
         environment = attrs.get("ContainerConfig").get("Env")
         for var in environment:
@@ -545,7 +543,9 @@ class ToolRegistry:
                     l_tool, r_tool, only_updates
                 )
             else:
-                raise FileNotFoundError(f"Given tool {tool} not found locally or remotely.")
+                raise FileNotFoundError(
+                    f"Given tool {tool} not found locally or remotely."
+                )
         else:
             remote_tools = await self.list_tools_registry()
             # Remote tools, with included upstream version information

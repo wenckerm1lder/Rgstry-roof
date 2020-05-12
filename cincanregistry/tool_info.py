@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 from .version_info import VersionInfo
-from .utils import format_time
+from .utils import format_time, parse_file_time
 from json import JSONEncoder
 
 
@@ -120,7 +120,27 @@ class ToolInfo:
         else:
             return False
 
+    @classmethod
+    def from_dict(cls, _dict: dict):
+        """Instance class from dictionary"""
+        if not isinstance(_dict, dict):
+            raise TypeError(
+                "No dictionary provided when instancing ToolInfo with 'from_dict"
+            )
+        params = {}
+        for k, v in _dict.items():
+            if k == "updated":
+                params[k] = parse_file_time(v)
+            elif k == "versions":
+                params[k] = [VersionInfo.from_dict(ver) for ver in v] if v else []
+            else:
+                params[k] = v
+
+        return cls(**params)
+
 
 class ToolInfoEncoder(JSONEncoder):
+    """Convert object into JSON"""
+
     def default(self, o):
         return dict(o)

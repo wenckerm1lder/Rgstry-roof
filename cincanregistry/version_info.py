@@ -217,3 +217,17 @@ class VersionInfo:
         yield "updated", str(self.updated),
         yield "origin", self.origin,
         yield "size", self.size
+
+    @classmethod
+    def from_dict(cls, _dict: dict):
+        if not isinstance(_dict, dict):
+            raise TypeError(
+                "No dictionary provided when instancing VersionInfo with 'from_dict"
+            )
+        params = {}
+        for k, v in _dict.items():
+            if k == "tags":
+                params[k] = set(v)
+            else:
+                params[k] = v
+        return cls(**params)

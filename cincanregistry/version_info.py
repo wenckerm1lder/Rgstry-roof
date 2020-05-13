@@ -110,6 +110,7 @@ class VersionInfo:
         Return size in bigger units
         """
         if isinstance(self._size, str):
+            # It is possible that class is instanced from old values
             if (
                 self._size.endswith(" bytes")
                 or self._size.endswith(" KB")
@@ -133,7 +134,7 @@ class VersionInfo:
         if size < 1000:
             return f"{size:0.2f} GB"
 
-    def raw_size(self) -> int:
+    def raw_size(self) -> Union[int, str]:
         return self._size
 
     @size.setter
@@ -220,9 +221,10 @@ class VersionInfo:
 
     @classmethod
     def from_dict(cls, _dict: dict):
+        """Create VersionInfo object from dictionary"""
         if not isinstance(_dict, dict):
             raise TypeError(
-                "No dictionary provided when instancing VersionInfo with 'from_dict"
+                "No dictionary provided when instancing VersionInfo with 'from_dict'"
             )
         params = {}
         for k, v in _dict.items():

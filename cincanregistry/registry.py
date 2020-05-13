@@ -5,7 +5,7 @@ import logging
 import pathlib
 import timeit
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Union
 import docker
 import docker.errors
 import requests
@@ -529,7 +529,9 @@ class ToolRegistry:
             self.logger.debug(f"Updating tool cache for tool {tool.name}")
             json.dump(tools, f, cls=ToolInfoEncoder)
 
-    def read_tool_cache(self, tool_name: str = "") -> Dict[str, ToolInfo]:
+    def read_tool_cache(
+        self, tool_name: str = ""
+    ) -> Union[Dict[str, ToolInfo], ToolInfo]:
         """
         Read the local tool cache file
         Returns all as dictionary, or single tool as ToolInfo object
@@ -540,7 +542,8 @@ class ToolRegistry:
         with self.tool_cache.open("r") as f:
             root_json = json.load(f)
             if tool_name:
-                return ToolInfo.from_dict(root_json.get(tool_name))
+                d = root_json.get(tool_name, {})
+                return ToolInfo.from_dict(d) if d else {}
             for name, j in root_json.items():
                 r[name] = ToolInfo.from_dict(j)
         return r

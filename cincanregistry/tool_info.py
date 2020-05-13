@@ -125,7 +125,7 @@ class ToolInfo:
         """Instance class from dictionary"""
         if not isinstance(_dict, dict):
             raise TypeError(
-                "No dictionary provided when instancing ToolInfo with 'from_dict"
+                "No dictionary provided when instancing ToolInfo with 'from_dict'"
             )
         params = {}
         for k, v in _dict.items():

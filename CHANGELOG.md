@@ -1,6 +1,13 @@
 # Changelog
 All notable changes in project will be documented in here.
 
+## [0.1.0-rc6]
+
+### Changed
+
+ * Bugfixes
+ * Registry fetch optimized - only required tools
+
 ## [0.1.0-rc5]
 
 ### Changed
@@ -29,5 +36,6 @@ All notable changes in project will be documented in here.
 
 ### Added
 - First release candidate
+
 
 

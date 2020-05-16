@@ -150,7 +150,11 @@ def test_tool_info_from_dict():
     assert t_info.location == t_info_from_dict.location
     assert t_info.versions == t_info_from_dict.versions
     # Too hard to mock this object, values are correct when 1.1 vs 1.2
+    # There is side effect in .version which should change values to same, but
+    # mock implementation missing
     assert t_info.upstream_v[0].version != t_info_from_dict.upstream_v[0].version
+    assert t_info.upstream_v[0].version == "1.1"
+    assert t_info_from_dict.upstream_v[0].version == "1.2"
 
     with pytest.raises(TypeError):
         ToolInfo.from_dict("not_dict")

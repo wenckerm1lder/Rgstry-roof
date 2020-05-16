@@ -1,7 +1,8 @@
-from cincanregistry import VersionInfo, ToolInfo
+from cincanregistry import VersionInfo, ToolInfo, ToolInfoEncoder
+from cincanregistry.utils import format_time
 from datetime import datetime
 import pytest
-
+import json
 from .fake_instances import (
     FAKE_VERSION_INFO_NO_CHECKER,
     FAKE_VERSION_INFO_WITH_CHECKER,
@@ -116,3 +117,42 @@ def test_tool_info_eq():
     # Invalid type comparison
     with pytest.raises(ValueError):
         assert tool_obj == "Heheehe"
+
+
+def test_tool_info_iter():
+    t_info = ToolInfo(**FAKE_TOOL_INFO)
+    t_info.versions.append(VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER))
+    t_info.upstream_v.append(VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER))
+    t_info_dict = dict(t_info)
+
+    assert t_info_dict.get("name") == "test_tool"
+    assert t_info_dict.get("updated") == "2020-03-13T13:37:00"
+    assert t_info_dict.get("location") == "test_location"
+    assert t_info_dict.get("description") == "test_description"
+    assert t_info_dict.get("versions")[0] == {
+        "version": "0.9",
+        "source": "no_checker_case",
+        "tags": ["latest", "latest-stable"],
+        "updated": format_time(datetime(2020, 3, 3, 13, 37,)),
+        "size": "39.53 MB",
+        "origin": False,
+    }
+
+
+def test_tool_info_from_dict():
+    t_info = ToolInfo(**FAKE_TOOL_INFO)
+    t_info.versions.append(VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER))
+    t_info.upstream_v.append(VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER))
+    t_info_dict = dict(t_info)
+    t_info_from_dict = ToolInfo.from_dict(t_info_dict)
+    assert t_info.name == t_info_from_dict.name
+    assert t_info.updated == t_info_from_dict.updated
+    assert t_info.location == t_info_from_dict.location
+    assert t_info.versions == t_info_from_dict.versions
+    # Too hard to mock this object, values are correct when 1.1 vs 1.2
+    assert t_info.upstream_v[0].version != t_info_from_dict.upstream_v[0].version
+
+    with pytest.raises(TypeError):
+        ToolInfo.from_dict("not_dict")
+
+    assert json.dumps(t_info, cls=ToolInfoEncoder)

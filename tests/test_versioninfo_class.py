@@ -4,7 +4,7 @@ from datetime import datetime
 from unittest import mock
 import pytest
 import json
-
+from cincanregistry.utils import format_time
 from .fake_instances import (
     FAKE_VERSION_INFO_NO_CHECKER,
     FAKE_VERSION_INFO_WITH_CHECKER,
@@ -169,7 +169,7 @@ def test_version_info_iter():
             "extra_info": "Test information",
         },
         "tags": ["latest", "latest-stable"],
-        "updated": str(obj.updated),
+        "updated": format_time(obj.updated),
         "origin": True,
         "size": "3.95 MB"
     }
@@ -180,7 +180,7 @@ def test_version_info_iter():
         "version": "0.9",
         "source": "no_checker_case",
         "tags": ["latest", "latest-stable"],
-        "updated": str(obj.updated),
+        "updated": format_time(obj.updated),
         "origin": False,
         "size": "39.53 MB"
     }

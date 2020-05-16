@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 from typing import List, Union
 from .checkers import UpstreamChecker
+from .utils import format_time
 import re
 
 
@@ -26,7 +27,7 @@ class VersionInfo:
     def version(self) -> str:
         """
         Returns version of the object. If it's containing information
-        about possible upstream version, updates it if it's older than 1 hour.
+        about possible upstream version, updates it if it's older than 1 day.
         """
         # TODO maybe remove time comparison here
         if isinstance(self._source, UpstreamChecker):
@@ -215,7 +216,7 @@ class VersionInfo:
             self.source
         ),
         yield "tags", sorted(list(self.tags)),
-        yield "updated", str(self.updated),
+        yield "updated", format_time(self.updated),
         yield "origin", self.origin,
         yield "size", self.size
 

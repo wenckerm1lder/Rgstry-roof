@@ -14,6 +14,7 @@ class ToolInfo:
         updated: datetime,
         location: str,
         versions: List[VersionInfo] = None,
+        upstream_v: List[VersionInfo] = None,
         description: str = "",
     ):
 
@@ -23,7 +24,7 @@ class ToolInfo:
         self._updated: datetime = updated
         self.location: str = location
         self.versions: List[VersionInfo] = versions or []
-        self.upstream_v: List[VersionInfo] = []
+        self.upstream_v: List[VersionInfo] = upstream_v or []
         self.description = description
 
     @property
@@ -132,6 +133,8 @@ class ToolInfo:
             if k == "updated":
                 params[k] = parse_file_time(v)
             elif k == "versions":
+                params[k] = [VersionInfo.from_dict(ver) for ver in v] if v else []
+            elif k == "upstream_v":
                 params[k] = [VersionInfo.from_dict(ver) for ver in v] if v else []
             else:
                 params[k] = v

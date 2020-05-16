@@ -16,6 +16,7 @@ from datetime import datetime
 from unittest import mock
 from cincanregistry.checkers import UpstreamChecker
 
+
 FAKE_VERSION_INFO_NO_CHECKER = {
     "version": 0.9,
     "source": "no_checker_case",
@@ -23,6 +24,7 @@ FAKE_VERSION_INFO_NO_CHECKER = {
     "updated": datetime(2020, 3, 3, 13, 37,),
     "size": 39529754,
 }
+
 
 FAKE_UPSTREAM_CHECKER = mock.Mock(spec=UpstreamChecker)
 FAKE_UPSTREAM_CHECKER.uri = "https://test.uri"
@@ -37,7 +39,10 @@ FAKE_UPSTREAM_CHECKER.version = "1.1"
 FAKE_UPSTREAM_CHECKER.extra_info = "Test information"
 FAKE_UPSTREAM_CHECKER.timeout = 30
 # This value is used, if old value is stored more than 1 hour ago
-FAKE_UPSTREAM_CHECKER.get_version.return_value = "1.2"
+FAKE_UPSTREAM_CHECKER.get_version = mock.Mock(
+    UpstreamChecker, return_value="1.2", auto_spec=True,
+)
+# FAKE_UPSTREAM_CHECKER.get_version.return_value = "1.2"
 FAKE_UPSTREAM_CHECKER.__iter__ = UpstreamChecker.__iter__
 
 FAKE_VERSION_INFO_WITH_CHECKER = {

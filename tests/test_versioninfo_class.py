@@ -24,6 +24,10 @@ def test_create_version_info_no_checker():
     assert obj._tags == set(["latest", "latest-stable"])
     assert obj._updated == datetime(2020, 3, 3, 13, 37)
     assert obj._origin is False
+    fake_d = FAKE_VERSION_INFO_NO_CHECKER.copy()
+    fake_d["updated"] = "invalid_dateformat"
+    with pytest.raises(ValueError):
+        VersionInfo(**fake_d)
 
 
 def test_getters_version_info_no_checker():

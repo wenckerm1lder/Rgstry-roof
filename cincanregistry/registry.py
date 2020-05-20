@@ -82,6 +82,7 @@ class ToolRegistry:
         """
         if custom_error_msg:
             self.logger.error(f"{custom_error_msg}")
+        print(r.content)
         for error in r.json().get("errors"):
             self.logger.debug(
                 f"{error.get('code')}: {error.get('message')} Additional details: {error.get('detail')}"
@@ -117,7 +118,8 @@ class ToolRegistry:
         if v1_comp_string is None:
             return {}
         v1_comp = json.loads(v1_comp_string)
-        updated = v1_comp.get("created")
+        # Get time and convert to Datetime object
+        updated = parse_file_time(v1_comp.get("created"))
         version = ""
         try:
             for i in v1_comp.get("config").get("Env"):
@@ -348,8 +350,8 @@ class ToolRegistry:
             },
         )
         if tags_req.status_code != 200:
-            self._docker_registry_API_error(
-                tags_req, f"Error getting tags for tool {tool_name}"
+            self.logger.error(
+                f"Error when getting tags for tool {tool_name}: {tags_req.content}"
             )
             return {}
         if tags_req.json().get("count") > self.max_page_size:
@@ -536,11 +538,19 @@ class ToolRegistry:
         Read the local tool cache file
         Returns all as dictionary, or single tool as ToolInfo object
         """
+        # json.decoder.JSONDecodeError
         if not self.tool_cache.exists():
             return {}
         r = {}
         with self.tool_cache.open("r") as f:
-            root_json = json.load(f)
+            try:
+                root_json = json.load(f)
+            except json.decoder.JSONDecodeError:
+                self.logger.warning(
+                    f"Something wrong with '{self.tool_cache.stem}' cache, deleting it ..."
+                )
+                self.tool_cache.unlink()
+                return {}
             if tool_name:
                 d = root_json.get(tool_name, {})
                 return ToolInfo.from_dict(d) if d else {}
@@ -676,6 +686,9 @@ class ToolRegistry:
 
         Return True on successful update, False otherwise
         """
+        if not self.tools_repo_path:
+            raise RuntimeError("'Tools' repository path must be defined.'")
+
         if not s:
             s = requests.Session()
             self._get_hub_session_cookies(s)
@@ -718,6 +731,8 @@ class ToolRegistry:
                     f"README size of {tool_name} exceeds the maximum allowed {MAX_SIZE} bytes for tool {tool_name}"
                 )
         else:
-            self.logger.warning(f"No README file found for tool {tool_name}.")
+            self.logger.warning(
+                f"No README file found for tool {tool_name} in path {readme_path}."
+            )
         self.logger.warning(f"README not updated for tool {tool_name}")
         return False

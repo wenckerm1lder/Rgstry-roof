@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import List, Union
 from .checkers import UpstreamChecker
-from .utils import format_time
+from .utils import format_time, parse_file_time
 import re
 
 
@@ -19,6 +19,8 @@ class VersionInfo:
         self._source: Union[str, UpstreamChecker] = source
         self._origin: bool = origin
         self._tags: set = tags
+        if updated and not isinstance(updated, datetime):
+            raise ValueError("Given time is not 'datetime' object.")
         self._updated: datetime = updated
         # Size should be in bytes
         self._size: Union[float, int] = size
@@ -231,6 +233,8 @@ class VersionInfo:
         for k, v in _dict.items():
             if k == "tags":
                 params[k] = set(v)
+            elif k == "updated":
+                params[k] = parse_file_time(v)
             else:
                 params[k] = v
         return cls(**params)

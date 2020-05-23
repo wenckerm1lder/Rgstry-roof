@@ -137,6 +137,25 @@ class ToolRegistry:
         else:
             raise PermissionError(f"Failed to fetch JWT and CSRF Token: {resp.content}")
 
+    def _get_version_from_containerconfig_env(self, attrs: dict) -> str:
+        """
+        Parse version information ENV from local image attributes
+        """
+        environment = attrs.get("ContainerConfig").get("Env")
+        for var in environment:
+            if "".join(var).split("=")[0] == self.version_var:
+                version = "".join(var).split("=")[1]
+                return version
+        return ""
+
+    def get_version_by_image_id(self, image_id: str) -> str:
+        """Get version of local image by ID"""
+        if not self._is_docker_running():
+            return ""
+        image = self.client.images.get(image_id)
+        version = self._get_version_from_containerconfig_env(image.attrs)
+        return version
+
     def _get_version_from_manifest(
         self, manifest: dict,
     ):
@@ -163,6 +182,35 @@ class ToolRegistry:
             )
 
         return version, updated
+
+    def fetch_manifest(
+        self, session: requests.Session, name: str, tag: str
+    ) -> Dict[str, Any]:
+        """Fetch docker image manifest information by tag"""
+
+        # Get authentication token for tool with pull scope
+        token = self._get_registry_service_token(session, name)
+
+        manifest_req = session.get(
+            self.registry_url + "/" + name + "/manifests/" + tag,
+            headers={
+                "Authorization": ("Bearer " + token),
+                # 'Accept': 'application/vnd.docker.distribution.manifest.v2+json',
+            },
+        )
+        if manifest_req.status_code != 200:
+            self._docker_registry_API_error(
+                manifest_req,
+                f"Error when getting manifest for tool {name}. Code {manifest_req.status_code}",
+            )
+            return {}
+        return manifest_req.json()
+
+        # curl -s "https://registry.hub.docker.com/v2/repositories/cincan/"
+        # curl https://hub.docker.com/v2/repositories/cincan/tshark/tags
+        # curl - sSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:raulik/test-test-tool:pull" | jq - r.token > bearer - token
+        # curl - s H "Authorization: Bearer `cat bearer-token`" "https://registry.hub.docker.com/v2/raulik/test-test-tool/manifests/latest" | python - m json.tool
+
 
     async def get_local_remote_tools(self, defined_tag: str = "") -> Tuple[Dict, Dict]:
         """
@@ -235,25 +283,6 @@ class ToolRegistry:
         if not use_tools:
             self.logger.info(f"No single tool found with tag `{defined_tag}`.")
         return use_tools
-
-    def _get_version_from_containerconfig_env(self, attrs: dict) -> str:
-        """
-        Parse version information ENV from local image attributes
-        """
-        environment = attrs.get("ContainerConfig").get("Env")
-        for var in environment:
-            if "".join(var).split("=")[0] == self.version_var:
-                version = "".join(var).split("=")[1]
-                return version
-        return ""
-
-    def get_version_by_image_id(self, image_id: str) -> str:
-        """Get version of local image by ID"""
-        if not self._is_docker_running():
-            return ""
-        image = self.client.images.get(image_id)
-        version = self._get_version_from_containerconfig_env(image.attrs)
-        return version
 
     def create_local_toolinfo_by_name(self, name: str) -> ToolInfo:
         """Find local images by name, return ToolInfo object with version list"""
@@ -445,34 +474,6 @@ class ToolRegistry:
         if update_cache:
             self.update_cache_by_tool(tool)
         return manifest_latest
-
-    def fetch_manifest(
-        self, session: requests.Session, name: str, tag: str
-    ) -> Dict[str, Any]:
-        """Fetch docker image manifest information by tag"""
-
-        # Get authentication token for tool with pull scope
-        token = self._get_registry_service_token(session, name)
-
-        manifest_req = session.get(
-            self.registry_url + "/" + name + "/manifests/" + tag,
-            headers={
-                "Authorization": ("Bearer " + token),
-                # 'Accept': 'application/vnd.docker.distribution.manifest.v2+json',
-            },
-        )
-        if manifest_req.status_code != 200:
-            self._docker_registry_API_error(
-                manifest_req,
-                f"Error when getting manifest for tool {name}. Code {manifest_req.status_code}",
-            )
-            return {}
-        return manifest_req.json()
-
-        # curl -s "https://registry.hub.docker.com/v2/repositories/cincan/"
-        # curl https://hub.docker.com/v2/repositories/cincan/tshark/tags
-        # curl - sSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:raulik/test-test-tool:pull" | jq - r.token > bearer - token
-        # curl - s H "Authorization: Bearer `cat bearer-token`" "https://registry.hub.docker.com/v2/raulik/test-test-tool/manifests/latest" | python - m json.tool
 
     async def list_tools_registry(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
         """List tools from registry with help of local cache"""

@@ -23,7 +23,7 @@ class VersionInfo:
             raise ValueError("Given time is not 'datetime' object.")
         self._updated: datetime = updated
         # Size should be in bytes
-        self._size: Union[float, int] = size
+        self._size: Union[float, int, str] = size
 
     @property
     def version(self) -> str:
@@ -122,7 +122,7 @@ class VersionInfo:
             ):
                 return self._size
             else:
-                raise ValueError("Unsupported format for size.")
+                return "NaN"
         if self._size is None:
             return "NaN"
         if self._size < 1000:

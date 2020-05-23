@@ -70,6 +70,8 @@ def test_setters_version_info_no_checker():
 
     obj._size = None
     assert obj.size == "NaN"
+    obj.size = 900
+    assert obj.size == "900 bytes"
     obj.size = 1001
     assert obj.size == "1.00 KB"
     obj.size = 16062
@@ -78,6 +80,11 @@ def test_setters_version_info_no_checker():
     assert obj.size == "16.06 MB"
     obj.size = 1606200600
     assert obj.size == "1.61 GB"
+
+    obj_c = FAKE_VERSION_INFO_NO_CHECKER.copy()
+    obj_c["size"] = "This is something"
+    obj = VersionInfo(**obj_c)
+    assert obj.size == "NaN"
 
 
 @mock.patch.object(
@@ -128,6 +135,9 @@ def test_version_info_normalization():
     obj1.version = "f809fba9fda9ffebae86611261cf628bd71022fb4348d876974f7c48ddcc65"
     assert obj1.get_normalized_ver() == [809998661126162871022434887697474865]
 
+    obj1.version = "ABCDEFG"
+    assert obj1.get_normalized_ver() == "ABCDEFG"
+
 
 def test_version_info_str():
 
@@ -175,7 +185,7 @@ def test_version_info_iter():
         "tags": ["latest", "latest-stable"],
         "updated": format_time(obj.updated),
         "origin": True,
-        "size": "3.95 MB"
+        "size": "3.95 MB",
     }
     assert dict(obj) == test_dict
     obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
@@ -186,9 +196,23 @@ def test_version_info_iter():
         "tags": ["latest", "latest-stable"],
         "updated": format_time(obj.updated),
         "origin": False,
-        "size": "39.53 MB"
+        "size": "39.53 MB",
     }
     assert dict(obj) == test_dict2
 
     assert json.dumps(test_dict)
     assert json.dumps(test_dict2)
+
+
+def test_version_info_from_dict():
+    obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
+    obj_dict = dict(obj)
+    obj = VersionInfo.from_dict(obj_dict)
+    assert obj.version == "0.9"
+    assert obj.source == "no_checker_case"
+    assert obj.tags == set(["latest-stable", "latest"])
+    assert obj.updated == datetime(2020, 3, 3, 13, 37)
+    assert obj.size == "39.53 MB"
+
+    with pytest.raises(TypeError):
+        VersionInfo.from_dict("not_dict")

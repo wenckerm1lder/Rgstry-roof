@@ -83,6 +83,11 @@ FAKE_CHECKER_CONF = {
 
 FAKE_CHECKER_TOKEN = "abcd1234efgh5678"
 
+FAKE_DOCKER_REGISTRY_ERROR = {
+    "errors": [{"message": "Big error...", "code": 400, "detail": "This is why!"}]
+}
+
+
 FAKE_IMAGE_ATTRS = {
     "Id": "sha256:c37a27619b376487d2b0b064112441c46aa1f6089440743f34177aa6abd30abd",
     "RepoTags": [
@@ -189,6 +194,79 @@ FAKE_IMAGE_ATTRS = {
     "Metadata": {"LastTagTime": "2020-05-19T17:13:16.665036311+03:00"},
 }
 
-FAKE_DOCKER_REGISTRY_ERROR = {
-    "errors": [{"message": "Big error...", "code": 400, "detail": "This is why!"}]
+FAKE_MANIFEST = {
+    "architecture": "amd64",
+    "fsLayers": [
+        {
+            "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+        },
+        {
+            "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+        },
+        {
+            "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+        },
+        {
+            "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+        },
+        {
+            "blobSum": "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"
+        },
+        {
+            "blobSum": "sha256:c9b1b535fdd91a9855fb7f82348177e5f019329a58c53c47272962dd60f71fc9"
+        },
+    ],
+    "history": [
+        {
+            "v1Compatibility": '{"architecture":"amd64","config":{"Hostname":"","Domainname":"","User":"","AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,"OpenStdin":false,"StdinOnce":false,"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION=1.0"],"Cmd":["echo","Hello, '
+            'world!"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"container":"6e470d761c29de22781774ab9ab5e16678f1a603ba2f5c0a6b83c8597bd63b7a","container_config":{"Hostname":"6e470d761c29","Domainname":"","User":"","AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,"OpenStdin":false,"StdinOnce":false,"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION=1.0"],"Cmd":["/bin/sh","-c","#(nop) '
+            '","CMD [\\"echo\\" \\"Hello, '
+            'world!\\"]"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"created":"2020-05-23T19:43:14.106177342Z","docker_version":"19.03.8-ce","id":"5dfc05a56cc5819bb4dec3f7d19f908566c4d115457a1be8cc02ca87cc8d81c0","os":"linux","parent":"7099d9ed2d5fca9f9a65e010826d70a5fd5c53d64a5590292a89e106f8f98d6d","throwaway":true}'
+        },
+        {
+            "v1Compatibility": '{"id":"7099d9ed2d5fca9f9a65e010826d70a5fd5c53d64a5590292a89e106f8f98d6d","parent":"015cf255964c759a51ea696916c8f112e6d0a7968859b1fafd243d9247f6648f","created":"2020-05-23T19:43:13.801013161Z","container_config":{"Cmd":["/bin/sh '
+            '-c echo \\"Hello, '
+            'world!\\""]},"throwaway":true}'
+        },
+        {
+            "v1Compatibility": '{"id":"015cf255964c759a51ea696916c8f112e6d0a7968859b1fafd243d9247f6648f","parent":"1f470a89b4bfd6e3558e340359062e86485fed5fbaaa3d4e0c7d9b3de5910cc5","created":"2020-05-23T19:43:13.03913518Z","container_config":{"Cmd":["/bin/sh '
+            "-c #(nop)  ENV "
+            'TOOL_VERSION=1.0"]},"throwaway":true}'
+        },
+        {
+            "v1Compatibility": '{"id":"1f470a89b4bfd6e3558e340359062e86485fed5fbaaa3d4e0c7d9b3de5910cc5","parent":"4698bdfdf9a50584d768f267df5ea06575733809413b4aa30f526d1c8442ee4c","created":"2020-04-16T22:37:19.783297733Z","container_config":{"Cmd":["/bin/sh '
+            "-c #(nop)  LABEL "
+            'MAINTAINER=cincan.io"]},"throwaway":true}'
+        },
+        {
+            "v1Compatibility": '{"id":"4698bdfdf9a50584d768f267df5ea06575733809413b4aa30f526d1c8442ee4c","parent":"2ff09547bf97be635cf104ec0ff3033b8c103a04e01a3d2e1f84f07dfb5cd80c","created":"2020-01-18T01:19:37.187497623Z","container_config":{"Cmd":["/bin/sh '
+            "-c #(nop)  CMD "
+            '[\\"/bin/sh\\"]"]},"throwaway":true}'
+        },
+        {
+            "v1Compatibility": '{"id":"2ff09547bf97be635cf104ec0ff3033b8c103a04e01a3d2e1f84f07dfb5cd80c","created":"2020-01-18T01:19:37.02673981Z","container_config":{"Cmd":["/bin/sh '
+            "-c #(nop) ADD "
+            "file:e69d441d729412d24675dcd33e04580885df99981cec43de8c9b24015313ff8e "
+            'in / "]}}'
+        },
+    ],
+    "name": "cincan/test",
+    "schemaVersion": 1,
+    "signatures": [
+        {
+            "header": {
+                "alg": "ES256",
+                "jwk": {
+                    "crv": "P-256",
+                    "kid": "XXJM:6UZG:AND7:DMOA:ZLVC:VRTJ:NZVX:OFEI:PTMN:APDF:GULV:ELAG",
+                    "kty": "EC",
+                    "x": "7Rq4ad1-iEAq9o-6LxPGGYJ6t25wrHfxFQioZ4zvO9U",
+                    "y": "Ir-FTF3YyuEdG-M3sgfS4EQ7N_4M_zes5fQasc7haQQ",
+                },
+            },
+            "protected": "eyJmb3JtYXRMZW5ndGgiOjQwNjUsImZvcm1hdFRhaWwiOiJDbjAiLCJ0aW1lIjoiMjAyMC0wNS0yM1QyMDoyODo1N1oifQ",
+            "signature": "6qA-GHZ21iaxVOtNHJwoVp_2JdDWuahoUsHP0-Nfi--PvcTRb_gXl9UM_MYRQIwCyXI3ukvs1R_oKB8k5j8JMg",
+        }
+    ],
+    "tag": "latest",
 }

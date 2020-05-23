@@ -180,7 +180,6 @@ class ToolRegistry:
             self.logger.warning(
                 f"No version information for tool {manifest.get('name')}: {e}"
             )
-
         return version, updated
 
     def fetch_manifest(
@@ -195,7 +194,7 @@ class ToolRegistry:
             self.registry_url + "/" + name + "/manifests/" + tag,
             headers={
                 "Authorization": ("Bearer " + token),
-                # 'Accept': 'application/vnd.docker.distribution.manifest.v2+json',
+                "Accept": "application/vnd.docker.distribution.manifest.list.v2+json",
             },
         )
         if manifest_req.status_code != 200:
@@ -210,7 +209,6 @@ class ToolRegistry:
         # curl https://hub.docker.com/v2/repositories/cincan/tshark/tags
         # curl - sSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:raulik/test-test-tool:pull" | jq - r.token > bearer - token
         # curl - s H "Authorization: Bearer `cat bearer-token`" "https://registry.hub.docker.com/v2/raulik/test-test-tool/manifests/latest" | python - m json.tool
-
 
     async def get_local_remote_tools(self, defined_tag: str = "") -> Tuple[Dict, Dict]:
         """

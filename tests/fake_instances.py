@@ -189,3 +189,6 @@ FAKE_IMAGE_ATTRS = {
     "Metadata": {"LastTagTime": "2020-05-19T17:13:16.665036311+03:00"},
 }
 
+FAKE_DOCKER_REGISTRY_ERROR = {
+    "errors": [{"message": "Big error...", "code": 400, "detail": "This is why!"}]
+}

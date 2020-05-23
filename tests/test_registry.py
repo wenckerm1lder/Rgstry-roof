@@ -4,7 +4,10 @@ import docker
 import logging
 import requests
 from unittest import mock
-from .fake_instances import FAKE_IMAGE_ATTRS
+from .fake_instances import FAKE_IMAGE_ATTRS, FAKE_DOCKER_REGISTRY_ERROR
+
+TEST_REPOSITORY = "cincan/test"
+TEST_EXTERNAL_API = True
 
 
 def test_create_registry(mocker, caplog):
@@ -58,6 +61,37 @@ def test_is_docker_running(mocker, caplog):
         reg.client, "ping", return_value=True, autospec=True,
     )
     assert reg._is_docker_running()
+
+
+def test_docker_registry_api_error(mocker, caplog):
+    reg = ToolRegistry()
+    caplog.set_level(logging.DEBUG)
+    response = mock.Mock(ok=True)
+    response.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
+
+    reg._docker_registry_API_error(response)
+
+    logs = [l.message for l in caplog.records]
+    assert logs == [f"400: Big error... Additional details: This is why!"]
+    caplog.clear()
+    caplog.set_level(logging.ERROR)
+    reg._docker_registry_API_error(response, "Big cathastrope")
+    logs = [l.message for l in caplog.records]
+    assert logs == ["Big cathastrope"]
+
+
+def test_get_service_token(mocker):
+    reg = ToolRegistry()
+    with requests.Session() as s:
+        # Test against real API
+        if TEST_EXTERNAL_API:
+            assert reg._get_registry_service_token(s, "cincan/test")
+
+        ret = mock.Mock(ok=True)
+        ret.status_code = 404
+        ret.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
+        mocker.patch.object(s, "get", return_value=ret, autospec=True)
+        assert not reg._get_registry_service_token(s, "cincan/test")
 
 
 def test_get_version_by_image_id(mocker):

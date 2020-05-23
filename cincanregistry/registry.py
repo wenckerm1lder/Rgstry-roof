@@ -82,7 +82,6 @@ class ToolRegistry:
         """
         if custom_error_msg:
             self.logger.error(f"{custom_error_msg}")
-        print(r.content)
         for error in r.json().get("errors"):
             self.logger.debug(
                 f"{error.get('code')}: {error.get('message')} Additional details: {error.get('detail')}"

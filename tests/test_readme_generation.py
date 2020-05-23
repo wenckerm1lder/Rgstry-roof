@@ -8,4 +8,4 @@ def test_update_tool_readme(mocker, tmpdir):
     mocker.patch.object(
         reg.client, "ping", return_value=True, autospec=True,
     )
-    print(reg._is_docker_running())
+    # print(reg._is_docker_running())

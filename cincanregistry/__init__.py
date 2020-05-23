@@ -2,6 +2,7 @@ from .version_info import VersionInfo
 from .tool_info import ToolInfo, ToolInfoEncoder
 from .version_maintainer import VersionMaintainer
 from .registry import ToolRegistry
+from .readme_utils import HubReadmeHandler
 from .main import (
     list_handler,
     utils_handler,
@@ -9,4 +10,4 @@ from .main import (
     create_utils_argparse,
 )
 
-__all__ = ["ToolInfo", "VersionInfo", "ToolRegistry", "VersionMaintainer"]
+__all__ = ["ToolInfo", "VersionInfo", "ToolRegistry", "VersionMaintainer", "HubReadmeHandler"]

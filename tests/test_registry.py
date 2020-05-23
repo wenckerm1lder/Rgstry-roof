@@ -1,8 +1,10 @@
 from cincanregistry.registry import ToolRegistry
 import pathlib
+import docker
 import logging
 import requests
 from unittest import mock
+from .fake_instances import FAKE_IMAGE_ATTRS
 
 
 def test_create_registry(mocker, caplog):
@@ -58,17 +60,21 @@ def test_is_docker_running(mocker, caplog):
     assert reg._is_docker_running()
 
 
-# @mock.patch.object(ToolRegistry, "_is_docker_running", return_value=True, autospec=True)
-# def test_get_version_by_image_id(mocker):
-    # reg = ToolRegistry()
-    # assert reg._is_docker_running()
-
-    # print(reg.get_version_by_image_id("a40b6ef99eab50c03f4c1bf6e28d95a5c88f0d001c343e871d7cb1c9fcecbb48"))
-
-
-def test_update_tool_readme(mocker, tmpdir):
-    p = tmpdir.mkdir("my_tool").join("README.md")
-    p.write("# This is useful example tool.")
+def test_get_version_by_image_id(mocker):
+    mock_image = mock.Mock(spec=docker.models.images.Image)
+    mock_image.attrs = FAKE_IMAGE_ATTRS
     reg = ToolRegistry()
-    mocker.patch.object(reg, "_is_docker_running", return_value=True, autospec=True)
-    print(reg._is_docker_running())
+    reg.client = mock.Mock()
+    mocker.patch.object(
+        reg.client, "ping", return_value=True, autospec=True,
+    )
+    assert reg._is_docker_running()
+    mocker.patch.object(
+        reg.client.images,
+        "get",
+        return_value=mock_image,
+        autospec=docker.models.images.Image,
+        create=True,
+        spec_set=True,
+    )
+    assert reg.get_version_by_image_id("test_id") == "0.2"

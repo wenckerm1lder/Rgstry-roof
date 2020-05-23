@@ -1,9 +1,9 @@
 import asyncio
-import base64
 import json
 import logging
 import pathlib
 import timeit
+import base64
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, Tuple, Union
 import docker
@@ -62,7 +62,7 @@ class ToolRegistry:
         ) or (
             pathlib.Path(self.configuration.get("tools_repo_path"))
             if self.configuration.get("tools_repo_path")
-            else ""
+            else None
         )
 
     def _is_docker_running(self):
@@ -88,7 +88,7 @@ class ToolRegistry:
                 f"{error.get('code')}: {error.get('message')} Additional details: {error.get('detail')}"
             )
 
-    def _get_service_token(self, session: requests.Session, repo: str) -> str:
+    def _get_registry_service_token(self, session: requests.Session, repo: str) -> str:
         """
         Gets Bearer token with 'pull' scope for single repository
         in Docker Registry by default.
@@ -105,6 +105,38 @@ class ToolRegistry:
             return ""
         else:
             return token_req.json().get("token", "")
+
+    def _get_hub_session_cookies(self, s: requests.Session):
+        """
+        Gets JWT and CSRF token for making authorized requests for Docker Hub
+        Updates request Session object with valid header
+
+        It seems Docker Hub is using cookie-to-header pattern as
+        extra CSRF protection, header named as 'X-CSRFToken'
+        """
+
+        LOGIN_URI = self.hub_url + "/users/login/"
+        config = docker.utils.config.load_general_config()
+        auths = (
+            next(iter(config.get("auths").values())) if config.get("auths") else None
+        )
+        if auths:
+            username, password = (
+                base64.b64decode(auths.get("auth")).decode("utf-8").split(":", 1)
+            )
+        else:
+            raise PermissionError(
+                "Unable to find credentials. Please use 'docker login' to log in."
+            )
+        data = {"username": username, "password": password}
+        headers = {
+            "Content-Type": "application/json",  # redundant because json as data parameter
+        }
+        resp = s.post(LOGIN_URI, json=data, headers=headers)
+        if resp.status_code == 200:
+            s.headers.update({"X-CSRFToken": s.cookies.get("csrftoken")})
+        else:
+            raise PermissionError(f"Failed to fetch JWT and CSRF Token: {resp.content}")
 
     def _get_version_from_manifest(
         self, manifest: dict,
@@ -421,7 +453,7 @@ class ToolRegistry:
         """Fetch docker image manifest information by tag"""
 
         # Get authentication token for tool with pull scope
-        token = self._get_service_token(session, name)
+        token = self._get_registry_service_token(session, name)
 
         manifest_req = session.get(
             self.registry_url + "/" + name + "/manifests/" + tag,
@@ -624,115 +656,3 @@ class ToolRegistry:
             return json.dumps(versions)
         else:
             return versions
-
-    def _get_hub_session_cookies(self, s: requests.Session):
-        """
-        Gets JWT and CSRF token for making authorized requests for Docker Hub
-        Updates request Session object with valid header
-
-        It seems Docker Hub is using cookie-to-header pattern as
-        extra CSRF protection, header named as 'X-CSRFToken'
-        """
-
-        LOGIN_URI = self.hub_url + "/users/login/"
-        config = docker.utils.config.load_general_config()
-        auths = (
-            next(iter(config.get("auths").values())) if config.get("auths") else None
-        )
-        if auths:
-            username, password = (
-                base64.b64decode(auths.get("auth")).decode("utf-8").split(":", 1)
-            )
-        else:
-            raise PermissionError(
-                "Unable to find credentials. Please use 'docker login' to log in."
-            )
-        data = {"username": username, "password": password}
-        headers = {
-            "Content-Type": "application/json",  # redundant because json as data parameter
-        }
-        resp = s.post(LOGIN_URI, json=data, headers=headers)
-        if resp.status_code == 200:
-            s.headers.update({"X-CSRFToken": s.cookies.get("csrftoken")})
-        else:
-            raise PermissionError(f"Failed to fetch JWT and CSRF Token: {resp.content}")
-
-    def update_readme_all_tools(self,):
-        """
-        Iterate over all directories, and attempt to push
-        README for corresponding repository in DockerHub
-        """
-        if not self.tools_repo_path:
-            raise RuntimeError("'Tools' repository path must be defined.'")
-        fails = []
-        with requests.Session() as s:
-            self._get_hub_session_cookies(s)
-            for tool_path in self.tools_repo_path.iterdir():
-                if tool_path.is_dir() and not (tool_path.stem.startswith(("_", "."))):
-                    tool_name = tool_path.stem
-                    if not self.update_readme_single_tool(tool_name, s):
-                        fails.append(tool_name)
-            if fails:
-                self.logger.info(f"Not every README updated: {','.join(fails)}")
-            else:
-                self.logger.info("README of every tool updated.")
-
-    def update_readme_single_tool(
-        self, tool_name: str, s: requests.Session = None, prefix="cincan/"
-    ) -> bool:
-        """
-        Upload README  and description of tool into Docker Hub.
-        Description is first header (H1) of README.
-
-        Return True on successful update, False otherwise
-        """
-        if not self.tools_repo_path:
-            raise RuntimeError("'Tools' repository path must be defined.'")
-
-        if not s:
-            s = requests.Session()
-            self._get_hub_session_cookies(s)
-
-        MAX_SIZE = 25000
-        MAX_DESCRIPTION_LENGTH = 100
-        REPOSITORY_URI = self.hub_url + f"/repositories/{prefix + tool_name}/"
-        readme_path = self.tools_repo_path / tool_name / "README.md"
-        if readme_path.is_file():
-            if readme_path.stat().st_size <= MAX_SIZE:
-                with open(readme_path, "r") as f:
-                    content = f.read()
-                    description = ""
-                    for line in content.splitlines():
-                        if line.lstrip().startswith("# "):
-                            description = line.lstrip()[2:]
-                            break
-                    if len(description) > MAX_DESCRIPTION_LENGTH:
-                        description = ""
-                        self.logger.warning(
-                            f"Too long description for tool {tool_name}. Not set."
-                        )
-                    data = {
-                        "full_description": content,
-                        "description": description,
-                    }
-
-                    resp = s.patch(REPOSITORY_URI, json=data)
-                    if resp.status_code == 200:
-                        self.logger.info(
-                            f"README and description updated for {tool_name}"
-                        )
-                        return True
-                    else:
-                        self.logger.error(
-                            f"Something went wrong with updating tool {tool_name}: {resp.status_code} : {resp.content}"
-                        )
-            else:
-                self.logger.error(
-                    f"README size of {tool_name} exceeds the maximum allowed {MAX_SIZE} bytes for tool {tool_name}"
-                )
-        else:
-            self.logger.warning(
-                f"No README file found for tool {tool_name} in path {readme_path}."
-            )
-        self.logger.warning(f"README not updated for tool {tool_name}")
-        return False

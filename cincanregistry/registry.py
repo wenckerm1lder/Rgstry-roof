@@ -71,7 +71,7 @@ class ToolRegistry:
             return True
         except requests.exceptions.ConnectionError:
             self.logger.error("Failed to connect to Docker Server. Is it running?")
-            self.logger.error("Not able to list local tools.")
+            self.logger.error("Not able to list or use local tools.")
             return False
 
     def _docker_registry_API_error(

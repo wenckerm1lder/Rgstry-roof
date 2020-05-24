@@ -141,7 +141,7 @@ class ToolRegistry:
         """
         Parse version information ENV from local image attributes
         """
-        environment = attrs.get("ContainerConfig").get("Env")
+        environment = attrs.get("Config").get("Env")
         for var in environment:
             if "".join(var).split("=")[0] == self.version_var:
                 version = "".join(var).split("=")[1]

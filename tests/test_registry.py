@@ -7,7 +7,7 @@ import requests
 import pytest
 from unittest import mock
 from .fake_instances import FAKE_IMAGE_ATTRS, FAKE_DOCKER_REGISTRY_ERROR, FAKE_MANIFEST
-
+from copy import deepcopy
 TEST_REPOSITORY = "cincan/test"
 
 
@@ -187,10 +187,22 @@ def test_create_local_tool_info_by_name(mocker):
     fake_image = mock.Mock(spec=docker.models.images.Image)
     fake_image.attrs = FAKE_IMAGE_ATTRS
     fake_image.tags = ["latest"]
-    mocker.patch.object(reg.client.images, "list", return_value=[fake_image], create=True)
+    fake_image2 = mock.Mock(spec=docker.models.images.Image)
+    fake_image2.attrs = FAKE_IMAGE_ATTRS
+    fake_image2.tags = ["dev"]
+    fake_image3 = mock.Mock(spec=docker.models.images.Image)
+    fake_attrs2 = deepcopy(FAKE_IMAGE_ATTRS)
+    # Typo in env TOOL_VERSION
+    fake_attrs2["Config"]["Env"] = [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "TOOL_VERSIO=0.9",
+    ]
+    fake_image3.attrs = fake_attrs2
+    fake_image3.tags = ["test"]
+    mocker.patch.object(reg.client.images, "list", return_value=[fake_image, fake_image2, fake_image3], create=True)
     tool_info = reg.create_local_tool_info_by_name("cincan/test")
     assert tool_info.name == "cincan/test"
-    assert len(tool_info.versions) == 1
+    assert len(tool_info.versions) == 2
     assert tool_info.versions[0].version == "1.0"
     assert tool_info.versions[0].tags == {"latest"}
     assert tool_info.versions[0].size == "5.59 MB"

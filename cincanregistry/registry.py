@@ -282,8 +282,10 @@ class ToolRegistry:
             self.logger.info(f"No single tool found with tag `{defined_tag}`.")
         return use_tools
 
-    def create_local_toolinfo_by_name(self, name: str) -> Union[ToolInfo, None]:
+    def create_local_tool_info_by_name(self, name: str) -> Union[ToolInfo, None]:
         """Find local images by name, return ToolInfo object with version list"""
+        if not self._is_docker_running():
+            return None
         images = self.client.images.list(name, filters={"dangling": False})
         if not images:
             return None
@@ -595,7 +597,7 @@ class ToolRegistry:
         )
         versions = {}
         if tool:
-            l_tool = self.create_local_toolinfo_by_name(tool)
+            l_tool = self.create_local_tool_info_by_name(tool)
             r_tool = self.read_tool_cache(tool)
             now = datetime.now()
             if not r_tool:

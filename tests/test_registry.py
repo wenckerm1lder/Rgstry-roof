@@ -109,7 +109,7 @@ def test_get_version_by_image_id(mocker):
         create=True,
         spec_set=True,
     )
-    assert reg.get_version_by_image_id("test_id") == "0.2"
+    assert reg.get_version_by_image_id("test_id") == "1.0"
 
 
 @pytest.mark.external_api
@@ -141,10 +141,27 @@ def test_get_version_from_manifest(mocker, caplog):
 
     manifest_c = FAKE_MANIFEST.copy()
     manifest_c["history"][0] = {
-        "v1Compatibility": '{"architecture":"amd64","config":{"Hostname":"","Domainname":"","User":"","AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,"OpenStdin":false,"StdinOnce":false,"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION"],"Cmd":["echo","Hello, '
-                           'world!"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"container":"6e470d761c29de22781774ab9ab5e16678f1a603ba2f5c0a6b83c8597bd63b7a","container_config":{"Hostname":"6e470d761c29","Domainname":"","User":"","AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,"OpenStdin":false,"StdinOnce":false,"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION=1.0"],"Cmd":["/bin/sh","-c","#(nop) '
-                           '","CMD [\\"echo\\" \\"Hello, '
-                           'world!\\"]"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"created":"2020-05-23T19:43:14.106177342Z","docker_version":"19.03.8-ce","id":"5dfc05a56cc5819bb4dec3f7d19f908566c4d115457a1be8cc02ca87cc8d81c0","os":"linux","parent":"7099d9ed2d5fca9f9a65e010826d70a5fd5c53d64a5590292a89e106f8f98d6d","throwaway":true}'
+        "v1Compatibility": '{"architecture":"amd64","config":{"Hostname":"","Domainname":"","User":"",'
+                           '"AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,'
+                           '"OpenStdin":false,"StdinOnce":false,"Env":['
+                           '"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION"],'
+                           '"Cmd":["echo","Hello, '
+                           'world!"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4'
+                           '","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{'
+                           '"MAINTAINER":"cincan.io"}},'
+                           '"container":"6e470d761c29de22781774ab9ab5e16678f1a603ba2f5c0a6b83c8597bd63b7a",'
+                           '"container_config":{"Hostname":"6e470d761c29","Domainname":"","User":"",'
+                           '"AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,'
+                           '"OpenStdin":false,"StdinOnce":false,"Env":['
+                           '"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION=1.0"],'
+                           '"Cmd":["/bin/sh","-c","#(nop) ","CMD [\\"echo\\" \\"Hello, world!\\"]"],'
+                           '"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4",'
+                           '"Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{'
+                           '"MAINTAINER":"cincan.io"}},"created":"2020-05-23T19:43:14.106177342Z",'
+                           '"docker_version":"19.03.8-ce",'
+                           '"id":"5dfc05a56cc5819bb4dec3f7d19f908566c4d115457a1be8cc02ca87cc8d81c0","os":"linux",'
+                           '"parent":"7099d9ed2d5fca9f9a65e010826d70a5fd5c53d64a5590292a89e106f8f98d6d",'
+                           '"throwaway":true} '
     }
     caplog.set_level(logging.WARNING)
     assert (
@@ -155,3 +172,28 @@ def test_get_version_from_manifest(mocker, caplog):
     assert logs == [
         "No version information for tool cincan/test: list index out of range"
     ]
+
+
+def test_create_local_tool_info_by_name(mocker):
+    reg = ToolRegistry()
+    reg.client = mock.Mock()
+    mocker.patch.object(
+        reg.client, "ping", return_value=False, autospec=True, side_effect=requests.exceptions.ConnectionError(),
+    )
+    assert not reg.create_local_tool_info_by_name("cincan/test")
+    mocker.patch.object(
+        reg.client, "ping", return_value=True, autospec=True,
+    )
+    fake_image = mock.Mock(spec=docker.models.images.Image)
+    fake_image.attrs = FAKE_IMAGE_ATTRS
+    fake_image.tags = ["latest"]
+    mocker.patch.object(reg.client.images, "list", return_value=[fake_image], create=True)
+    tool_info = reg.create_local_tool_info_by_name("cincan/test")
+    assert tool_info.name == "cincan/test"
+    assert len(tool_info.versions) == 1
+    assert tool_info.versions[0].version == "1.0"
+    assert tool_info.versions[0].tags == {"latest"}
+    assert tool_info.versions[0].size == "5.59 MB"
+    assert tool_info.versions[0].updated == parse_file_time("2020-05-23T19:43:14.106177342Z")
+    mocker.patch.object(reg.client.images, "list", return_value=[], create=True)
+    assert not reg.create_local_tool_info_by_name("cincan/test")

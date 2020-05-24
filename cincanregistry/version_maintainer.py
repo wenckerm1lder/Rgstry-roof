@@ -316,7 +316,7 @@ class VersionMaintainer:
                 f"Writing checker cache of tool {tool_name} for provider {provider} into {path}"
             )
 
-    async def _check_upstream_versions(self, tools: Dict[str, ToolInfo]):
+    async def check_upstream_versions(self, tools: Dict[str, ToolInfo]):
         """
         Checks for available versions in upstream
         """
@@ -346,7 +346,7 @@ class VersionMaintainer:
                 )
         return tools
 
-    async def _list_versions_single(
+    async def list_versions_single(
             self, l_tool: ToolInfo, r_tool: ToolInfo, only_updates: bool = False
     ) -> dict:
         """

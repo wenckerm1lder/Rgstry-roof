@@ -611,7 +611,7 @@ class ToolRegistry:
                 l_tool, r_tool = maintainer.get_versions_single_tool(
                     tool, l_tool, r_tool
                 )
-                versions = await maintainer._list_versions_single(
+                versions = await maintainer.list_versions_single(
                     l_tool, r_tool, only_updates
                 )
             else:
@@ -621,7 +621,7 @@ class ToolRegistry:
         else:
             remote_tools = await self.list_tools_registry()
             # Remote tools, with included upstream version information
-            remote_tools_with_origin_version = await maintainer._check_upstream_versions(
+            remote_tools_with_origin_version = await maintainer.check_upstream_versions(
                 remote_tools
             )
             # Local tools, without checking
@@ -631,7 +631,7 @@ class ToolRegistry:
                     t
                 )  # Contains also upstream version info
                 l_tool = local_tools.get(t, "")
-                t_info = await maintainer._list_versions_single(
+                t_info = await maintainer.list_versions_single(
                     l_tool, r_tool, only_updates
                 )
                 if t_info:

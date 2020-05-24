@@ -7,13 +7,13 @@ import re
 
 class VersionInfo:
     def __init__(
-        self,
-        version: str,
-        source: Union[str, UpstreamChecker],
-        tags: set,
-        updated: datetime = None,
-        origin: bool = False,
-        size: Union[int, float] = None,
+            self,
+            version: str,
+            source: Union[str, UpstreamChecker],
+            tags: set,
+            updated: datetime = None,
+            origin: bool = False,
+            size: Union[int, float] = None,
     ):
         self._version: str = str(version)
         self._source: Union[str, UpstreamChecker] = source
@@ -35,7 +35,7 @@ class VersionInfo:
         if isinstance(self._source, UpstreamChecker):
             now = datetime.now()
             if not self._updated or not (
-                now - timedelta(hours=24) <= self._updated <= now
+                    now - timedelta(hours=24) <= self._updated <= now
             ):
                 self._version = self._source.get_version()
                 self._updated = now
@@ -115,10 +115,10 @@ class VersionInfo:
         if isinstance(self._size, str):
             # It is possible that class is instanced from old values
             if (
-                self._size.endswith(" bytes")
-                or self._size.endswith(" KB")
-                or self._size.endswith(" MB")
-                or self._size.endswith(" GB")
+                    self._size.endswith(" bytes")
+                    or self._size.endswith(" KB")
+                    or self._size.endswith(" MB")
+                    or self._size.endswith(" GB")
             ):
                 return self._size
             else:

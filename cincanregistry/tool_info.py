@@ -5,17 +5,27 @@ from .utils import format_time, parse_file_time
 from json import JSONEncoder
 
 
+def _map_sub_versions(ver: VersionInfo):
+
+    norm_ver = ver.get_normalized_ver()
+    # Can't map if there are only  non-digits or hash
+    if isinstance(norm_ver, str):
+        return [-1]
+    else:
+        return norm_ver
+
+
 class ToolInfo:
     """A tool in registry"""
 
     def __init__(
-        self,
-        name: str,
-        updated: datetime,
-        location: str,
-        versions: List[VersionInfo] = None,
-        upstream_v: List[VersionInfo] = None,
-        description: str = "",
+            self,
+            name: str,
+            updated: datetime,
+            location: str,
+            versions: List[VersionInfo] = None,
+            upstream_v: List[VersionInfo] = None,
+            description: str = "",
     ):
 
         if not name or not isinstance(name, str):
@@ -41,18 +51,7 @@ class ToolInfo:
             raise ValueError("Given time is not 'datetime' object.")
         self._updated = dt
 
-    def _map_sub_versions(self, ver: VersionInfo):
-
-        norm_ver = ver.get_normalized_ver()
-
-        # Can't map if there are only  non-digits or hash
-        if isinstance(norm_ver, str):
-            return [-1]
-
-        else:
-            return norm_ver
-
-    def getOriginVersion(self) -> VersionInfo:
+    def get_origin_version(self) -> VersionInfo:
         """
         Returns version from the upstream versions, which is marked
         as very origin of the tool.
@@ -63,7 +62,7 @@ class ToolInfo:
                     return v
         return VersionInfo("Not implemented", "", set(), datetime.min)
 
-    def getDockerOriginVersion(self) -> VersionInfo:
+    def get_docker_origin_version(self) -> VersionInfo:
         """
         Returns version from the upstream versions, which is marked
         as install source in dockerfile.
@@ -74,7 +73,7 @@ class ToolInfo:
                     return v
         return VersionInfo("Not implemented", "", set(), datetime.min)
 
-    def getLatest(self, in_upstream: bool = False) -> VersionInfo:
+    def get_latest(self, in_upstream: bool = False) -> VersionInfo:
         """
         Attempts to return latest version from available versions.
         By default, not checking upstream
@@ -86,7 +85,7 @@ class ToolInfo:
                     if not in_upstream
                     else (self.upstream_v if self.upstream_v else []),
                     reverse=True,
-                    key=lambda s: self._map_sub_versions(s),
+                    key=lambda s: _map_sub_versions(s),
                 )
             ),
             None,
@@ -116,7 +115,7 @@ class ToolInfo:
             raise ValueError(
                 f"Unable to compare '=' type {type(value)} and type {self}"
             )
-        if self.getLatest() == value.getLatest() and self.name == value.name:
+        if self.get_latest() == value.get_latest() and self.name == value.name:
             return True
         else:
             return False

@@ -111,7 +111,19 @@ def test_fetch_tags(mocker, caplog):
         assert tool_info.versions[0].version == "1.0"
         assert tool_info.versions[0].tags == {"latest"}
 
-    logs = [l.message for l in caplog.records]
-    assert logs == [
-        "fetch cincan/test..."
-    ]
+        logs = [l.message for l in caplog.records]
+        assert logs == [
+            "fetch cincan/test..."
+        ]
+        caplog.clear()
+        caplog.set_level(logging.ERROR)
+        ret = mock.Mock(ok=True)
+        ret.status_code = 404
+        ret.content = "Not Found"
+        mocker.patch.object(s, "get", return_value=ret, autospec=True)
+        tool_info = ToolInfo(TEST_REPOSITORY, datetime.datetime.now(), "remote")
+        reg.fetch_tags(s, tool_info, update_cache=False)
+        logs = [l.message for l in caplog.records]
+        assert logs == [
+            "Error when getting tags for tool cincan/test: Not Found"
+        ]

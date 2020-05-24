@@ -403,14 +403,13 @@ class ToolRegistry:
             params=params,
             headers={
                 "Host": self.registry_host
-                # "Authorization": ("Bearer " + token),
-                # 'Accept': 'application/vnd.docker.distribution.manifest.v2+json',
             },
         )
         if tags_req.status_code != 200:
             self.logger.error(
                 f"Error when getting tags for tool {tool_name}: {tags_req.content}"
             )
+            return
         if tags_req.json().get("count") > self.max_page_size:
             self.logger.warning(
                 f"More tags ( > {self.max_page_size}) than able to list for tool {tool_name}."
@@ -448,6 +447,7 @@ class ToolRegistry:
                         available_versions.append(ver_info)
         else:
             self.logger.error(f"No tags found for tool {tool_name} for unknown reason.")
+            return
         tool.versions = available_versions
         tool.updated = datetime.now()
         if update_cache:

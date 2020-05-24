@@ -75,9 +75,9 @@ def test_docker_registry_api_error(mocker, caplog):
     assert logs == [f"400: Big error... Additional details: This is why!"]
     caplog.clear()
     caplog.set_level(logging.ERROR)
-    reg._docker_registry_api_error(response, "Big cathastrope")
+    reg._docker_registry_api_error(response, "Big catastrophe")
     logs = [l.message for l in caplog.records]
-    assert logs == ["Big cathastrope"]
+    assert logs == ["Big catastrophe"]
 
 
 @pytest.mark.external_api

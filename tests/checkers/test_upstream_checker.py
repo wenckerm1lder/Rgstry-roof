@@ -96,22 +96,24 @@ def test_upstream_checker_get_version():
     checker._get_version = mock.Mock(side_effect=ConnectionError)
     assert checker.get_version() == "Not found"
     checker.version = ""
-    checker._get_version = mock.Mock(side_effect=checker._fail())
+    resp = mock.Mock()
+    resp.status_code = 403
+    checker._get_version = mock.Mock(side_effect=checker._fail(resp))
     assert checker.get_version() == "Not found"
 
 
 def test_upstream_checker_iter():
     checker = FakeChecker(FAKE_CHECKER_CONF, FAKE_CHECKER_TOKEN)
     checker.get_version()
-    dict(checker) == {
+    assert dict(checker) == {
         "uri": "https://test.uri",
         "repository": "test_repository",
         "tool": "test_tool",
         "provider": "test_provider",
         "method": "test_method",
         "suite": "test_suite",
-        "origin": "test_origin",
-        "docker_origin": "test_docker_origin",
+        "origin": True,
+        "docker_origin": True,
         "version": "latest",
         "extra_info": "The Latest One",
     }
@@ -128,6 +130,6 @@ def test_upstream_checker_tag_sort():
     ]
     checker = FakeChecker(FAKE_CHECKER_CONF, FAKE_CHECKER_TOKEN)
     assert (
-        checker._sort_latest_tag(tags, tag_key="ver").get("ver")
-        == "1.2.32-release-third"
+            checker._sort_latest_tag(tags, tag_key="ver").get("ver")
+            == "1.2.32-release-third"
     )

@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 from .tool_info import ToolInfo
 from .version_info import VersionInfo
 from .checkers import classmap
@@ -35,13 +35,13 @@ class VersionMaintainer:
         # prefix, mostly meaning the owner of possible Docker image
         self.prefix = prefix
         self.meta_filename = meta_filename
-        # Used when storing metafiles in different place than cache
+        # Used when storing meta files in different place than cache
         self.meta_files_location = (
             meta_files_location
             if meta_files_location
             else pathlib.Path.home() / ".cincan" / "version_cache"
         )
-        # Path where metafiles are downloaded
+        # Path where meta files are downloaded
         # Or version cache kept
         self.cache_files_location = (
             pathlib.Path(cache_files_location)
@@ -64,7 +64,7 @@ class VersionMaintainer:
 
         self.able_to_check = {}
 
-    def _set_available_checkers(self) -> Dict:
+    def _set_available_checkers(self):
         """
         Gets dictionary of tools, whereas upstream/origin check is supported.
 
@@ -103,7 +103,7 @@ class VersionMaintainer:
 
     def _fetch_write_metafile_by_path(
             self, client: GitLabAPI, path: pathlib.Path, ref: str
-    ) -> pathlib.Path:
+    ) -> Union[pathlib.Path, None]:
 
         if not self.force_refresh:
             if self._is_old_metafile_usable(path):
@@ -138,7 +138,8 @@ class VersionMaintainer:
             raise ValueError("Empty 'tools' attribute provided to metafiles fetch.")
 
         self.logger.info(
-            f"Fetching upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project}) into path '{self.cache_files_location}'"
+            f"Fetching upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project})"
+            f" into path '{self.cache_files_location}'"
         )
         gitlab_client = GitLabAPI(
             self.tokens.get("gitlab"), self.namespace, self.project
@@ -194,7 +195,7 @@ class VersionMaintainer:
 
             self.logger.info("Required metafiles checked.")
 
-    def generate_meta_files(self, tools: [List, str]):
+    def _generate_meta_files(self, tools: [List, str]):
 
         if not self.disable_remote_download:
             self._get_checker_meta_files_from_gitlab(tools)
@@ -205,7 +206,7 @@ class VersionMaintainer:
     def get_versions_single_tool(
             self, tool_name: str, local_tool: ToolInfo, remote_tool: ToolInfo
     ) -> Tuple[ToolInfo, ToolInfo]:
-        self.generate_meta_files(tool_name)
+        self._generate_meta_files(tool_name)
         tool_path = self.able_to_check.get(tool_name)
         if not tool_path:
             raise FileNotFoundError(f"Upstream check not implemented for {tool_name}.")
@@ -216,7 +217,7 @@ class VersionMaintainer:
 
         return local_tool, remote_tool
 
-    def _set_single_tool_upstream_versions(self, tool_path: str, tool: ToolInfo) -> str:
+    def _set_single_tool_upstream_versions(self, tool_path: pathlib.Path, tool: ToolInfo):
 
         with open(tool_path / self.meta_filename) as f:
             conf = json.load(f)
@@ -229,7 +230,8 @@ class VersionMaintainer:
                 provider = tool_info.get("provider").lower()
                 if provider not in classmap.keys():
                     self.logger.error(
-                        f"No upstream checker implemented for tool '{tool.name}' with provider '{provider}'. Check JSON configuration."
+                        f"No upstream checker implemented for tool '{tool.name}' with provider '{provider}'. Check "
+                        f"JSON configuration. "
                     )
                     continue
                 cache_d = self._read_checker_cache(tool_path.stem, provider)
@@ -285,7 +287,7 @@ class VersionMaintainer:
         else:
             return {}
 
-    def _handle_checker_cache_data(self, data: dict, tool_info: dict) -> VersionInfo:
+    def _handle_checker_cache_data(self, data: dict, tool_info: dict) -> Union[VersionInfo, None]:
         now = datetime.now()
         timestamp = parse_file_time(data.get("updated"))
         if now - timedelta(hours=self.cache_lifetime) <= timestamp <= now:
@@ -314,12 +316,12 @@ class VersionMaintainer:
                 f"Writing checker cache of tool {tool_name} for provider {provider} into {path}"
             )
 
-    async def _check_upstream_versions(self, tools: List):
+    async def _check_upstream_versions(self, tools: Dict[str, ToolInfo]):
         """
         Checks for available versions in upstream
         """
         tasks = []
-        self.generate_meta_files(tools)
+        self._generate_meta_files(tools)
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             for t in tools:
                 tool_path = self.able_to_check.get(t)
@@ -336,7 +338,7 @@ class VersionMaintainer:
                 else:
                     self.logger.debug(f"Upstream check not implemented for tool {t}")
             if tasks:
-                for response in await asyncio.gather(*tasks):
+                for _ in await asyncio.gather(*tasks):
                     pass
             else:
                 self.logger.warning(
@@ -351,9 +353,7 @@ class VersionMaintainer:
         Generates version information for single tool. Attempts to define if there are
         new versions available.
         """
-        tool_info = {}
-        tool_info["name"] = r_tool.name if r_tool else l_tool.name
-        tool_info["versions"] = {}
+        tool_info = {"name": r_tool.name if r_tool else l_tool.name, "versions": {}}
         if l_tool:
             l_latest = l_tool.get_latest()
             tool_info["versions"]["local"] = {

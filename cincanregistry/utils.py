@@ -1,5 +1,4 @@
 import datetime
-from typing import List
 
 
 def parse_file_time(string: str) -> datetime.datetime:

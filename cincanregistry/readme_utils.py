@@ -18,7 +18,7 @@ class HubReadmeHandler(ToolRegistry):
         self.max_size = 25000
         self.max_description_size = 100
 
-    def update_readme_all_tools(self,):
+    def update_readme_all_tools(self, ):
         """
         Iterate over all directories, and attempt to push
         README for corresponding repository in DockerHub
@@ -39,7 +39,7 @@ class HubReadmeHandler(ToolRegistry):
                 self.logger.info("README of every tool updated.")
 
     def update_readme_single_tool(
-        self, tool_name: str, s: requests.Session = None, prefix="cincan/"
+            self, tool_name: str, s: requests.Session = None, prefix="cincan/"
     ) -> bool:
         """
         Upload README  and description of tool into Docker Hub.
@@ -54,7 +54,7 @@ class HubReadmeHandler(ToolRegistry):
             s = requests.Session()
             self._get_hub_session_cookies(s)
 
-        REPOSITORY_URI = self.hub_url + f"/repositories/{prefix + tool_name}/"
+        repository_uri = self.hub_url + f"/repositories/{prefix + tool_name}/"
         readme_path = self.tools_repo_path / tool_name / "README.md"
         if readme_path.is_file():
             if readme_path.stat().st_size <= self.max_size:
@@ -75,7 +75,7 @@ class HubReadmeHandler(ToolRegistry):
                         "description": description,
                     }
 
-                    resp = s.patch(REPOSITORY_URI, json=data)
+                    resp = s.patch(repository_uri, json=data)
                     if resp.status_code == 200:
                         self.logger.info(
                             f"README and description updated for {tool_name}"

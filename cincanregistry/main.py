@@ -1,4 +1,4 @@
-from . import ToolRegistry, ToolInfoEncoder
+from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler
 import argparse
 import sys
 import logging
@@ -52,8 +52,7 @@ class color:
 
 
 def print_single_tool_version_check(tool, show_tags: bool = False):
-
-    # Provider name lenght
+    # Provider name length
     MAX_WN = 25
     MAX_WV = 40
     print(f"\n{' ':<{PRE_SPACE}}{color.GREEN}  {tool.get('name')}{color.END}")
@@ -64,8 +63,8 @@ def print_single_tool_version_check(tool, show_tags: bool = False):
     underlined_ver = f"{color.UNDERLINE}Version{color.END}"
     underlined_tags = f"{color.UNDERLINE}Tags{color.END}"
     # Underline "eats" padding by adding extra chars
-    print(f"  {underlined_loc:<{MAX_WN+8}}", end="")
-    print(f"{underlined_ver:<{MAX_WV+8}}", end="")
+    print(f"  {underlined_loc:<{MAX_WN + 8}}", end="")
+    print(f"{underlined_ver:<{MAX_WV + 8}}", end="")
     if show_tags:
         print(f"{underlined_tags:<{MAX_WT}}", end="")
     print()
@@ -108,9 +107,8 @@ def print_single_tool_version_check(tool, show_tags: bool = False):
 
 
 def print_version_check(
-    tools: dict, location="both", only_updates: bool = False, show_tags: bool = False
+        tools: dict, location="both", only_updates: bool = False, show_tags: bool = False
 ):
-
     # TODO add maybe tag column somehow
 
     print(f"\n{' ':<{PRE_SPACE}}Color explanations:", end=" ")
@@ -181,12 +179,12 @@ def print_version_check(
             f"{r_ver[:CHARS_TO_SHOW]:<{MAX_WV}}", end="",
         )
 
-        ### origin check ####
+        # --- origin check ---
         org_details = versions.get("origin").get("details")
         if (
-            org_details
-            and not org_details.get("origin")
-            and org_details.get("docker_origin")
+                org_details
+                and not org_details.get("origin")
+                and org_details.get("docker_origin")
         ):
             mark_as_not_source = "(*)"
         else:
@@ -209,9 +207,8 @@ def print_version_check(
 
 
 def print_tools_by_location(
-    tools: List[dict], location: str, filter_by: str = "", show_size=False
+        tools: List[dict], location: str, filter_by: str = "", show_size=False
 ):
-
     MAX_WV = 41
     if location == "remote" and show_size:
         print(f"{' ':<{PRE_SPACE}} Size as compressed in Remote.")
@@ -273,7 +270,6 @@ def print_tools_by_location(
 
 
 def print_combined_local_remote(tools: dict, show_size=False):
-
     print(f"\n{' ':<{PRE_SPACE}}{color.BOLD} ", end="")
     print(f"{'Tool name':<{MAX_WN}}", end="")
     print(f"{f'Local Version':{MAX_WV}}", end="")
@@ -299,7 +295,6 @@ def print_combined_local_remote(tools: dict, show_size=False):
 
 
 def create_head_argparse() -> argparse.ArgumentParser:
-
     m_parser = argparse.ArgumentParser()
     m_parser.add_argument(
         "-l",
@@ -322,7 +317,6 @@ def create_head_argparse() -> argparse.ArgumentParser:
 
 
 def create_utils_argparse(subparsers: argparse._SubParsersAction):
-
     utility_parser = subparsers.add_parser(
         "utils", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
@@ -346,8 +340,7 @@ def create_utils_argparse(subparsers: argparse._SubParsersAction):
     )
 
 
-def create_list_argparse(subparsers: argparse._SubParsersAction,):
-
+def create_list_argparse(subparsers: argparse._SubParsersAction, ):
     list_parser = subparsers.add_parser(
         "list", formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
@@ -415,9 +408,8 @@ def create_list_argparse(subparsers: argparse._SubParsersAction,):
 
 
 def list_handler(args):
-
     if (args.list_sub_command or args.sub_command == "versions") and (
-        args.all or args.tag != DEFAULT_IMAGE_FILTER_TAG or args.size
+            args.all or args.tag != DEFAULT_IMAGE_FILTER_TAG or args.size
     ):
         logging.getLogger(__name__).warning(
             "No effect with size or tag related arguments when used with 'versions' subcommand"
@@ -481,7 +473,7 @@ def list_handler(args):
         ret = loop.run_until_complete(
             reg.list_versions(
                 tool=args.name or "",
-                toJSON=args.json or False,
+                to_json=args.json or False,
                 only_updates=args.only_updates,
                 force_refresh=args.force_refresh,
             )
@@ -498,7 +490,7 @@ def list_handler(args):
 
 def utils_handler(args):
     if args.utils_sub_command == "update-readme":
-        reg = ToolRegistry(args.config, args.tools)
+        reg = HubReadmeHandler(args.config, args.tools)
         if args.all:
             reg.update_readme_all_tools()
         elif args.name:
@@ -511,7 +503,6 @@ def utils_handler(args):
 
 
 def main():
-
     m_parser = create_head_argparse()
 
     if len(sys.argv) > 1:

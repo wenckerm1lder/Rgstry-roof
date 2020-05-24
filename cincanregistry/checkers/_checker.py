@@ -1,4 +1,5 @@
 import logging
+import requests
 import re
 from abc import ABCMeta, abstractmethod
 from typing import List, Dict
@@ -11,7 +12,7 @@ __name__ = "checker"
 
 class UpstreamChecker(metaclass=ABCMeta):
     def __init__(
-        self, tool_info: dict, token: str = "", timeout=20, version="", extra_info=""
+            self, tool_info: dict, token: str = "", timeout=20, version="", extra_info=""
     ):
         self.uri: str = tool_info.get("uri", "")
         self.repository: str = tool_info.get("repository", "")
@@ -55,12 +56,12 @@ class UpstreamChecker(metaclass=ABCMeta):
                 f"Tool {self.tool} has updated upstream version information of {self.version}"
             )
 
-    def _fail(self):
+    def _fail(self, r: requests.Response):
         """
         Set version for not defined on fail, log error.
         """
         self.version = NO_VERSION
-        self.logger.error(f"Failed to fetch version update information for {self.tool}")
+        self.logger.error(f"Failed to fetch version update information for {self.tool}: {r.status_code}")
 
     def _sort_latest_tag(self, versions: List[dict], tag_key: str) -> Dict:
         """
@@ -96,7 +97,8 @@ class UpstreamChecker(metaclass=ABCMeta):
             self.version = NO_VERSION
         except ConnectionError:
             self.logger.error(
-                f"Failed to connect provider {self.provider} of tool {self.tool} when checking upstream. Is configuration correct?"
+                f"Failed to connect provider {self.provider} of tool {self.tool} when checking upstream. Is "
+                f"configuration correct? "
             )
             self.version = NO_VERSION
         return self.version

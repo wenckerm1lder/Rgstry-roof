@@ -441,7 +441,7 @@ class ToolRegistry:
                         ver_info = VersionInfo(
                             version,
                             REMOTE_REGISTRY,
-                            set(t.get("name")),
+                            {t.get("name")},
                             updated,
                             size=t.get("full_size"),
                         )
@@ -576,7 +576,7 @@ class ToolRegistry:
     async def list_versions(
             self,
             tool: str = "",
-            toJSON: bool = False,
+            to_json: bool = False,
             only_updates: bool = False,
             force_refresh: bool = False,
     ):
@@ -588,8 +588,8 @@ class ToolRegistry:
         maintainer = VersionMaintainer(
             self.configuration.get("tokens", None),
             meta_filename=meta_filename,
-            metafiles_location=tools_loc,
-            cachefiles_location=mfile_p,
+            meta_files_location=tools_loc,
+            cache_files_location=mfile_p,
             disable_remote_download=disable_remote,
             force_refresh=force_refresh,
         )
@@ -635,7 +635,7 @@ class ToolRegistry:
                 if t_info:
                     versions[t] = t_info
 
-        if toJSON:
+        if to_json:
             return json.dumps(versions)
         else:
             return versions

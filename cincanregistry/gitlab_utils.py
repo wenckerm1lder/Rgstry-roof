@@ -5,7 +5,6 @@ import logging
 
 
 class GitLabAPI:
-
     """
     Simple implementation of client for GitLab API. Customized for needs of this application.
 
@@ -13,13 +12,13 @@ class GitLabAPI:
     """
 
     def __init__(
-        self,
-        token: str = "",
-        namespace: str = "",
-        project: str = "",
-        uri: str = "",
-        timeout: int = 20,
-        pool_maxsize: int = 100,
+            self,
+            token: str = "",
+            namespace: str = "",
+            project: str = "",
+            uri: str = "",
+            timeout: int = 20,
+            pool_maxsize: int = 100,
     ):
         self.logger = logging.getLogger("gitlab-api")
         self.session = requests.Session()
@@ -63,7 +62,7 @@ class GitLabAPI:
             return
         if remaining == 0:
             self.logger.error("Rate limit reached. Starting throttling")
-            # TODO ratelimit throttle
+            # TODO rate limit throttle
         elif remaining < 10:
             self.logger.warning("Less than 10 requests remaining for GitLab API")
             self.logger.warning(
@@ -87,12 +86,12 @@ class GitLabAPI:
             return False
 
     def get_full_tree(
-        self,
-        path: str = "",
-        ref: str = "master",
-        recursive: bool = False,
-        page: int = 1,
-        per_page: int = 20,
+            self,
+            path: str = "",
+            ref: str = "master",
+            recursive: bool = False,
+            page: int = 1,
+            per_page: int = 20,
     ):
         contents = []
         r = self._get_tree(path, ref, recursive, page, per_page)
@@ -122,12 +121,12 @@ class GitLabAPI:
         return contents
 
     def _get_tree(
-        self,
-        path: str = "",
-        ref: str = "master",
-        recursive: bool = False,
-        page: int = 1,
-        per_page: int = 20,
+            self,
+            path: str = "",
+            ref: str = "master",
+            recursive: bool = False,
+            page: int = 1,
+            per_page: int = 20,
     ) -> requests.Response:
         """ 
         Listing repository tree: https://docs.gitlab.com/ee/api/repositories.html

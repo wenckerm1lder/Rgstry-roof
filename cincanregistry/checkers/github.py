@@ -104,7 +104,8 @@ class GitHubChecker(UpstreamChecker):
         """
         if current_commit:
             r = self.session.get(
-                f"{self.api}/repos/{self.repository}/{self.tool}/compare/master...{current_commit}", timeout=self.timeout
+                f"{self.api}/repos/{self.repository}/{self.tool}/compare/master...{current_commit}",
+                timeout=self.timeout
             )
             if r.status_code == 200:
                 self.extra_info = f"{r.json().get('behind_by')} commits behind master."

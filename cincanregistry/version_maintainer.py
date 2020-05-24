@@ -19,14 +19,14 @@ class VersionMaintainer:
     """
 
     def __init__(
-        self,
-        tokens: dict = None,
-        meta_filename: str = "meta.json",
-        prefix: str = "cincan/",
-        metafiles_location: str = "",
-        cachefiles_location: str = "",
-        disable_remote_download: bool = False,
-        force_refresh: bool = False,
+            self,
+            tokens: dict = None,
+            meta_filename: str = "meta.json",
+            prefix: str = "cincan/",
+            meta_files_location: pathlib.Path = None,
+            cache_files_location: str = "",
+            disable_remote_download: bool = False,
+            force_refresh: bool = False,
     ):
         self.logger = logging.getLogger("versions")
         self.tokens = tokens or {}
@@ -36,21 +36,21 @@ class VersionMaintainer:
         self.prefix = prefix
         self.meta_filename = meta_filename
         # Used when storing metafiles in different place than cache
-        self.metafiles_location = (
-            pathlib.Path(metafiles_location)
-            if metafiles_location
+        self.meta_files_location = (
+            meta_files_location
+            if meta_files_location
             else pathlib.Path.home() / ".cincan" / "version_cache"
         )
         # Path where metafiles are downloaded
         # Or version cache kept
-        self.cachefiles_location = (
-            pathlib.Path(cachefiles_location)
-            if cachefiles_location
+        self.cache_files_location = (
+            pathlib.Path(cache_files_location)
+            if cache_files_location
             else pathlib.Path.home() / ".cincan" / "version_cache"
         )
 
         self.disable_remote_download = (
-            disable_remote_download if not metafiles_location else True
+            disable_remote_download if not meta_files_location else True
         )
 
         if self.disable_remote_download:
@@ -69,18 +69,18 @@ class VersionMaintainer:
         Gets dictionary of tools, whereas upstream/origin check is supported.
 
         """
-        for tool_path in self.metafiles_location.iterdir():
+        for tool_path in self.meta_files_location.iterdir():
             if (tool_path / self.meta_filename).is_file():
                 self.able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path
         if not self.able_to_check:
             self.logger.error(
-                f"No single configuration for upstream check found. Something is wrong in path {self.metafiles_location}"
+                f"No single configuration for upstream check found. Something is wrong in path {self.meta_files_location}"
             )
 
     def _is_old_metafile_usable(self, local_path: pathlib.Path) -> bool:
 
         if isinstance(local_path, pathlib.Path):
-            local_path = self.cachefiles_location / local_path
+            local_path = self.cache_files_location / local_path
         else:
             raise AttributeError("Given path is not Path object.")
         if not local_path.is_file():
@@ -102,7 +102,7 @@ class VersionMaintainer:
             return False
 
     def _fetch_write_metafile_by_path(
-        self, client: GitLabAPI, path: pathlib.Path, ref: str
+            self, client: GitLabAPI, path: pathlib.Path, ref: str
     ) -> pathlib.Path:
 
         if not self.force_refresh:
@@ -117,7 +117,7 @@ class VersionMaintainer:
                     f"File {str(path)} in wrong place at GitLab repository, skipping..."
                 )
                 return
-            file_path = self.cachefiles_location / path
+            file_path = self.cache_files_location / path
             # Make subdirectory - should be tool name
             file_path.parent.mkdir(parents=True, exist_ok=True)
             with open(file_path, "wb") as f:
@@ -128,17 +128,17 @@ class VersionMaintainer:
         return file_path
 
     def _get_checker_meta_files_from_gitlab(
-        self, tools: [List, str], branch: str = "master", prefix="cincan"
+            self, tools: [List, str], branch: str = "master", prefix="cincan"
     ):
 
         if tools:
             # Create store location directory
-            self.cachefiles_location.mkdir(parents=True, exist_ok=True)
+            self.cache_files_location.mkdir(parents=True, exist_ok=True)
         else:
             raise ValueError("Empty 'tools' attribute provided to metafiles fetch.")
 
         self.logger.info(
-            f"Fetching upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project}) into path '{self.cachefiles_location}'"
+            f"Fetching upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project}) into path '{self.cache_files_location}'"
         )
         gitlab_client = GitLabAPI(
             self.tokens.get("gitlab"), self.namespace, self.project
@@ -194,7 +194,7 @@ class VersionMaintainer:
 
             self.logger.info("Required metafiles checked.")
 
-    def generate_metafiles(self, tools: [List, str]):
+    def generate_meta_files(self, tools: [List, str]):
 
         if not self.disable_remote_download:
             self._get_checker_meta_files_from_gitlab(tools)
@@ -203,9 +203,9 @@ class VersionMaintainer:
         self._set_available_checkers()
 
     def get_versions_single_tool(
-        self, tool_name: str, local_tool: ToolInfo, remote_tool: ToolInfo
+            self, tool_name: str, local_tool: ToolInfo, remote_tool: ToolInfo
     ) -> Tuple[ToolInfo, ToolInfo]:
-        self.generate_metafiles(tool_name)
+        self.generate_meta_files(tool_name)
         tool_path = self.able_to_check.get(tool_name)
         if not tool_path:
             raise FileNotFoundError(f"Upstream check not implemented for {tool_name}.")
@@ -222,9 +222,9 @@ class VersionMaintainer:
             conf = json.load(f)
             # Expect list or single object in "upstreams" value
             for tool_info in (
-                conf.get("upstreams")
-                if isinstance(conf.get("upstreams"), List)
-                else [conf.get("upstreams")]
+                    conf.get("upstreams")
+                    if isinstance(conf.get("upstreams"), List)
+                    else [conf.get("upstreams")]
             ):
                 provider = tool_info.get("provider").lower()
                 if provider not in classmap.keys():
@@ -252,7 +252,7 @@ class VersionMaintainer:
                 ver_obj = VersionInfo(
                     upstream_info.get_version(),
                     upstream_info,
-                    set({"latest"}),
+                    {"latest"},
                     updated,
                     origin=upstream_info.origin,
                 )
@@ -271,7 +271,7 @@ class VersionMaintainer:
 
     def _read_checker_cache(self, tool_name: str, provider: str) -> dict:
 
-        path = self.cachefiles_location / tool_name / f"{provider}_cache.json"
+        path = self.cache_files_location / tool_name / f"{provider}_cache.json"
         if path.is_file():
             with open(path, "r") as f:
                 try:
@@ -298,7 +298,7 @@ class VersionMaintainer:
             ver_obj = VersionInfo(
                 data.get("version"),
                 dummy_checker,
-                set({"latest"}),
+                {"latest"},
                 timestamp,
                 tool_info.get("origin"),
             )
@@ -306,7 +306,7 @@ class VersionMaintainer:
         return None
 
     def _write_checker_cache(self, tool_name: str, provider: str, data: dict):
-        path = self.cachefiles_location / tool_name / f"{provider}_cache.json"
+        path = self.cache_files_location / tool_name / f"{provider}_cache.json"
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:
             json.dump(data, f)
@@ -319,7 +319,7 @@ class VersionMaintainer:
         Checks for available versions in upstream
         """
         tasks = []
-        self.generate_metafiles(tools)
+        self.generate_meta_files(tools)
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             for t in tools:
                 tool_path = self.able_to_check.get(t)
@@ -345,7 +345,7 @@ class VersionMaintainer:
         return tools
 
     async def _list_versions_single(
-        self, l_tool: ToolInfo, r_tool: ToolInfo, only_updates: bool = False
+            self, l_tool: ToolInfo, r_tool: ToolInfo, only_updates: bool = False
     ) -> dict:
         """
         Generates version information for single tool. Attempts to define if there are
@@ -355,21 +355,21 @@ class VersionMaintainer:
         tool_info["name"] = r_tool.name if r_tool else l_tool.name
         tool_info["versions"] = {}
         if l_tool:
-            l_latest = l_tool.getLatest()
+            l_latest = l_tool.get_latest()
             tool_info["versions"]["local"] = {
                 "version": l_latest.version,
                 "tags": list(l_latest.tags),
             }
         if r_tool:
-            r_latest = r_tool.getLatest()
+            r_latest = r_tool.get_latest()
             tool_info["versions"]["remote"] = {
                 "version": r_latest.version,
                 "tags": list(r_latest.tags),
             }
 
-        r_tool_orig = r_tool.getOriginVersion()
+        r_tool_orig = r_tool.get_origin_version()
         if not r_tool_orig.provider:
-            r_tool_orig = r_tool.getDockerOriginVersion()
+            r_tool_orig = r_tool.get_docker_origin_version()
 
         tool_info["versions"]["origin"] = {"version": r_tool_orig.version}
         tool_info["versions"]["origin"]["details"] = (
@@ -394,22 +394,22 @@ class VersionMaintainer:
 
         # Compare local to remote at first
         if l_tool:
-            if l_tool.getLatest() == r_tool.getLatest():
+            if l_tool.get_latest() == r_tool.get_latest():
                 tool_info["updates"]["local"] = False
             else:
                 tool_info["updates"]["local"] = True
 
         # Remote to upstream
-        r_latest = r_tool.getLatest()
-        r_up_latest = r_tool.getLatest(in_upstream=True)
+        r_latest = r_tool.get_latest()
+        r_up_latest = r_tool.get_latest(in_upstream=True)
         tool_info["updates"]["remote"] = False
 
         if (r_latest and r_up_latest) and r_latest == r_up_latest:
             # Up to date with latest upstream version
             pass
         elif r_latest.version == "undefined" or (
-            tool_info.get("versions").get("origin").get("version") == "Not implemented"
-            and not tool_info.get("other_versions")
+                tool_info.get("versions").get("origin").get("version") == "Not implemented"
+                and not tool_info.get("other_versions")
         ):
             pass
         # elif r_latest in [v for v in r_tool.upstream_v if not v.origin]:
@@ -422,7 +422,7 @@ class VersionMaintainer:
 
         if only_updates:
             if tool_info["updates"]["remote"] or (
-                tool_info["updates"]["local"] if l_tool else False
+                    tool_info["updates"]["local"] if l_tool else False
             ):
                 return tool_info
             else:

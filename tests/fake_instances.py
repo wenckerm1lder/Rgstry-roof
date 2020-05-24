@@ -12,9 +12,13 @@
 #     checker = GitHubChecker()
 
 #     return
+import docker
 from datetime import datetime
 from unittest import mock
 from cincanregistry.checkers import UpstreamChecker
+from copy import deepcopy
+
+TEST_REPOSITORY = "cincan/test"
 
 FAKE_VERSION_INFO_NO_CHECKER = {
     "version": 0.9,
@@ -159,6 +163,23 @@ FAKE_IMAGE_ATTRS = {
     "Size": 5591300,
     "VirtualSize": 5591300,
 }
+FAKE_IMAGE_ATTRS2 = deepcopy(FAKE_IMAGE_ATTRS)
+# Typo in env TOOL_VERSION
+FAKE_IMAGE_ATTRS2["Config"]["Env"] = [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "TOOL_VERSIO=0.9",
+    ]
+
+FAKE_IMAGE = mock.Mock(spec=docker.models.images.Image)
+FAKE_IMAGE.attrs = FAKE_IMAGE_ATTRS
+FAKE_IMAGE.tags = ["latest"]
+FAKE_IMAGE2 = mock.Mock(spec=docker.models.images.Image)
+FAKE_IMAGE2.attrs = FAKE_IMAGE_ATTRS
+FAKE_IMAGE2.tags = ["dev"]
+FAKE_IMAGE3 = mock.Mock(spec=docker.models.images.Image)
+FAKE_IMAGE3.attrs = FAKE_IMAGE_ATTRS2
+FAKE_IMAGE3.tags = ["test"]
+
 
 FAKE_MANIFEST = {
     "architecture": "amd64",

@@ -41,7 +41,7 @@ def test_create_local_tool_info_by_name(mocker):
     assert tool_info.name == TEST_REPOSITORY
     assert len(tool_info.versions) == 2
     assert tool_info.versions[0].version == "1.0"
-    assert tool_info.versions[0].tags == {"latest"}
+    assert tool_info.versions[0].tags == {"cincan/test:latest"}
     assert tool_info.versions[0].size == "5.59 MB"
     assert tool_info.versions[0].updated == parse_file_time("2020-05-23T19:43:14.106177342Z")
     mocker.patch.object(reg.client.images, "list", return_value=[], create=True)

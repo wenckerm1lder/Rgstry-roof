@@ -172,13 +172,13 @@ FAKE_IMAGE_ATTRS2["Config"]["Env"] = [
 
 FAKE_IMAGE = mock.Mock(spec=docker.models.images.Image)
 FAKE_IMAGE.attrs = FAKE_IMAGE_ATTRS
-FAKE_IMAGE.tags = ["latest"]
+FAKE_IMAGE.tags = ["cincan/test:latest"]
 FAKE_IMAGE2 = mock.Mock(spec=docker.models.images.Image)
 FAKE_IMAGE2.attrs = FAKE_IMAGE_ATTRS
-FAKE_IMAGE2.tags = ["dev"]
+FAKE_IMAGE2.tags = ["cincan/test:dev"]
 FAKE_IMAGE3 = mock.Mock(spec=docker.models.images.Image)
 FAKE_IMAGE3.attrs = FAKE_IMAGE_ATTRS2
-FAKE_IMAGE3.tags = ["test"]
+FAKE_IMAGE3.tags = ["cincan/test:test"]
 
 
 FAKE_MANIFEST = {

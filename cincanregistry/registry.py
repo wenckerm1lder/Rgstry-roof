@@ -261,9 +261,9 @@ class ToolRegistry:
                     l_version = "Not installed"
             else:
                 l_version = (
-                    local_tools.get(i).getLatest().version if local_tools.get(i) else ""
+                    local_tools.get(i).get_latest().version if local_tools.get(i) else ""
                 )
-                r_obj = remote_tools.get(i).getLatest() if remote_tools.get(i) else None
+                r_obj = remote_tools.get(i).get_latest() if remote_tools.get(i) else None
                 if r_obj:
                     r_version = r_obj.version
                     size = r_obj.size

@@ -97,7 +97,7 @@ class VersionMaintainer:
             return True
         else:
             self.logger.info(
-                f"Outdated metafile for {local_path.parent.stem}. Updating..."
+                f"Outdated meta file for {local_path.parent.stem}. Updating..."
             )
             return False
 

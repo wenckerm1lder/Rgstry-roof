@@ -29,6 +29,7 @@ class HubReadmeHandler(ToolRegistry):
         with requests.Session() as s:
             self._get_hub_session_cookies(s)
             for tool_path in self.tools_repo_path.iterdir():
+                # Exclude files starting with '_' and '.'
                 if tool_path.is_dir() and not (tool_path.stem.startswith(("_", "."))):
                     tool_name = tool_path.stem
                     if not self.update_readme_single_tool(tool_name, s):

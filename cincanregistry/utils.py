@@ -13,14 +13,6 @@ def format_time(time: datetime.datetime) -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%S")
 
 
-def parse_data_types(string: str) -> List[str]:
-    """Parse list of data types into a list"""
-    s = string.strip()
-    if len(s) == 0:
-        return []
-    return list(map(lambda x: x.strip(), s.split(",")))
-
-
 def split_tool_tag(tag: str) -> (str, str):
     """Split tool tag into tool name and tool version"""
     tag_split = tag.split(":", maxsplit=2)

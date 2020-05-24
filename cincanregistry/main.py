@@ -1,10 +1,10 @@
-from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler
+from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, ToolInfo
 import argparse
 import sys
 import logging
 import asyncio
 import json
-from typing import List
+from typing import List, Dict
 
 DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
 
@@ -207,7 +207,7 @@ def print_version_check(
 
 
 def print_tools_by_location(
-        tools: List[dict], location: str, filter_by: str = "", show_size=False
+        tools: Dict[str, ToolInfo], location: str, filter_by: str = "", show_size=False
 ):
     MAX_WV = 41
     if location == "remote" and show_size:
@@ -239,14 +239,11 @@ def print_tools_by_location(
             if show_size:
                 print(f"{size:>{MAX_WS}} | ", end="")
             print(f"{tags:<{MAX_WT}}")
-            first_print = False
         else:
             if not filter_by:
                 print(
                     f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}"
                 )
-            tags = ""
-            version = ""
             for i, ver in enumerate(lst.versions):
                 name = lst.name.split(":")[0] if first_print else ""
                 tags = ",".join(lst.versions[i].tags)
@@ -427,18 +424,15 @@ def list_handler(args):
 
             loop = asyncio.get_event_loop()
             try:
-                if args.local:
-                    tools = loop.run_until_complete(
-                        reg.list_tools_local_images(
-                            defined_tag=args.tag if not args.all else ""
-                        )
+                tools = loop.run_until_complete(
+                    reg.list_tools_local_images(
+                        defined_tag=args.tag if not args.all else ""
                     )
-                elif args.remote:
-                    tools = loop.run_until_complete(
-                        reg.list_tools_registry(
-                            defined_tag=args.tag if not args.all else ""
-                        )
+                ) if args.local else loop.run_until_complete(
+                    reg.list_tools_registry(
+                        defined_tag=args.tag if not args.all else ""
                     )
+                )
 
             finally:
                 loop.close()

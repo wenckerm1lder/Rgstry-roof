@@ -19,7 +19,7 @@ class FakeChecker(UpstreamChecker):
         self.version = "latest"
 
 
-def test_upstream_checker_create_invalid_childclass():
+def test_upstream_checker_create_invalid_child_class():
     """Test invalid child class implementation """
     with pytest.raises(TypeError):
         InvalidChecker()

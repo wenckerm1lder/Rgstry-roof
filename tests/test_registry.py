@@ -84,12 +84,12 @@ def test_docker_registry_api_error(mocker, caplog):
 def test_get_service_token(mocker):
     reg = ToolRegistry()
     with requests.Session() as s:
-        assert reg._get_registry_service_token(s, "cincan/test")
+        assert reg._get_registry_service_token(s, TEST_REPOSITORY)
         ret = mock.Mock(ok=True)
         ret.status_code = 404
         ret.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
         mocker.patch.object(s, "get", return_value=ret, autospec=True)
-        assert not reg._get_registry_service_token(s, "cincan/test")
+        assert not reg._get_registry_service_token(s, TEST_REPOSITORY)
 
 
 def test_get_version_by_image_id(mocker):
@@ -117,9 +117,9 @@ def test_fetch_manifest(mocker):
     reg = ToolRegistry()
     with requests.Session() as s:
         # Test against real API
-        manifest = reg.fetch_manifest(s, "cincan/test", "latest")
+        manifest = reg.fetch_manifest(s, TEST_REPOSITORY, "latest")
         assert manifest.get("tag") == "latest"
-        assert manifest.get("name") == "cincan/test"
+        assert manifest.get("name") == TEST_REPOSITORY
         assert manifest.get("schemaVersion") == 1
         assert manifest.get("history")
         assert manifest.get("signatures")
@@ -130,7 +130,7 @@ def test_fetch_manifest(mocker):
         ret.status_code = 404
         ret.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
         mocker.patch.object(s, "get", return_value=ret, autospec=True)
-        assert not reg.fetch_manifest(s, "cincan/test", "latest")
+        assert not reg.fetch_manifest(s, TEST_REPOSITORY, "latest")
 
 
 def test_get_version_from_manifest(mocker, caplog):
@@ -180,7 +180,7 @@ def test_create_local_tool_info_by_name(mocker):
     mocker.patch.object(
         reg.client, "ping", return_value=False, autospec=True, side_effect=requests.exceptions.ConnectionError(),
     )
-    assert not reg.create_local_tool_info_by_name("cincan/test")
+    assert not reg.create_local_tool_info_by_name(TEST_REPOSITORY)
     mocker.patch.object(
         reg.client, "ping", return_value=True, autospec=True,
     )
@@ -200,12 +200,12 @@ def test_create_local_tool_info_by_name(mocker):
     fake_image3.attrs = fake_attrs2
     fake_image3.tags = ["test"]
     mocker.patch.object(reg.client.images, "list", return_value=[fake_image, fake_image2, fake_image3], create=True)
-    tool_info = reg.create_local_tool_info_by_name("cincan/test")
-    assert tool_info.name == "cincan/test"
+    tool_info = reg.create_local_tool_info_by_name(TEST_REPOSITORY)
+    assert tool_info.name == TEST_REPOSITORY
     assert len(tool_info.versions) == 2
     assert tool_info.versions[0].version == "1.0"
     assert tool_info.versions[0].tags == {"latest"}
     assert tool_info.versions[0].size == "5.59 MB"
     assert tool_info.versions[0].updated == parse_file_time("2020-05-23T19:43:14.106177342Z")
     mocker.patch.object(reg.client.images, "list", return_value=[], create=True)
-    assert not reg.create_local_tool_info_by_name("cincan/test")
+    assert not reg.create_local_tool_info_by_name(TEST_REPOSITORY)

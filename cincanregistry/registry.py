@@ -391,7 +391,7 @@ class ToolRegistry:
 
     def fetch_tags(
             self, session: requests.Session, tool: ToolInfo, update_cache: bool = False
-    ) -> Dict[str, Any]:
+    ):
         """Fetch remote data to update a tool info"""
 
         available_versions: List[VersionInfo] = []
@@ -411,7 +411,6 @@ class ToolRegistry:
             self.logger.error(
                 f"Error when getting tags for tool {tool_name}: {tags_req.content}"
             )
-            return {}
         if tags_req.json().get("count") > self.max_page_size:
             self.logger.warning(
                 f"More tags ( > {self.max_page_size}) than able to list for tool {tool_name}."
@@ -424,7 +423,6 @@ class ToolRegistry:
             reverse=True,
         )
         tag_names = list(map(lambda x: x["name"], tags_sorted))
-        manifest_latest = {}
         first_run = True
         if tag_names:
             for t in tags_sorted:
@@ -450,15 +448,10 @@ class ToolRegistry:
                         available_versions.append(ver_info)
         else:
             self.logger.error(f"No tags found for tool {tool_name} for unknown reason.")
-            return {}
-
-        manifest_latest["all_tags"] = tags  # adding tags to manifest data
-        manifest_latest["sorted_tags"] = tag_names
         tool.versions = available_versions
         tool.updated = datetime.now()
         if update_cache:
             self.update_cache_by_tool(tool)
-        return manifest_latest
 
     async def list_tools_registry(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
         """List tools from registry with help of local cache"""
@@ -522,7 +515,7 @@ class ToolRegistry:
                         else:
                             tool_list[t.name] = old_tools[t.name]
                             self.logger.debug("no updates for %s", t.name)
-                    for response in await asyncio.gather(*tasks):
+                    for _ in await asyncio.gather(*tasks):
                         pass
 
                 # save the tool list

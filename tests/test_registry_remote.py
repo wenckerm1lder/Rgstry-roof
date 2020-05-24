@@ -1,8 +1,9 @@
 import pytest
 import logging
 import requests
+import datetime
 from unittest import mock
-from cincanregistry import ToolRegistry
+from cincanregistry import ToolRegistry, ToolInfo
 from cincanregistry.utils import parse_file_time
 from .fake_instances import FAKE_DOCKER_REGISTRY_ERROR, FAKE_MANIFEST, TEST_REPOSITORY
 
@@ -95,4 +96,22 @@ def test_get_version_from_manifest(mocker, caplog):
     logs = [l.message for l in caplog.records]
     assert logs == [
         "No version information for tool cincan/test: list index out of range"
+    ]
+
+
+@pytest.mark.external_api
+def test_fetch_tags(mocker, caplog):
+    reg = ToolRegistry()
+    caplog.set_level(logging.INFO)
+    with requests.Session() as s:
+        tool_info = ToolInfo(TEST_REPOSITORY, datetime.datetime.now(), "remote")
+        reg.fetch_tags(s, tool_info, update_cache=False)
+        assert tool_info.name == TEST_REPOSITORY
+        assert len(tool_info.versions) == 1
+        assert tool_info.versions[0].version == "1.0"
+        assert tool_info.versions[0].tags == {"latest"}
+
+    logs = [l.message for l in caplog.records]
+    assert logs == [
+        "fetch cincan/test..."
     ]

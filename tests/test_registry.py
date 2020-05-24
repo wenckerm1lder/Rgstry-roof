@@ -9,11 +9,9 @@ from unittest import mock
 from .fake_instances import FAKE_IMAGE_ATTRS, FAKE_DOCKER_REGISTRY_ERROR, FAKE_MANIFEST
 
 TEST_REPOSITORY = "cincan/test"
-TEST_EXTERNAL_API = True
 
 
 def test_create_registry(mocker, caplog):
-
     caplog.set_level(logging.DEBUG)
     # Ignore possible configuration file in local filesystem
     mocker.patch("builtins.open", side_effect=IOError())
@@ -71,13 +69,13 @@ def test_docker_registry_api_error(mocker, caplog):
     response = mock.Mock(ok=True)
     response.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
 
-    reg._docker_registry_API_error(response)
+    reg._docker_registry_api_error(response)
 
     logs = [l.message for l in caplog.records]
     assert logs == [f"400: Big error... Additional details: This is why!"]
     caplog.clear()
     caplog.set_level(logging.ERROR)
-    reg._docker_registry_API_error(response, "Big cathastrope")
+    reg._docker_registry_api_error(response, "Big cathastrope")
     logs = [l.message for l in caplog.records]
     assert logs == ["Big cathastrope"]
 
@@ -144,15 +142,15 @@ def test_get_version_from_manifest(mocker, caplog):
     manifest_c = FAKE_MANIFEST.copy()
     manifest_c["history"][0] = {
         "v1Compatibility": '{"architecture":"amd64","config":{"Hostname":"","Domainname":"","User":"","AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,"OpenStdin":false,"StdinOnce":false,"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION"],"Cmd":["echo","Hello, '
-        'world!"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"container":"6e470d761c29de22781774ab9ab5e16678f1a603ba2f5c0a6b83c8597bd63b7a","container_config":{"Hostname":"6e470d761c29","Domainname":"","User":"","AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,"OpenStdin":false,"StdinOnce":false,"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION=1.0"],"Cmd":["/bin/sh","-c","#(nop) '
-        '","CMD [\\"echo\\" \\"Hello, '
-        'world!\\"]"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"created":"2020-05-23T19:43:14.106177342Z","docker_version":"19.03.8-ce","id":"5dfc05a56cc5819bb4dec3f7d19f908566c4d115457a1be8cc02ca87cc8d81c0","os":"linux","parent":"7099d9ed2d5fca9f9a65e010826d70a5fd5c53d64a5590292a89e106f8f98d6d","throwaway":true}'
+                           'world!"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"container":"6e470d761c29de22781774ab9ab5e16678f1a603ba2f5c0a6b83c8597bd63b7a","container_config":{"Hostname":"6e470d761c29","Domainname":"","User":"","AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,"OpenStdin":false,"StdinOnce":false,"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION=1.0"],"Cmd":["/bin/sh","-c","#(nop) '
+                           '","CMD [\\"echo\\" \\"Hello, '
+                           'world!\\"]"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"created":"2020-05-23T19:43:14.106177342Z","docker_version":"19.03.8-ce","id":"5dfc05a56cc5819bb4dec3f7d19f908566c4d115457a1be8cc02ca87cc8d81c0","os":"linux","parent":"7099d9ed2d5fca9f9a65e010826d70a5fd5c53d64a5590292a89e106f8f98d6d","throwaway":true}'
     }
     caplog.set_level(logging.WARNING)
     assert (
-        "",
-        parse_file_time("2020-05-23T19:43:14.106177342Z"),
-    ) == reg._get_version_from_manifest(manifest_c)
+               "",
+               parse_file_time("2020-05-23T19:43:14.106177342Z"),
+           ) == reg._get_version_from_manifest(manifest_c)
     logs = [l.message for l in caplog.records]
     assert logs == [
         "No version information for tool cincan/test: list index out of range"

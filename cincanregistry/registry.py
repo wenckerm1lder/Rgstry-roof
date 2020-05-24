@@ -5,7 +5,7 @@ import pathlib
 import timeit
 import base64
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, Tuple, Union, List
 import docker
 import docker.errors
 import requests
@@ -22,10 +22,10 @@ class ToolRegistry:
     """A tool registry"""
 
     def __init__(
-        self,
-        config_path: str = "",
-        tools_repo_path: str = "",
-        version_var="TOOL_VERSION",
+            self,
+            config_path: str = "",
+            tools_repo_path: str = "",
+            version_var="TOOL_VERSION",
     ):
         self.logger = logging.getLogger("registry")
         self.client = docker.from_env()
@@ -58,12 +58,12 @@ class ToolRegistry:
             else pathlib.Path.home() / ".cincan" / "tools.json"
         )
         self.tools_repo_path = (
-            pathlib.Path(tools_repo_path) if tools_repo_path else None
-        ) or (
-            pathlib.Path(self.configuration.get("tools_repo_path"))
-            if self.configuration.get("tools_repo_path")
-            else None
-        )
+                                   pathlib.Path(tools_repo_path) if tools_repo_path else None
+                               ) or (
+                                   pathlib.Path(self.configuration.get("tools_repo_path"))
+                                   if self.configuration.get("tools_repo_path")
+                                   else None
+                               )
 
     def _is_docker_running(self):
         try:
@@ -74,8 +74,8 @@ class ToolRegistry:
             self.logger.error("Not able to list or use local tools.")
             return False
 
-    def _docker_registry_API_error(
-        self, r: requests.Response, custom_error_msg: str = ""
+    def _docker_registry_api_error(
+            self, r: requests.Response, custom_error_msg: str = ""
     ):
         """
         Logs error response caused by Docker Registry HTTP API V2
@@ -98,7 +98,7 @@ class ToolRegistry:
         }
         token_req = session.get(self.auth_url, params=params)
         if token_req.status_code != 200:
-            self._docker_registry_API_error(
+            self._docker_registry_api_error(
                 token_req, f"Error when getting token for repository {repo}"
             )
             return ""
@@ -114,7 +114,7 @@ class ToolRegistry:
         extra CSRF protection, header named as 'X-CSRFToken'
         """
 
-        LOGIN_URI = self.hub_url + "/users/login/"
+        login_uri = self.hub_url + "/users/login/"
         config = docker.utils.config.load_general_config()
         auths = (
             next(iter(config.get("auths").values())) if config.get("auths") else None
@@ -131,7 +131,7 @@ class ToolRegistry:
         headers = {
             "Content-Type": "application/json",  # redundant because json as data parameter
         }
-        resp = s.post(LOGIN_URI, json=data, headers=headers)
+        resp = s.post(login_uri, json=data, headers=headers)
         if resp.status_code == 200:
             s.headers.update({"X-CSRFToken": s.cookies.get("csrftoken")})
         else:
@@ -157,7 +157,7 @@ class ToolRegistry:
         return version
 
     def _get_version_from_manifest(
-        self, manifest: dict,
+            self, manifest: dict,
     ):
         """
         Parses value from defined variable from container's environment variables.
@@ -183,7 +183,7 @@ class ToolRegistry:
         return version, updated
 
     def fetch_manifest(
-        self, session: requests.Session, name: str, tag: str
+            self, session: requests.Session, name: str, tag: str
     ) -> Dict[str, Any]:
         """Fetch docker image manifest information by tag"""
 
@@ -198,7 +198,7 @@ class ToolRegistry:
             },
         )
         if manifest_req.status_code != 200:
-            self._docker_registry_API_error(
+            self._docker_registry_api_error(
                 manifest_req,
                 f"Error when getting manifest for tool {name}. Code {manifest_req.status_code}",
             )
@@ -282,7 +282,7 @@ class ToolRegistry:
             self.logger.info(f"No single tool found with tag `{defined_tag}`.")
         return use_tools
 
-    def create_local_toolinfo_by_name(self, name: str) -> ToolInfo:
+    def create_local_toolinfo_by_name(self, name: str) -> Union[ToolInfo, None]:
         """Find local images by name, return ToolInfo object with version list"""
         images = self.client.images.list(name, filters={"dangling": False})
         if not images:
@@ -314,10 +314,10 @@ class ToolRegistry:
         return tool
 
     async def list_tools_local_images(
-        self,
-        defined_tag: str = "",
-        prefix: str = "cincan/",
-        default_ver: str = VER_UNDEFINED,
+            self,
+            defined_tag: str = "",
+            prefix: str = "cincan/",
+            default_ver: str = VER_UNDEFINED,
     ) -> Dict[str, ToolInfo]:
         """
         List tools from the locally available docker images
@@ -332,7 +332,6 @@ class ToolRegistry:
         images.sort(key=lambda x: parse_file_time(x.attrs["Created"]), reverse=True)
         ret = {}
         for i in images:
-            # print(i.attrs.get("ContainerConfig").get("Env"))
             if len(i.tags) == 0:
                 continue  # not sure what these are...
             updated = parse_file_time(i.attrs["Created"])
@@ -389,13 +388,12 @@ class ToolRegistry:
         return ret
 
     def fetch_tags(
-        self, session: requests.Session, tool: ToolInfo, update_cache: bool = False
+            self, session: requests.Session, tool: ToolInfo, update_cache: bool = False
     ) -> Dict[str, Any]:
         """Fetch remote data to update a tool info"""
 
-        available_versions = []
+        available_versions: List[VersionInfo] = []
         self.logger.info("fetch %s...", tool.name)
-
         tool_name, tool_tag = split_tool_tag(tool.name)
         params = {"page_size": self.max_page_size}
         tags_req = session.get(
@@ -426,7 +424,7 @@ class ToolRegistry:
         tag_names = list(map(lambda x: x["name"], tags_sorted))
         manifest_latest = {}
         first_run = True
-        if tool.name.count(":") == 0 and tag_names:
+        if tag_names:
             for t in tags_sorted:
                 manifest = self.fetch_manifest(session, tool_name, t.get("name"))
                 if first_run:
@@ -443,27 +441,14 @@ class ToolRegistry:
                         ver_info = VersionInfo(
                             version,
                             REMOTE_REGISTRY,
-                            {t.get("name")},
+                            set(t.get("name")),
                             updated,
                             size=t.get("full_size"),
                         )
                         available_versions.append(ver_info)
         else:
-            manifest = self.fetch_manifest(session, tool_name, tool_tag)
-            if manifest:
-                manifest_latest = manifest
-                version, updated = self._get_version_from_manifest(manifest)
-                available_versions.append(
-                    VersionInfo(
-                        version,
-                        REMOTE_REGISTRY,
-                        {t.get("name")},
-                        updated,
-                        size=t.get("full_size"),
-                    )
-                )
-            else:
-                return {}
+            self.logger.error(f"No tags found for tool {tool_name} for unknown reason.")
+            return {}
 
         manifest_latest["all_tags"] = tags  # adding tags to manifest data
         manifest_latest["sorted_tags"] = tag_names
@@ -489,7 +474,7 @@ class ToolRegistry:
             except requests.ConnectionError as e:
                 self.logger.warning(e)
             if fresh_resp and fresh_resp.status_code != 200:
-                self._docker_registry_API_error(
+                self._docker_registry_api_error(
                     fresh_resp,
                     "Error getting list of remote tools, code: {}".format(
                         fresh_resp.status_code
@@ -523,8 +508,8 @@ class ToolRegistry:
                         # print(t.name)
                         # if t.name == "cincan/radare2:latest-stable":
                         if (
-                            t.name not in old_tools
-                            or t.updated > old_tools[t.name].updated
+                                t.name not in old_tools
+                                or t.updated > old_tools[t.name].updated
                         ):
                             tasks.append(
                                 loop.run_in_executor(
@@ -562,7 +547,7 @@ class ToolRegistry:
             json.dump(tools, f, cls=ToolInfoEncoder)
 
     def read_tool_cache(
-        self, tool_name: str = ""
+            self, tool_name: str = ""
     ) -> Union[Dict[str, ToolInfo], ToolInfo]:
         """
         Read the local tool cache file
@@ -589,11 +574,11 @@ class ToolRegistry:
         return r
 
     async def list_versions(
-        self,
-        tool: str = "",
-        toJSON: bool = False,
-        only_updates: bool = False,
-        force_refresh: bool = False,
+            self,
+            tool: str = "",
+            toJSON: bool = False,
+            only_updates: bool = False,
+            force_refresh: bool = False,
     ):
         tools_loc = self.tools_repo_path
         checker = self.configuration.get("versions", {})
@@ -616,7 +601,7 @@ class ToolRegistry:
             if not r_tool:
                 r_tool = ToolInfo(tool, datetime.min, "remote")
             if not r_tool.updated or not (
-                now - timedelta(hours=24) <= r_tool.updated <= now
+                    now - timedelta(hours=24) <= r_tool.updated <= now
             ):
                 with requests.Session() as s:
                     self.fetch_tags(s, r_tool, update_cache=True)

@@ -4,7 +4,7 @@ import sys
 import logging
 import asyncio
 import json
-from typing import List, Dict
+from typing import Dict
 
 DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
 

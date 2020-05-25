@@ -51,6 +51,6 @@ class GitLabUtils:
         return tags
 
     def get_releases(self) -> List[ProjectRelease]:
-        """Ger releases of project"""
+        """Get releases of project"""
         releases = self.project.releases.list()
         return releases

@@ -185,10 +185,11 @@ class ToolRegistry:
         return version, updated
 
     def fetch_manifest(
-            self, session: requests.Session, name: str, tag: str
+            self, name: str, tag: str, session: requests.Session = None
     ) -> Dict[str, Any]:
         """Fetch docker image manifest information by tag"""
-
+        if not session:
+            session = requests.Session()
         # Get authentication token for tool with pull scope
         token = self._get_registry_service_token(session, name)
 
@@ -427,7 +428,7 @@ class ToolRegistry:
         first_run = True
         if tag_names:
             for t in tags_sorted:
-                manifest = self.fetch_manifest(session, tool_name, t.get("name"))
+                manifest = self.fetch_manifest(tool_name, t.get("name"), session=session)
                 if first_run:
                     manifest_latest = manifest
                     first_run = False

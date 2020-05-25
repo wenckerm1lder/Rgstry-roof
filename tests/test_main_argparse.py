@@ -80,6 +80,7 @@ def test_create_list_version_argparse(caplog, capsys):
     create_list_argparse(subparsers)
     test_args = ["list", "versions"]
     args = parser.parse_args(test_args)
+    assert args.list_sub_command == "versions"
     assert not args.local
     assert not args.remote
     assert not args.all

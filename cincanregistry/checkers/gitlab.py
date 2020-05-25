@@ -1,25 +1,25 @@
 from ._checker import UpstreamChecker, NO_VERSION
-from ..gitlab_utils import GitLabAPI
+from ..gitlab_utils import GitLabUtils
+from gitlab.exceptions import GitlabError
 
 
-class GitLabChecker(UpstreamChecker, GitLabAPI):
+class GitLabChecker(UpstreamChecker, GitLabUtils):
     """
-    Class for checking latests possible releases of given repository by
+    Class for checking latest possible releases of given repository by
     release or tag release.
     Uses GitLab API v4: https://docs.gitlab.com/ee/api/
     """
 
     def __init__(self, tool_info: dict, **kwargs):
         """
-        Please use token, which as zero scopes defined.
+        Please use token, with zero scopes defined!
         It is enough to be functional and rise API limit.
         """
         UpstreamChecker.__init__(self, tool_info=tool_info, **kwargs)
-        GitLabAPI.__init__(
+        GitLabUtils.__init__(
             self,
             namespace=self.repository,
             project=self.tool,
-            uri=self.uri,
             token=kwargs.get("token", "")
         )
 
@@ -34,34 +34,40 @@ class GitLabChecker(UpstreamChecker, GitLabAPI):
             )
             self.version = NO_VERSION
 
-    def _fail(self, r):
+    def _fail(self, r=None, e: GitlabError = None):
         """
         Set version for not defined on fail, log error.
         """
         self.version = NO_VERSION
         self.logger.error(
-            f"Failed to fetch version update information for {self.project}"
+            f"Failed to fetch version update information for {self.project}: {e}"
         )
 
     def _by_release(self):
         """
         Method for finding latest release from repository.
         """
-        r = self.get_releases()
-        if r:
-            self.version = r[0].get("name")
-        else:
-            self._fail(r)
+        try:
+            r = self.get_releases()
+            if r:
+                self.version = r[0].name
+            else:
+                self.logger.debug(f"No releases found for {self.project} with {self.provider}")
+        except GitlabError as e:
+            self._fail(e=e)
 
     def _by_tag(self):
         """
         Method for finding latest tag.
         """
-        r = self.get_tags()
-        if r:
-            self.version = r[0].get("name")
-        else:
-            self._fail(r)
+        try:
+            r = self.get_tags()
+            if r:
+                self.version = r[0].name
+            else:
+                self.logger.debug(f"No tags found for {self.project} with {self.provider}")
+        except GitlabError as e:
+            self._fail(e=e)
 
 
 '''

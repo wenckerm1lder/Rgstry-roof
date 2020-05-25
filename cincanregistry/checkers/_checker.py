@@ -56,12 +56,12 @@ class UpstreamChecker(metaclass=ABCMeta):
                 f"Tool {self.tool} has updated upstream version information of {self.version}"
             )
 
-    def _fail(self, r: requests.Response):
+    def _fail(self, r: requests.Response = None):
         """
         Set version for not defined on fail, log error.
         """
         self.version = NO_VERSION
-        self.logger.error(f"Failed to fetch version update information for {self.tool}: {r.status_code}")
+        self.logger.error(f"Failed to fetch version update information for {self.tool}.")
 
     def _sort_latest_tag(self, versions: List[dict], tag_key: str) -> Dict:
         """

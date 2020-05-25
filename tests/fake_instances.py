@@ -24,7 +24,7 @@ FAKE_VERSION_INFO_NO_CHECKER = {
     "version": 0.9,
     "source": "no_checker_case",
     "tags": set(["latest", "latest-stable"]),
-    "updated": datetime(2020, 3, 3, 13, 37, ),
+    "updated": datetime(2020, 3, 3, 13, 37,),
     "size": 39529754,
 }
 
@@ -51,7 +51,7 @@ FAKE_VERSION_INFO_WITH_CHECKER = {
     "version": 0.9,
     "source": FAKE_UPSTREAM_CHECKER,
     "tags": set(["latest", "latest-stable"]),
-    "updated": datetime(2020, 3, 3, 13, 37, ),
+    "updated": datetime(2020, 3, 3, 13, 37,),
     "size": 3952975,
 }
 
@@ -166,9 +166,9 @@ FAKE_IMAGE_ATTRS = {
 FAKE_IMAGE_ATTRS2 = deepcopy(FAKE_IMAGE_ATTRS)
 # Typo in env TOOL_VERSION
 FAKE_IMAGE_ATTRS2["Config"]["Env"] = [
-        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-        "TOOL_VERSIO=0.9",
-    ]
+    "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "TOOL_VERSIO=0.9",
+]
 
 FAKE_IMAGE = mock.Mock(spec=docker.models.images.Image)
 FAKE_IMAGE.attrs = FAKE_IMAGE_ATTRS
@@ -179,7 +179,6 @@ FAKE_IMAGE2.tags = ["cincan/test:dev"]
 FAKE_IMAGE3 = mock.Mock(spec=docker.models.images.Image)
 FAKE_IMAGE3.attrs = FAKE_IMAGE_ATTRS2
 FAKE_IMAGE3.tags = ["cincan/test:test"]
-
 
 FAKE_MANIFEST = {
     "architecture": "amd64",
@@ -206,35 +205,35 @@ FAKE_MANIFEST = {
     "history": [
         {
             "v1Compatibility": '{"architecture":"amd64","config":{"Hostname":"","Domainname":"","User":"","AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,"OpenStdin":false,"StdinOnce":false,"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION=1.0"],"Cmd":["echo","Hello, '
-                               'world!"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"container":"6e470d761c29de22781774ab9ab5e16678f1a603ba2f5c0a6b83c8597bd63b7a","container_config":{"Hostname":"6e470d761c29","Domainname":"","User":"","AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,"OpenStdin":false,"StdinOnce":false,"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION=1.0"],"Cmd":["/bin/sh","-c","#(nop) '
-                               '","CMD [\\"echo\\" \\"Hello, '
-                               'world!\\"]"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"created":"2020-05-23T19:43:14.106177342Z","docker_version":"19.03.8-ce","id":"5dfc05a56cc5819bb4dec3f7d19f908566c4d115457a1be8cc02ca87cc8d81c0","os":"linux","parent":"7099d9ed2d5fca9f9a65e010826d70a5fd5c53d64a5590292a89e106f8f98d6d","throwaway":true}'
+            'world!"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"container":"6e470d761c29de22781774ab9ab5e16678f1a603ba2f5c0a6b83c8597bd63b7a","container_config":{"Hostname":"6e470d761c29","Domainname":"","User":"","AttachStdin":false,"AttachStdout":false,"AttachStderr":false,"Tty":false,"OpenStdin":false,"StdinOnce":false,"Env":["PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin","TOOL_VERSION=1.0"],"Cmd":["/bin/sh","-c","#(nop) '
+            '","CMD [\\"echo\\" \\"Hello, '
+            'world!\\"]"],"Image":"sha256:bc2af71e72403fbbcf777d551de96ffbcdc2837875370fc77c18befa895097d4","Volumes":null,"WorkingDir":"","Entrypoint":null,"OnBuild":null,"Labels":{"MAINTAINER":"cincan.io"}},"created":"2020-05-23T19:43:14.106177342Z","docker_version":"19.03.8-ce","id":"5dfc05a56cc5819bb4dec3f7d19f908566c4d115457a1be8cc02ca87cc8d81c0","os":"linux","parent":"7099d9ed2d5fca9f9a65e010826d70a5fd5c53d64a5590292a89e106f8f98d6d","throwaway":true}'
         },
         {
             "v1Compatibility": '{"id":"7099d9ed2d5fca9f9a65e010826d70a5fd5c53d64a5590292a89e106f8f98d6d","parent":"015cf255964c759a51ea696916c8f112e6d0a7968859b1fafd243d9247f6648f","created":"2020-05-23T19:43:13.801013161Z","container_config":{"Cmd":["/bin/sh '
-                               '-c echo \\"Hello, '
-                               'world!\\""]},"throwaway":true}'
+            '-c echo \\"Hello, '
+            'world!\\""]},"throwaway":true}'
         },
         {
             "v1Compatibility": '{"id":"015cf255964c759a51ea696916c8f112e6d0a7968859b1fafd243d9247f6648f","parent":"1f470a89b4bfd6e3558e340359062e86485fed5fbaaa3d4e0c7d9b3de5910cc5","created":"2020-05-23T19:43:13.03913518Z","container_config":{"Cmd":["/bin/sh '
-                               "-c #(nop)  ENV "
-                               'TOOL_VERSION=1.0"]},"throwaway":true}'
+            "-c #(nop)  ENV "
+            'TOOL_VERSION=1.0"]},"throwaway":true}'
         },
         {
             "v1Compatibility": '{"id":"1f470a89b4bfd6e3558e340359062e86485fed5fbaaa3d4e0c7d9b3de5910cc5","parent":"4698bdfdf9a50584d768f267df5ea06575733809413b4aa30f526d1c8442ee4c","created":"2020-04-16T22:37:19.783297733Z","container_config":{"Cmd":["/bin/sh '
-                               "-c #(nop)  LABEL "
-                               'MAINTAINER=cincan.io"]},"throwaway":true}'
+            "-c #(nop)  LABEL "
+            'MAINTAINER=cincan.io"]},"throwaway":true}'
         },
         {
             "v1Compatibility": '{"id":"4698bdfdf9a50584d768f267df5ea06575733809413b4aa30f526d1c8442ee4c","parent":"2ff09547bf97be635cf104ec0ff3033b8c103a04e01a3d2e1f84f07dfb5cd80c","created":"2020-01-18T01:19:37.187497623Z","container_config":{"Cmd":["/bin/sh '
-                               "-c #(nop)  CMD "
-                               '[\\"/bin/sh\\"]"]},"throwaway":true}'
+            "-c #(nop)  CMD "
+            '[\\"/bin/sh\\"]"]},"throwaway":true}'
         },
         {
             "v1Compatibility": '{"id":"2ff09547bf97be635cf104ec0ff3033b8c103a04e01a3d2e1f84f07dfb5cd80c","created":"2020-01-18T01:19:37.02673981Z","container_config":{"Cmd":["/bin/sh '
-                               "-c #(nop) ADD "
-                               "file:e69d441d729412d24675dcd33e04580885df99981cec43de8c9b24015313ff8e "
-                               'in / "]}}'
+            "-c #(nop) ADD "
+            "file:e69d441d729412d24675dcd33e04580885df99981cec43de8c9b24015313ff8e "
+            'in / "]}}'
         },
     ],
     "name": "cincan/test",
@@ -256,4 +255,17 @@ FAKE_MANIFEST = {
         }
     ],
     "tag": "latest",
+}
+
+GITLAB_FAKE_META_DICT = {
+    "file_name": "meta.json",
+    "file_path": "radare2/meta.json",
+    "size": 254,
+    "encoding": "base64",
+    "content_sha256": "f9f2fe65e99c313d2637530f09176fc246d9ce4d3e69d40ead17aaf772c8fbe0",
+    "ref": "master",
+    "blob_id": "babe8e938c676c81eb6b2308159481db3f955c33",
+    "commit_id": "0fcb693be9375c88ed5170c0770a8d72a6e9017e",
+    "last_commit_id": "356d07c779bd09482ddf2d4078b81fabc97e2f2d",
+    "content": "ewogICJ1cHN0cmVhbXMiOiBbCiAgICB7CiAgICAgICJ1cmkiOiAiaHR0cHM6Ly9naXRodWIuY29tL3JhZGFyZW9yZy9yYWRhcmUyLyIsCiAgICAgICJyZXBvc2l0b3J5IjogInJhZGFyZW9yZyIsCiAgICAgICJ0b29sIjogInJhZGFyZTIiLAogICAgICAicHJvdmlkZXIiOiAiR2l0SHViIiwKICAgICAgIm1ldGhvZCI6ICJyZWxlYXNlIiwKICAgICAgIm9yaWdpbiI6IHRydWUsCiAgICAgICJkb2NrZXJfb3JpZ2luIjogdHJ1ZQogICAgfQogIF0KfQo=",
 }

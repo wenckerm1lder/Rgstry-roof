@@ -2,7 +2,7 @@ from typing import Dict, List, Tuple, Union
 from .tool_info import ToolInfo
 from .version_info import VersionInfo
 from .checkers import classmap
-from .gitlab_utils import GitLabAPI
+from .gitlab_utils import GitLabUtils
 from .utils import parse_file_time, format_time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import pathlib
@@ -102,7 +102,7 @@ class VersionMaintainer:
             return False
 
     def _fetch_write_metafile_by_path(
-            self, client: GitLabAPI, path: pathlib.Path, ref: str
+            self, client: GitLabUtils, path: pathlib.Path, ref: str
     ) -> Union[pathlib.Path, None]:
 
         if not self.force_refresh:
@@ -141,8 +141,8 @@ class VersionMaintainer:
             f"Fetching upstream information files from GitLab (https://gitlab.com/{self.namespace}/{self.project})"
             f" into path '{self.cache_files_location}'"
         )
-        gitlab_client = GitLabAPI(
-            self.tokens.get("gitlab"), self.namespace, self.project
+        gitlab_client = GitLabUtils(
+            self.namespace, self.project, self.tokens.get("gitlab", "")
         )
 
         if isinstance(tools, str):
@@ -159,7 +159,7 @@ class VersionMaintainer:
         # meta_tools contain only tools with meta files - no extra 404 later
         if len(tools) > 1:
             files = gitlab_client.get_full_tree(
-                per_page=100, recursive=True, ref=branch
+                ref=branch
             )
             # Get paths of each meta file
             meta_paths = []

@@ -122,3 +122,16 @@ def test_create_list_version_argparse(caplog, capsys):
     test_args = ["list", "versions", "-n", "cincan/test"]
     args = parser.parse_args(test_args)
     assert args.name == "cincan/test"
+
+    test_args = ["list", "versions", "-fwn", "cincan/test"]
+    args = parser.parse_args(test_args)
+    assert not args.local
+    assert not args.remote
+    assert not args.all
+    assert not args.json
+    assert not args.size
+    assert args.tag == "latest-stable"
+    assert not args.only_updates
+    assert args.force_refresh
+    assert args.with_tags
+    assert args.name == "cincan/test"

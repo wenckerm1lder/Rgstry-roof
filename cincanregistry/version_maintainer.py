@@ -10,7 +10,7 @@ import json
 from datetime import datetime, timedelta
 import logging
 import asyncio
-import base64
+from gitlab.exceptions import GitlabGetError
 
 
 class VersionMaintainer:
@@ -101,15 +101,18 @@ class VersionMaintainer:
             )
             return False
 
-    def _fetch_write_metafile_by_path(
+    def cache_metafile_by_path(
             self, client: GitLabUtils, path: pathlib.Path, ref: str
     ) -> Union[pathlib.Path, None]:
 
+        file_path = None
         if not self.force_refresh:
             if self._is_old_metafile_usable(path):
                 return
-        resp = client.get_file_by_path(str(path), ref=ref)
-        file_path = None
+        try:
+            resp = client.get_file_by_path(str(path), ref=ref)
+        except GitlabGetError as e:
+            resp = None
         if resp:
             file_data = resp.decode()
             if str(path).count("/") > 1 or str(path).startswith("_"):
@@ -180,7 +183,7 @@ class VersionMaintainer:
             # Start the load operations and mark each future with its path
             future_to_fetch = {
                 executor.submit(
-                    self._fetch_write_metafile_by_path, gitlab_client, path, branch
+                    self.cache_metafile_by_path, gitlab_client, path, branch
                 ): path
                 for path in meta_paths
             }

@@ -10,4 +10,5 @@ from .main import (
     create_utils_argparse,
 )
 
-__all__ = ["ToolInfo", "VersionInfo", "ToolRegistry", "VersionMaintainer", "HubReadmeHandler"]
+__all__ = ["ToolInfo", "VersionInfo", "ToolRegistry", "VersionMaintainer", "HubReadmeHandler", "create_list_argparse",
+           "create_utils_argparse", "list_handler", "utils_handler"]

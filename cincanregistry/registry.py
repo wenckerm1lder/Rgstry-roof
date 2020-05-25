@@ -16,6 +16,7 @@ from .utils import parse_file_time, split_tool_tag
 VER_UNDEFINED = "undefined"
 REMOTE_REGISTRY = "Dockerhub"
 LOCAL_REGISTRY = "Docker Server"
+CACHE_VERSION_VAR = "__cache_version"
 
 
 class ToolRegistry:
@@ -57,6 +58,7 @@ class ToolRegistry:
             if self.configuration.get("tools_cache_path")
             else pathlib.Path.home() / ".cincan" / "tools.json"
         )
+        self.tool_cache_version = "1.0"
         self.tools_repo_path = (
                                    pathlib.Path(tools_repo_path) if tools_repo_path else None
                                ) or (
@@ -523,6 +525,7 @@ class ToolRegistry:
                     self.tool_cache.parent.mkdir(parents=True, exist_ok=True)
                     with self.tool_cache.open("w") as f:
                         self.logger.debug("saving tool cache %s", self.tool_cache)
+                        tool_list[CACHE_VERSION_VAR] = self.tool_cache_version
                         json.dump(tool_list, f, cls=ToolInfoEncoder)
             # read saved tools and return
             self.logger.debug(
@@ -536,7 +539,10 @@ class ToolRegistry:
         if self.tool_cache.is_file():
             with self.tool_cache.open("r") as f:
                 tools = json.load(f)
+                if not tools.get(CACHE_VERSION_VAR) == self.tool_cache_version:
+                    tools = {}
         with self.tool_cache.open("w") as f:
+            tools[CACHE_VERSION_VAR] = self.tool_cache_version
             tools[tool.name] = dict(tool)
             self.logger.debug(f"Updating tool cache for tool {tool.name}")
             json.dump(tools, f, cls=ToolInfoEncoder)
@@ -561,11 +567,22 @@ class ToolRegistry:
                 )
                 self.tool_cache.unlink()
                 return {}
-            if tool_name:
-                d = root_json.get(tool_name, {})
-                return ToolInfo.from_dict(d) if d else {}
-            for name, j in root_json.items():
-                r[name] = ToolInfo.from_dict(j)
+            c_ver = root_json.get(CACHE_VERSION_VAR, "")
+            if not c_ver == self.tool_cache_version:
+                self.tool_cache.unlink()
+                return {}
+            else:
+                del root_json[CACHE_VERSION_VAR]
+            try:
+                if tool_name:
+                    d = root_json.get(tool_name, {})
+                    return ToolInfo.from_dict(d) if d else {}
+                for name, j in root_json.items():
+                    r[name] = ToolInfo.from_dict(j)
+            # If cache is modified to contain extra variables
+            except TypeError:
+                self.tool_cache.unlink()
+                return {}
         return r
 
     async def list_versions(

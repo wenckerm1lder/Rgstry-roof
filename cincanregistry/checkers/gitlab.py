@@ -18,6 +18,7 @@ class GitLabChecker(UpstreamChecker, GitLabUtils):
         UpstreamChecker.__init__(self, tool_info=tool_info, **kwargs)
         GitLabUtils.__init__(
             self,
+            url=self.uri,
             namespace=self.repository,
             project=self.tool,
             token=kwargs.get("token", "")

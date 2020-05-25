@@ -11,11 +11,18 @@ class GitLabUtils:
 
     def __init__(
             self,
+            url: str = "",
             namespace: str = "",
             project: str = "",
             token: str = "",
+            pool_maxsize: int = 100
     ):
-        self.gl = gitlab.Gitlab('https://gitlab.com', private_token=token)
+        if url:
+            url = f"https://{urlparse(url).netloc}/"
+        self.base_url = url or "https://gitlab.com"
+        self.gl = gitlab.Gitlab(self.base_url, private_token=token)
+        adapter = requests.adapters.HTTPAdapter(pool_maxsize=pool_maxsize)
+        self.gl.session.mount("https://", adapter)
         self.logger = logging.getLogger("gitlab-util")
         self.namespace_name = namespace.strip("/")
         self.project_name = project.strip("/")
@@ -25,7 +32,7 @@ class GitLabUtils:
         elif self.namespace_name or self.project_name:
             self.id = quote_plus(self.project_name if self.project_name else self.namespace_name)
         else:
-            raise ValueError("Missing namespace or project for GitLab API")
+            raise ValueError("Missing namespace or project name for GitLab API")
         self.project = self.gl.projects.get(self.id, lazy=True)
 
     def get_full_tree(self, recursive=True, ref="master") -> List[dict]:
@@ -38,10 +45,12 @@ class GitLabUtils:
         file = self.project.files.get(file_path=path, ref=ref)
         return file
 
-    def get_tags(self, order_by: str = "updated", sort: str = "", search: str = "") -> List[ProjectTag]:
+    def get_tags(self, order_by: str = "updated", sort: str = "desc", search: str = "") -> List[ProjectTag]:
+        """Get tags of project"""
         tags = self.project.tags.list(order_by=order_by, sort=sort, search=search)
         return tags
 
     def get_releases(self) -> List[ProjectRelease]:
+        """Ger releases of project"""
         releases = self.project.releases.list()
         return releases

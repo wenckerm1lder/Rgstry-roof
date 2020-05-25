@@ -111,7 +111,7 @@ class VersionMaintainer:
         resp = client.get_file_by_path(str(path), ref=ref)
         file_path = None
         if resp:
-            file_data = base64.b64decode(resp.get("content"))
+            file_data = resp.decode()
             if str(path).count("/") > 1 or str(path).startswith("_"):
                 self.logger.warning(
                     f"File {str(path)} in wrong place at GitLab repository, skipping..."
@@ -142,7 +142,7 @@ class VersionMaintainer:
             f" into path '{self.cache_files_location}'"
         )
         gitlab_client = GitLabUtils(
-            self.namespace, self.project, self.tokens.get("gitlab", "")
+            namespace=self.namespace, project=self.project, token=self.tokens.get("gitlab", "")
         )
 
         if isinstance(tools, str):

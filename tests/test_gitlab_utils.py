@@ -4,7 +4,7 @@ from .fake_instances import GITLAB_FAKE_META_DICT
 from unittest import mock
 
 
-def test_create_instance(mocker):
+def test_create_instance():
     gl_util = GitLabUtils(namespace="cincan", project="tools", token="12345")
     assert gl_util.namespace_name == "cincan"
     assert gl_util.project_name == "tools"
@@ -44,7 +44,7 @@ def test_get_tags(mocker):
     fake_tags.return_value = [{"Many tags"}]
     m = mocker.patch.object(gl_util.project.tags, "list", fake_tags)
     assert gl_util.get_tags() == [{"Many tags"}]
-    gl_util.project.tags.list.assert_called_with(order_by="updated", sort="", search="")
+    gl_util.project.tags.list.assert_called_with(order_by="updated", sort="desc", search="")
 
 
 def test_get_releases(mocker):

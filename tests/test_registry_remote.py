@@ -42,7 +42,7 @@ def test_fetch_manifest(mocker):
     reg = ToolRegistry()
     with requests.Session() as s:
         # Test against real API
-        manifest = reg.fetch_manifest(s, TEST_REPOSITORY, "latest")
+        manifest = reg.fetch_manifest(TEST_REPOSITORY, "latest", session=s)
         assert manifest.get("tag") == "latest"
         assert manifest.get("name") == TEST_REPOSITORY
         assert manifest.get("schemaVersion") == 1
@@ -55,7 +55,7 @@ def test_fetch_manifest(mocker):
         ret.status_code = 404
         ret.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
         mocker.patch.object(s, "get", return_value=ret, autospec=True)
-        assert not reg.fetch_manifest(s, TEST_REPOSITORY, "latest")
+        assert not reg.fetch_manifest(TEST_REPOSITORY, "latest", session=s)
 
 
 def test_get_version_from_manifest(mocker, caplog):

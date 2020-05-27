@@ -12,6 +12,7 @@ import requests
 from datetime import datetime, timedelta
 from . import ToolInfo, ToolInfoEncoder, VersionInfo, VersionMaintainer
 from .utils import parse_file_time, split_tool_tag
+from .configuration import Configuration
 
 VER_UNDEFINED = "undefined"
 REMOTE_REGISTRY = "Dockerhub"
@@ -37,35 +38,13 @@ class ToolRegistry:
         self.registry_service = "registry.docker.io"
         self.registry_host = "registry.hub.docker.com"
         self.registry_url = f"https://{self.registry_host}/{self.schema_version}"
-        self.max_workers = 30
         self.max_page_size = 1000
         self.version_var = version_var
-        self.conf_filepath = (
-            pathlib.Path(config_path)
-            if config_path
-            else pathlib.Path.home() / ".cincan/registry.json"
-        )
-        try:
-            with open(self.conf_filepath) as f:
-                self.configuration = json.load(f)
-        except IOError:
-            self.logger.debug(
-                f"No configuration file found for registry in location: {self.conf_filepath}"
-            )
-            self.configuration = {}
-        self.tool_cache = (
-            pathlib.Path(self.configuration.get("tools_cache_path"))
-            if self.configuration.get("tools_cache_path")
-            else pathlib.Path.home() / ".cincan" / "tools.json"
-        )
-        self.tool_cache_version = "1.0"
-        self.tools_repo_path = (
-                                   pathlib.Path(tools_repo_path) if tools_repo_path else None
-                               ) or (
-                                   pathlib.Path(self.configuration.get("tools_repo_path"))
-                                   if self.configuration.get("tools_repo_path")
-                                   else None
-                               )
+        self.config = Configuration(config_path, tools_repo_path)
+        self.max_workers = self.config.max_workers
+        self.tool_cache = self.config.tool_cache
+        self.tool_cache_version = self.config.tool_cache_version
+        self.tools_repo_path = self.config.tools_repo_path
 
     def _is_docker_running(self):
         try:
@@ -593,17 +572,8 @@ class ToolRegistry:
             only_updates: bool = False,
             force_refresh: bool = False,
     ):
-        tools_loc = self.tools_repo_path
-        checker = self.configuration.get("versions", {})
-        meta_filename = checker.get("metadata_filename", "meta.json")
-        disable_remote = checker.get("disable_remote", False)
-        mfile_p = checker.get("cache_path", "")
         maintainer = VersionMaintainer(
-            self.configuration.get("tokens", None),
-            meta_filename=meta_filename,
-            meta_files_location=tools_loc,
-            cache_files_location=mfile_p,
-            disable_remote_download=disable_remote,
+            self.config,
             force_refresh=force_refresh,
         )
         versions = {}

@@ -263,14 +263,13 @@ Different file can be used with `--config` or `-c` option.
 
 Configuration file does not have many options, but some are needed.
 
-Data from DockerHub registry is cached into some specific path with `tools_cache_path` attribute.
+Data from DockerHub registry is cached into some specific path with `registry_cache_path` attribute.
 
-`tools_repo_path` attribute can be used to set path for local cloned [CinCan tools repository](https://gitlab.com/CinCan/tools). This is used to get meta files instead. Also some utilities are using this path (e.g. syncing README and description information into Docker Hub from tools repository.)
+`tools_repo_path` attribute can be used to set path for locally cloned [CinCan tools repository](https://gitlab.com/CinCan/tools). Then this local directory is used for meta files instead. Also some utilities are using this path (e.g. syncing README and description information into Docker Hub from tools repository.)
 
 `tokens` attribute can contain multiple tokens with schema \<provider\>:token.
 Tokens are helpful in cases, when API limit is needed to be increased for version checking. Caching is used to reduce the amount of requests.
 
-`versions` attribute contains some version checking specific details: `cache_path` is location, where metafiles and version cache is stored.
 
 `metadata_filename` is filename to be checked as metafile.
 
@@ -279,16 +278,14 @@ Tokens are helpful in cases, when API limit is needed to be increased for versio
 
 ```json
 {
-  "tools_cache_path": "/home/<username>/.cincan/tools.json",
+  "cache_path": "/home/<username>/.cincan/cache",
+  "registry_cache_path": "/home/<username>/.cincan/cache/tools.json",
   "tools_repo_path": "/home/<username>/Documents/cincan/tools/",
   "tokens": {
     "github": "<TOKEN>"
   },
-  "versions": {
-    "cache_path": "/home/<username>/.cincan/version_cache",
-    "metadata_filename": "meta.json",
-    "disable_remote": false
-  }
+  "metadata_filename": "meta.json",
+  "disable_remote": false
 }
 ```
 

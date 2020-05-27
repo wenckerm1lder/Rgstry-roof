@@ -10,6 +10,7 @@ from .configuration import Configuration
 
 
 class MetaHandler():
+    """Class for fetching and caching meta files from GitLab"""
 
     def __init__(self,
                  config: Configuration,
@@ -18,7 +19,6 @@ class MetaHandler():
         self.logger = logging.getLogger("metahandler")
         self.config = config
         self.force_refresh = force_refresh
-        # CinCan GitLab repository details
 
     def _is_old_metafile_usable(self, local_path: pathlib.Path) -> bool:
 

@@ -27,8 +27,6 @@ class VersionMaintainer:
         self.config = configuration
         self.logger = logging.getLogger("versions")
         self.tokens = self.config.tokens
-        # prefix, mostly meaning the owner of possible Docker image
-        self.prefix = self.config.prefix
         # Use local 'tools' path if provided
         self.meta_files_location = self.config.tools_repo_path or self.config.cache_location
         self.meta_filename = self.config.meta_filename
@@ -53,7 +51,7 @@ class VersionMaintainer:
         """
         for tool_path in self.meta_files_location.iterdir():
             if (tool_path / self.meta_filename).is_file():
-                self.able_to_check[f"{self.prefix}{tool_path.stem}"] = tool_path
+                self.able_to_check[f"{self.config.prefix}{tool_path.stem}"] = tool_path
         if not self.able_to_check:
             self.logger.error(
                 f"No single configuration for upstream check found."

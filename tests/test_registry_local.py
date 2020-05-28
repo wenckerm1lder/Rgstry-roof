@@ -30,11 +30,11 @@ def test_create_local_tool_info_by_name(mocker):
     reg = ToolRegistry()
     reg.client = mock.Mock()
     mocker.patch.object(
-        reg.client, "ping", return_value=False, autospec=True, side_effect=requests.exceptions.ConnectionError(),
+        reg.client, "ping", return_value=False, side_effect=requests.exceptions.ConnectionError(),
     )
     assert not reg.create_local_tool_info_by_name(TEST_REPOSITORY)
     mocker.patch.object(
-        reg.client, "ping", return_value=True, autospec=True,
+        reg.client, "ping", return_value=True,
     )
     mocker.patch.object(reg.client.images, "list", return_value=[FAKE_IMAGE, FAKE_IMAGE2, FAKE_IMAGE3], create=True)
     tool_info = reg.create_local_tool_info_by_name(TEST_REPOSITORY)

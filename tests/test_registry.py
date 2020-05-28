@@ -43,7 +43,6 @@ def test_is_docker_running(mocker, caplog):
         reg.client,
         "ping",
         return_value=False,
-        autospec=True,
         side_effect=requests.exceptions.ConnectionError(),
     )
     assert not reg._is_docker_running()

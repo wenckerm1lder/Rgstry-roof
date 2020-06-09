@@ -6,7 +6,7 @@ import asyncio
 import json
 from typing import Dict
 
-DEFAULT_IMAGE_FILTER_TAG = "latest-stable"
+DEFAULT_IMAGE_FILTER_TAG = "latest"
 
 PRE_SPACE = 0
 # Name length

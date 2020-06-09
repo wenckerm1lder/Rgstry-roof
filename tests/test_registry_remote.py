@@ -42,8 +42,8 @@ def test_fetch_manifest(mocker):
     reg = ToolRegistry()
     with requests.Session() as s:
         # Test against real API
-        manifest = reg.fetch_manifest(TEST_REPOSITORY, "latest", session=s)
-        assert manifest.get("tag") == "latest"
+        manifest = reg.fetch_manifest(TEST_REPOSITORY, "dev", session=s)
+        assert manifest.get("tag") == "dev"
         assert manifest.get("name") == TEST_REPOSITORY
         assert manifest.get("schemaVersion") == 1
         assert manifest.get("history")
@@ -55,7 +55,7 @@ def test_fetch_manifest(mocker):
         ret.status_code = 404
         ret.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
         mocker.patch.object(s, "get", return_value=ret, autospec=True)
-        assert not reg.fetch_manifest(TEST_REPOSITORY, "latest", session=s)
+        assert not reg.fetch_manifest(TEST_REPOSITORY, "dev", session=s)
 
 
 def test_get_version_from_manifest(mocker, caplog):
@@ -109,7 +109,7 @@ def test_fetch_tags(mocker, caplog):
         assert tool_info.name == TEST_REPOSITORY
         assert len(tool_info.versions) == 1
         assert tool_info.versions[0].version == "1.0"
-        assert tool_info.versions[0].tags == {"latest"}
+        assert tool_info.versions[0].tags == {"dev"}
 
         logs = [l.message for l in caplog.records]
         assert logs == [

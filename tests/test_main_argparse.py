@@ -1,6 +1,7 @@
 from cincanregistry import create_list_argparse
 import argparse
 import pytest
+DEFAULT_TAG = "latest"
 
 
 def test_create_list_argparse(caplog, capsys):
@@ -14,7 +15,7 @@ def test_create_list_argparse(caplog, capsys):
     assert not args.all
     assert not args.json
     assert not args.size
-    assert args.tag == "latest-stable"
+    assert args.tag == DEFAULT_TAG
     assert not args.config
 
     test_args = ["list", "-ja"]
@@ -24,7 +25,7 @@ def test_create_list_argparse(caplog, capsys):
     assert args.all
     assert args.json
     assert not args.size
-    assert args.tag == "latest-stable"
+    assert args.tag == DEFAULT_TAG
     assert not args.config
 
     test_args = ["list", "-lr"]
@@ -50,7 +51,7 @@ def test_create_list_argparse(caplog, capsys):
     assert not args.all
     assert args.json
     assert not args.size
-    assert args.tag == "latest-stable"
+    assert args.tag == DEFAULT_TAG
     assert not args.config
 
     test_args = ["list", "-j", "-l"]
@@ -60,7 +61,7 @@ def test_create_list_argparse(caplog, capsys):
     assert not args.all
     assert args.json
     assert not args.size
-    assert args.tag == "latest-stable"
+    assert args.tag == DEFAULT_TAG
     assert not args.config
 
     test_args = ["list", "-t", "dev"]
@@ -86,7 +87,7 @@ def test_create_list_version_argparse(caplog, capsys):
     assert not args.all
     assert not args.json
     assert not args.size
-    assert args.tag == "latest-stable"
+    assert args.tag == "latest"
     assert not args.config
     assert not args.only_updates
     assert not args.with_tags
@@ -116,7 +117,7 @@ def test_create_list_version_argparse(caplog, capsys):
     assert not args.all
     assert not args.json
     assert not args.size
-    assert args.tag == "latest-stable"
+    assert args.tag == DEFAULT_TAG
     assert args.only_updates
     assert args.force_refresh
 
@@ -131,7 +132,7 @@ def test_create_list_version_argparse(caplog, capsys):
     assert not args.all
     assert not args.json
     assert not args.size
-    assert args.tag == "latest-stable"
+    assert args.tag == DEFAULT_TAG
     assert not args.only_updates
     assert args.force_refresh
     assert args.with_tags

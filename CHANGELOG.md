@@ -2,6 +2,12 @@
 
 All notable changes in project will be documented in here.
 
+## [0.1.1]
+
+### Changed
+
+  - Default stable tag is now 'latest' instead of 'latest-stable'
+
 ## [0.1.0]
 
 ### Changed
@@ -48,6 +54,4 @@ All notable changes in project will be documented in here.
 
 ### Added
 - First release candidate
-
-
 

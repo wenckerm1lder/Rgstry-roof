@@ -1,3 +1,5 @@
+# Ingore all paths starting with 'venv'
+venv*
 # ide specific
 .idea
 .vscode

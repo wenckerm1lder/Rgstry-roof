@@ -1,5 +1,6 @@
 from cincanregistry.registry import ToolRegistry
 from cincanregistry.utils import parse_file_time
+from cincanregistry.configuration import Configuration
 import pathlib
 import docker
 import logging
@@ -26,13 +27,12 @@ def test_create_registry(mocker, caplog):
     assert reg.max_workers == 30
     assert reg.max_page_size == 1000
     assert reg.version_var == "TOOL_VERSION"
-    assert reg.conf_filepath == pathlib.Path.home() / ".cincan/registry.json"
-    assert reg.tool_cache == pathlib.Path.home() / ".cincan" / "tools.json"
-    assert reg.configuration == {}
+    assert reg.tool_cache == pathlib.Path.home() / ".cincan" / "cache" / "tools.json"
+    assert isinstance(reg.config, Configuration)
 
     logs = [l.message for l in caplog.records]
     assert logs == [
-        f"No configuration file found for registry in location: {reg.conf_filepath}"
+        f"No configuration file found for registry in location: {reg.config.file}"
     ]
 
 

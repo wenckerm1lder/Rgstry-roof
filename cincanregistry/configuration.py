@@ -37,8 +37,12 @@ class Configuration:
                                    if self.values.get("tools_repo_path")
                                    else None
                                )
+        # Default branch in GitLab
+        self.branch = self.values.get("branch", "change-structure")
         # Name for meta files in GitLab
         self.meta_filename = self.values.get("metadata_filename", "meta.json")
+        # Index file in GitLab
+        self.index_file = self.values.get("index_filename", "index.yml")
         # Disable meta file download from GitLab
         self.disable_remote = self.values.get("disable_remote", False)
         # GitLab namespace

@@ -38,7 +38,7 @@ class Configuration:
                                    else None
                                )
         # Default branch in GitLab
-        self.branch = self.values.get("branch", "change-structure")
+        self.branch = self.values.get("branch", "master")
         # Name for meta files in GitLab
         self.meta_filename = self.values.get("metadata_filename", "meta.json")
         # Index file in GitLab

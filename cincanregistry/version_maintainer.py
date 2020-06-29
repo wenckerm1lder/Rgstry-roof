@@ -67,8 +67,7 @@ class VersionMaintainer:
             self.tool_dirs = meta_handler.tool_dirs
         else:
             self.logger.debug("Download disabled, nothing to generate.")
-            meta_handler.read_index_file(self.config.tools_repo_path / "index.yml")
-            self.tool_dirs = meta_handler.tool_dirs
+            self.tool_dirs = meta_handler.read_index_file(self.config.tools_repo_path / "index.yml")
         self._set_available_checkers()
 
     def get_versions_single_tool(

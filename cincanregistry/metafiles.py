@@ -15,7 +15,7 @@ class MetaHandler():
 
     def __init__(self,
                  config: Configuration,
-                 force_refresh
+                 force_refresh: bool = False
                  ):
         self.logger = logging.getLogger("metahandler")
         self.config = config
@@ -49,13 +49,14 @@ class MetaHandler():
     def _get_index_file(self, client: GitLabUtils) -> bytes:
         return client.get_file_by_path(self.config.index_file, ref=self.config.branch).decode()
 
-    def read_index_file(self, index_f: Union[bytes, pathlib.Path]):
+    def read_index_file(self, index_f: Union[bytes, pathlib.Path]) -> List:
         """Get index file, which tells paths for tools"""
         if isinstance(index_f, pathlib.Path):
             with index_f.open("r") as f:
                 index_f = f.read()
         yaml_obj = yaml.safe_load(index_f)
         self.tool_dirs = yaml_obj.get("tools")
+        return self.tool_dirs
 
     def cache_metafile_by_path(
             self, client: GitLabUtils, path: pathlib.Path, ref: str

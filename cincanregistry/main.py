@@ -484,7 +484,7 @@ def list_handler(args):
 
 def utils_handler(args):
     if args.utils_sub_command == "update-readme":
-        reg = HubReadmeHandler(args.config, args.tools)
+        reg = HubReadmeHandler(tools_repo_path=args.tools, config_path=args.config)
         if args.all:
             reg.update_readme_all_tools()
         elif args.name:

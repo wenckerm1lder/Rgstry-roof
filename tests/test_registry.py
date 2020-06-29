@@ -12,6 +12,7 @@ def test_create_registry(mocker, caplog):
     caplog.set_level(logging.DEBUG)
     # Ignore possible configuration file in local filesystem
     mocker.patch("builtins.open", side_effect=IOError())
+    mocker.patch.object(pathlib.Path, "is_file", return_value=False)
 
     logging.getLogger("docker").setLevel(logging.WARNING)
     reg = ToolRegistry()

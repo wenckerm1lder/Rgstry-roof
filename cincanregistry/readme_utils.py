@@ -1,5 +1,6 @@
 from .registry import ToolRegistry
 from .metafiles import MetaHandler
+from typing import Union
 import requests
 import pathlib
 import logging
@@ -10,7 +11,8 @@ class HubReadmeHandler(ToolRegistry):
     Class for updating README files in Docker Hub.
     """
 
-    def __init__(self, config_path="", tools_repo_path="", version_var="TOOL_VERSION"):
+    def __init__(self, tools_repo_path: Union[str, pathlib.Path], config_path: str = "",
+                 version_var: str = "TOOL_VERSION"):
         super().__init__(
             config_path=config_path,
             tools_repo_path=tools_repo_path,

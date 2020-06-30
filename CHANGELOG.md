@@ -2,6 +2,12 @@
 
 All notable changes in project will be documented in here.
 
+## [0.1.2]
+
+### Changed
+
+  * Changes related to structure change of 'tools' repository. Index file is used now for tools path. README and metafiles are used now correctly.
+
 ## [0.1.1]
 
 ### Changed
@@ -54,4 +60,5 @@ All notable changes in project will be documented in here.
 
 ### Added
 - First release candidate
+
 

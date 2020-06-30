@@ -30,8 +30,6 @@ class VersionMaintainer:
         # Use local 'tools' path if provided
         self.meta_files_location = self.config.tools_repo_path or self.config.cache_location
         self.meta_filename = self.config.meta_filename
-        # Branch for meta files
-        self.branch = "master"
         # Disable download if local path provided
         self.disable_remote_download = (
             self.config.disable_remote if not self.config.tools_repo_path else True
@@ -43,15 +41,18 @@ class VersionMaintainer:
             )
         self.force_refresh = force_refresh
         self.able_to_check = {}
+        self.tool_dirs = []
 
     def _set_available_checkers(self):
         """
         Gets dictionary of tools, whereas upstream/origin check is supported.
 
         """
-        for tool_path in self.meta_files_location.iterdir():
-            if (tool_path / self.meta_filename).is_file():
-                self.able_to_check[f"{self.config.prefix}{tool_path.stem}"] = tool_path
+        for tool_dir in self.meta_files_location.iterdir():
+            if tool_dir.name in self.tool_dirs:
+                for tool_path in tool_dir.iterdir():
+                    if (tool_path / self.meta_filename).is_file():
+                        self.able_to_check[f"{self.config.prefix}{tool_path.stem}"] = tool_path
         if not self.able_to_check:
             self.logger.error(
                 f"No single configuration for upstream check found."
@@ -60,11 +61,13 @@ class VersionMaintainer:
 
     def _generate_meta_files(self, tools: [List, str]):
 
+        meta_handler = MetaHandler(self.config, self.force_refresh)
         if not self.disable_remote_download:
-            meta_handler = MetaHandler(self.config, self.force_refresh)
-            meta_handler.get_meta_files_from_gitlab(tools, self.branch)
+            meta_handler.get_meta_files_from_gitlab(tools, self.config.branch)
+            self.tool_dirs = meta_handler.tool_dirs
         else:
             self.logger.debug("Download disabled, nothing to generate.")
+            self.tool_dirs = meta_handler.read_index_file(self.config.tools_repo_path / "index.yml")
         self._set_available_checkers()
 
     def get_versions_single_tool(

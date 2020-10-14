@@ -32,7 +32,7 @@ def test_create_registry(mocker, caplog):
     assert isinstance(reg.config, Configuration)
 
     logs = [l.message for l in caplog.records]
-    assert logs[1:] == [
+    assert logs[-1:] == [
         f"No configuration file found for registry in location: {reg.config.file}"
     ]
 

@@ -9,7 +9,7 @@ unittests:
   services:
     - docker:dind
   before_script:
-    - apt-get update && apt-get install docker
+    - apt-get update && apt-get install -y docker
     - pip3 install .
     - pip3 install -r test-requirements.txt
   script:

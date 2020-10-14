@@ -1,10 +1,15 @@
+variables:
+    DOCKER_HOST: tcp://docker:2375/
 stages:
   - test
 
 unittests:
   stage: test
   image: python:3.6-slim-buster
+  services:
+    - docker:dind
   before_script:
+    - apt-get update && apt-get install docker
     - pip3 install .
     - pip3 install -r test-requirements.txt
   script:

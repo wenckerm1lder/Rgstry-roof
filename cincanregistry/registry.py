@@ -98,15 +98,22 @@ class ToolRegistry:
         login_uri = self.hub_url + "/users/login/"
         config = docker.utils.config.load_general_config()
         auths = (
-            next(iter(config.get("auths").values())) if config.get("auths") else None
+            iter(config.get("auths")) if config.get("auths") else None
         )
         if auths:
-            username, password = (
-                base64.b64decode(auths.get("auth")).decode("utf-8").split(":", 1)
+            auth = {key: value for key, value in config.get("auths").items() if "docker.io" in key}
+            if auth:
+                token = next(iter(auth.items()))[1].get("auth")
+                username, password = (
+                            base64.b64decode(token).decode("utf-8").split(":", 1)
+                        )
+            else:
+                raise PermissionError(
+                "Unable to find Docker Hub credentials. Please use 'docker login' to log in."
             )
         else:
             raise PermissionError(
-                "Unable to find credentials. Please use 'docker login' to log in."
+                "Unable to find any credentials. Please use 'docker login' to log in."
             )
         data = {"username": username, "password": password}
         headers = {

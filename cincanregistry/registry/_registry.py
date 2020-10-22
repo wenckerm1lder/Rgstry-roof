@@ -47,8 +47,6 @@ class ToolRegistry(metaclass=ABCMeta):
         self.auth_url: str = ""
         # Root of custom API of registry provider for extra functionality
         self.custom_api_root: str = ""
-        # Page size for Docker Hub
-        self.max_page_size: int = 1000
         self.version_var: str = version_var
         self.config: Configuration = Configuration(config_path, tools_repo_path)
         self.max_workers: int = self.config.max_workers
@@ -184,10 +182,10 @@ class ToolRegistry(metaclass=ABCMeta):
         token = self._get_registry_service_token(name)
 
         manifest_req = self.session.get(
-            self.registry_root + "/" + name + "/manifests/" + tag,
+            f"{self.registry_root}/{self.schema_version}/{name}/manifests/{tag}",
             headers={
-                "Authorization": ("Bearer " + token),
-                "Accept": "application/vnd.docker.distribution.manifest.v2+json",
+                "Authorization": f"{self.auth_digest_type} {token}",
+                "Accept": "application/vnd.docker.distribution.manifest.v1+json",
             },
         )
         if manifest_req.status_code != 200:
@@ -197,11 +195,6 @@ class ToolRegistry(metaclass=ABCMeta):
             )
             return {}
         return manifest_req.json()
-
-        # curl -s "https://registry.hub.docker.com/v2/repositories/cincan/"
-        # curl https://hub.docker.com/v2/repositories/cincan/tshark/tags
-        # curl - sSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:raulik/test-test-tool:pull" | jq - r.token > bearer - token
-        # curl - s H "Authorization: Bearer `cat bearer-token`" "https://registry.hub.docker.com/v2/raulik/test-test-tool/manifests/latest" | python - m json.tool
 
     async def get_local_remote_tools(self, defined_tag: str = "") -> Tuple[Dict, Dict]:
         """
@@ -291,7 +284,7 @@ class ToolRegistry(metaclass=ABCMeta):
             updated = parse_file_time(i.attrs["Created"])
             version = self._get_version_from_containerconfig_env(i.attrs)
             if not version:
-                version = VER_UNDEFINED
+                version = self.VER_UNDEFINED
             tags = set(i.tags)
             size = i.attrs.get("Size")
             if not versions:
@@ -491,6 +484,10 @@ class ToolRegistry(metaclass=ABCMeta):
             return json.dumps(versions)
         else:
             return versions
+
+    @abstractmethod
+    def fetch_tags(self, tool: ToolInfo, update_cache: bool = False):
+        pass
 
     @abstractmethod
     async def list_tools_registry(self, defined_tag: str = "") -> Dict[str, ToolInfo]:

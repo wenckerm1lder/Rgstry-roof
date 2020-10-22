@@ -1,4 +1,4 @@
-from .registry import ToolRegistry
+from ._registry import ToolRegistry
 from ..utils import parse_file_time, split_tool_tag
 from ..tool_info import ToolInfo, ToolInfoEncoder
 from ..version_info import VersionInfo
@@ -23,11 +23,12 @@ class DockerHubRegistry(ToolRegistry):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.registry_name = "Docker Hub"
-        self.registry_root = "https://index.docker.io"
-        self.custom_api_root = "https://registry.hub.docker.com"
+        self.registry_root = "https://registry.hub.docker.com"
+        # Page size for Docker Hub
+        self.max_page_size: int = 1000
         self._set_auth_and_service_location()
 
-    def _get_hub_session_cookies(self, s: requests.Session = None):
+    def _get_hub_session_cookies(self):
         """
         Gets JWT and CSRF token for making authorized requests for Docker Hub
         Updates request Session object with valid header
@@ -35,10 +36,8 @@ class DockerHubRegistry(ToolRegistry):
         It seems Docker Hub is using cookie-to-header pattern as
         extra CSRF protection, header named as 'X-CSRFToken'
         """
-        if not s:
-            s = self.session
 
-        login_uri = f"{self.custom_api_root}/{self.schema_version}/users/login/"
+        login_uri = f"{self.registry_root}/{self.schema_version}/users/login/"
         config = docker.utils.config.load_general_config()
         auths = (
             iter(config.get("auths")) if config.get("auths") else None
@@ -62,15 +61,16 @@ class DockerHubRegistry(ToolRegistry):
         headers = {
             "Content-Type": "application/json",  # redundant because json as data parameter
         }
-        resp = s.post(login_uri, json=data, headers=headers)
+        resp = self.session.post(login_uri, json=data, headers=headers)
         if resp.status_code == 200:
-            s.headers.update({"X-CSRFToken": s.cookies.get("csrftoken")})
+            self.session.headers.update({"X-CSRFToken": self.session.cookies.get("csrftoken")})
         else:
             raise PermissionError(f"Failed to fetch JWT and CSRF Token: {resp.content}")
 
     def fetch_tags(self, tool: ToolInfo, update_cache: bool = False
-    ):
-        """Fetch remote data to update a tool info
+                   ):
+        """
+        Fetch remote data to update a tool info
         Applies only to Docker Hub
         """
 
@@ -79,10 +79,10 @@ class DockerHubRegistry(ToolRegistry):
         tool_name, tool_tag = split_tool_tag(tool.name)
         params = {"page_size": self.max_page_size}
         tags_req = self.session.get(
-            f"{self.custom_api_root}/{self.schema_version}/repositories/{tool_name}/tags",
+            f"{self.registry_root}/{self.schema_version}/repositories/{tool_name}/tags",
             params=params,
             # headers={
-                # "Host": self.registry_host
+            # "Host": self.registry_host
             # },
         )
         if tags_req.status_code != 200:
@@ -141,7 +141,7 @@ class DockerHubRegistry(ToolRegistry):
         try:
             params = {"page_size": 1000}
             fresh_resp = self.session.get(
-                f"{self.custom_api_root}/{self.schema_version}/repositories/cincan/", params=params
+                f"{self.registry_root}/{self.schema_version}/repositories/cincan/", params=params
             )
         except requests.ConnectionError as e:
             self.logger.warning(e)
@@ -185,7 +185,7 @@ class DockerHubRegistry(ToolRegistry):
                     ):
                         tasks.append(
                             loop.run_in_executor(
-                                executor, self.fetch_tags, *(t)
+                                executor, self.fetch_tags, t
                             )
                         )
                         updated += 1

@@ -8,7 +8,7 @@ import logging
 
 class HubReadmeHandler(DockerHubRegistry):
     """
-    Class for updating README files in Docker Hub.
+    Class for updating README files and description in Docker Hub.
     """
 
     def __init__(self, tools_repo_path: Union[str, pathlib.Path], config_path: str = "",

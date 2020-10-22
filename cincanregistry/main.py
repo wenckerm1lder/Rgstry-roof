@@ -416,8 +416,6 @@ def list_handler(args):
     if not hasattr(args, "tools"):
         args.tools = ""
 
-    print(args)
-
     reg = DockerHubRegistry(args.config, args.tools)
 
     if not args.list_sub_command:

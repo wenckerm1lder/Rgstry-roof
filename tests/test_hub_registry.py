@@ -1,11 +1,9 @@
-from cincanregistry.registry import ToolRegistry
-from cincanregistry.utils import parse_file_time
+from cincanregistry.registry._registry import ToolRegistry
+from cincanregistry.registry.dockerhub import DockerHubRegistry
 from cincanregistry.configuration import Configuration
 import pathlib
-import docker
 import logging
 import requests
-import pytest
 
 
 def test_create_registry(mocker, caplog):
@@ -15,16 +13,14 @@ def test_create_registry(mocker, caplog):
     mocker.patch.object(pathlib.Path, "is_file", return_value=False)
 
     logging.getLogger("docker").setLevel(logging.WARNING)
-    reg = ToolRegistry()
+    reg = DockerHubRegistry()
 
     assert reg.logger
     assert reg.client
     assert reg.schema_version == "v2"
-    assert reg.hub_url == "https://hub.docker.com/v2"
+    assert reg.registry_root == "https://registry.hub.docker.com"
     assert reg.auth_url == "https://auth.docker.io/token"
     assert reg.registry_service == "registry.docker.io"
-    assert reg.registry_host == "registry.hub.docker.com"
-    assert reg.registry_url == "https://registry.hub.docker.com/v2"
     assert reg.max_workers == 30
     assert reg.max_page_size == 1000
     assert reg.version_var == "TOOL_VERSION"
@@ -32,14 +28,14 @@ def test_create_registry(mocker, caplog):
     assert isinstance(reg.config, Configuration)
 
     logs = [l.message for l in caplog.records]
-    assert logs[-1:] == [
+    assert logs[:1] == [
         f"No configuration file found for registry in location: {reg.config.file}"
     ]
 
 
 def test_is_docker_running(mocker, caplog):
     caplog.set_level(logging.ERROR)
-    reg = ToolRegistry()
+    reg = DockerHubRegistry()
     mocker.patch.object(
         reg.client,
         "ping",

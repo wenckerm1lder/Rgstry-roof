@@ -3,13 +3,13 @@ import logging
 import requests
 import datetime
 from unittest import mock
-from cincanregistry import ToolRegistry, ToolInfo
+from cincanregistry import DockerHubRegistry, ToolInfo
 from cincanregistry.utils import parse_file_time
 from .fake_instances import FAKE_DOCKER_REGISTRY_ERROR, FAKE_MANIFEST, TEST_REPOSITORY
 
 
 def test_docker_registry_api_error(mocker, caplog):
-    reg = ToolRegistry()
+    reg = DockerHubRegistry()
     caplog.set_level(logging.DEBUG)
     response = mock.Mock(ok=True)
     response.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
@@ -27,39 +27,37 @@ def test_docker_registry_api_error(mocker, caplog):
 
 @pytest.mark.external_api
 def test_get_service_token(mocker):
-    reg = ToolRegistry()
-    with requests.Session() as s:
-        assert reg._get_registry_service_token(s, TEST_REPOSITORY)
-        ret = mock.Mock(ok=True)
-        ret.status_code = 404
-        ret.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
-        mocker.patch.object(s, "get", return_value=ret, autospec=True)
-        assert not reg._get_registry_service_token(s, TEST_REPOSITORY)
+    reg = DockerHubRegistry()
+    assert reg._get_registry_service_token(TEST_REPOSITORY)
+    ret = mock.Mock(ok=True)
+    ret.status_code = 404
+    ret.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
+    mocker.patch.object(reg.session, "get", return_value=ret, autospec=True)
+    assert not reg._get_registry_service_token(TEST_REPOSITORY)
 
 
 @pytest.mark.external_api
 def test_fetch_manifest(mocker):
-    reg = ToolRegistry()
-    with requests.Session() as s:
-        # Test against real API
-        manifest = reg.fetch_manifest(TEST_REPOSITORY, "dev", session=s)
-        assert manifest.get("tag") == "dev"
-        assert manifest.get("name") == TEST_REPOSITORY
-        assert manifest.get("schemaVersion") == 1
-        assert manifest.get("history")
-        assert manifest.get("signatures")
-        assert manifest.get("fsLayers")
-        assert manifest.get("architecture")
+    reg = DockerHubRegistry()
+    # Test against real API
+    manifest = reg.fetch_manifest(TEST_REPOSITORY, "dev")
+    assert manifest.get("tag") == "dev"
+    assert manifest.get("name") == TEST_REPOSITORY
+    assert manifest.get("schemaVersion") == 1
+    assert manifest.get("history")
+    assert manifest.get("signatures")
+    assert manifest.get("fsLayers")
+    assert manifest.get("architecture")
 
-        ret = mock.Mock(ok=True)
-        ret.status_code = 404
-        ret.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
-        mocker.patch.object(s, "get", return_value=ret, autospec=True)
-        assert not reg.fetch_manifest(TEST_REPOSITORY, "dev", session=s)
+    ret = mock.Mock(ok=True)
+    ret.status_code = 404
+    ret.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
+    mocker.patch.object(reg.session, "get", return_value=ret, autospec=True)
+    assert not reg.fetch_manifest(TEST_REPOSITORY, "dev")
 
 
 def test_get_version_from_manifest(mocker, caplog):
-    reg = ToolRegistry()
+    reg = DockerHubRegistry()
     assert "1.0", parse_file_time(
         "2020-05-23T19:43:14.106177342Z"
     ) == reg._get_version_from_manifest(FAKE_MANIFEST)
@@ -101,29 +99,28 @@ def test_get_version_from_manifest(mocker, caplog):
 
 @pytest.mark.external_api
 def test_fetch_tags(mocker, caplog):
-    reg = ToolRegistry()
+    reg = DockerHubRegistry()
     caplog.set_level(logging.INFO)
-    with requests.Session() as s:
-        tool_info = ToolInfo(TEST_REPOSITORY, datetime.datetime.now(), "remote")
-        reg.fetch_tags(s, tool_info, update_cache=False)
-        assert tool_info.name == TEST_REPOSITORY
-        assert len(tool_info.versions) == 1
-        assert tool_info.versions[0].version == "1.0"
-        assert tool_info.versions[0].tags == {"dev"}
+    tool_info = ToolInfo(TEST_REPOSITORY, datetime.datetime.now(), "remote")
+    reg.fetch_tags(tool_info, update_cache=False)
+    assert tool_info.name == TEST_REPOSITORY
+    assert len(tool_info.versions) == 1
+    assert tool_info.versions[0].version == "1.0"
+    assert tool_info.versions[0].tags == {"dev"}
 
-        logs = [l.message for l in caplog.records]
-        assert logs == [
-            "fetch cincan/test..."
-        ]
-        caplog.clear()
-        caplog.set_level(logging.ERROR)
-        ret = mock.Mock(ok=True)
-        ret.status_code = 404
-        ret.content = "Not Found"
-        mocker.patch.object(s, "get", return_value=ret, autospec=True)
-        tool_info = ToolInfo(TEST_REPOSITORY, datetime.datetime.now(), "remote")
-        reg.fetch_tags(s, tool_info, update_cache=False)
-        logs = [l.message for l in caplog.records]
-        assert logs == [
-            "Error when getting tags for tool cincan/test: Not Found"
-        ]
+    logs = [l.message for l in caplog.records]
+    assert logs == [
+        "fetch cincan/test..."
+    ]
+    caplog.clear()
+    caplog.set_level(logging.ERROR)
+    ret = mock.Mock(ok=True)
+    ret.status_code = 404
+    ret.content = "Not Found"
+    mocker.patch.object(reg.session, "get", return_value=ret, autospec=True)
+    tool_info = ToolInfo(TEST_REPOSITORY, datetime.datetime.now(), "remote")
+    reg.fetch_tags(tool_info, update_cache=False)
+    logs = [l.message for l in caplog.records]
+    assert logs == [
+        "Error when getting tags for tool cincan/test: Not Found"
+    ]

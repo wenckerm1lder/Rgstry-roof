@@ -1,4 +1,4 @@
-from cincanregistry.registry.registry import ToolRegistry
+from cincanregistry.registry.dockerhub import DockerHubRegistry
 from .metafiles import MetaHandler
 from typing import Union
 import requests
@@ -6,7 +6,7 @@ import pathlib
 import logging
 
 
-class HubReadmeHandler(ToolRegistry):
+class HubReadmeHandler(DockerHubRegistry):
     """
     Class for updating README files in Docker Hub.
     """
@@ -32,23 +32,22 @@ class HubReadmeHandler(ToolRegistry):
         README for corresponding repository in DockerHub
         """
         fails = []
-        with requests.Session() as s:
-            self._get_hub_session_cookies(s)
-            for tools_root in self.tool_locations:
-                # Iterate over different locations: stable or dev tools etc.
-                for tool_path in (self.tools_repo_path / tools_root).iterdir():
-                    # Exclude files starting with '_' and '.'
-                    if tool_path.is_dir() and not (tool_path.stem.startswith(("_", "."))):
-                        tool_name = tool_path.stem
-                        if not self.update_readme_single_tool(tool_name, tool_path, s):
-                            fails.append(tool_name)
-            if fails:
-                self.logger.info(f"Not every README updated: {','.join(fails)}")
-            else:
-                self.logger.info("README of every tool updated.")
+        self._get_hub_session_cookies()
+        for tools_root in self.tool_locations:
+            # Iterate over different locations: stable or dev tools etc.
+            for tool_path in (self.tools_repo_path / tools_root).iterdir():
+                # Exclude files starting with '_' and '.'
+                if tool_path.is_dir() and not (tool_path.stem.startswith(("_", "."))):
+                    tool_name = tool_path.stem
+                    if not self.update_readme_single_tool(tool_name, tool_path, many=True):
+                        fails.append(tool_name)
+        if fails:
+            self.logger.info(f"Not every README updated: {','.join(fails)}")
+        else:
+            self.logger.info("README of every tool updated.")
 
     def update_readme_single_tool(
-            self, tool_name: str, tool_path: pathlib.Path = "", s: requests.Session = None, prefix="cincan/"
+            self, tool_name: str, tool_path: pathlib.Path = "", many: bool = False, prefix="cincan/"
     ) -> bool:
         """
         Upload README  and description of tool into Docker Hub.
@@ -59,11 +58,11 @@ class HubReadmeHandler(ToolRegistry):
         if not self.tools_repo_path:
             raise RuntimeError("'Tools' repository path must be defined.'")
 
-        if not s:
-            s = requests.Session()
-            self._get_hub_session_cookies(s)
+        # Cookie header updated already - expecting to update many files if "many=True"
+        if not many:
+            self._get_hub_session_cookies()
 
-        repository_uri = self.hub_url + f"/repositories/{prefix + tool_name}/"
+        repository_uri = f"{self.custom_api_root}/{self.schema_version}/repositories/{prefix + tool_name}/"
         readme_path = pathlib.Path()
         if tool_path:
             readme_path = tool_path / "README.md"
@@ -96,7 +95,7 @@ class HubReadmeHandler(ToolRegistry):
                         "description": description,
                     }
 
-                    resp = s.patch(repository_uri, json=data)
+                    resp = self.session.patch(repository_uri, json=data)
                     if resp.status_code == 200:
                         self.logger.info(
                             f"README and description updated for {tool_name}"

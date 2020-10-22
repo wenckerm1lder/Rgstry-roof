@@ -11,7 +11,13 @@ from cincanregistry.configuration import Configuration
 
 
 class RegistryBase(metaclass=ABCMeta):
-    """Base class for local and remote registry"""
+    """
+    Base class for local and remote registry
+
+    Provides some methods for handling cache
+
+    # TODO make sqlite3 database instead of JSON...
+    """
     VER_UNDEFINED = "undefined"
     CACHE_VERSION_VAR = "__cache_version"
 

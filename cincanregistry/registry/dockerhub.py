@@ -30,7 +30,7 @@ class DockerHubRegistry(RemoteRegistry):
 
     def _get_hub_session_cookies(self):
         """
-        Gets JWT and CSRF token for making authorized requests for Docker Hub
+        Gets JWT and CSRF token for making authorized requests for Docker Hub (not image registry)
         Updates request Session object with valid header
 
         It seems Docker Hub is using cookie-to-header pattern as
@@ -70,7 +70,7 @@ class DockerHubRegistry(RemoteRegistry):
     def fetch_tags(self, tool: ToolInfo, update_cache: bool = False
                    ):
         """
-        Fetch remote data to update a tool info
+        Fetch remote data to update a tool info. Gives more information than using regular registry /tags/list method
         Applies only to Docker Hub
         """
 

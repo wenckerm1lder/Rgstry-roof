@@ -1,4 +1,4 @@
-from .registry import ToolRegistry
+from cincanregistry.registry.registry import ToolRegistry
 from .metafiles import MetaHandler
 from typing import Union
 import requests

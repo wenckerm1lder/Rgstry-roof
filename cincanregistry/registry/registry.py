@@ -10,9 +10,9 @@ import docker
 import docker.errors
 import requests
 from datetime import datetime, timedelta
-from . import ToolInfo, ToolInfoEncoder, VersionInfo, VersionMaintainer
-from .utils import parse_file_time, split_tool_tag
-from .configuration import Configuration
+from cincanregistry import ToolInfo, ToolInfoEncoder, VersionInfo, VersionMaintainer
+from cincanregistry.utils import parse_file_time, split_tool_tag
+from cincanregistry.configuration import Configuration
 
 VER_UNDEFINED = "undefined"
 REMOTE_REGISTRY = "Dockerhub"
@@ -71,7 +71,7 @@ class ToolRegistry:
     def _get_registry_service_token(self, session: requests.Session, repo: str) -> str:
         """
         Gets Bearer token with 'pull' scope for single repository
-        in Docker Registry by default.
+        in Docker Registry HTTP API V2 by default.
         """
         params = {
             "service": self.registry_service,

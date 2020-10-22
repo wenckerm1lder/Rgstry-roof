@@ -1,3 +1,4 @@
+import re
 import asyncio
 import json
 import logging
@@ -21,7 +22,14 @@ CACHE_VERSION_VAR = "__cache_version"
 
 
 class ToolRegistry:
-    """A tool registry"""
+    """A tool registry
+    Implements client for Docker Registry HTTP V2 API
+    https://docs.docker.com/registry/spec/api/
+
+    Gives additional abstract methods for specific registries to list
+    images etc. which might not be supported by normal API.
+
+    """
 
     def __init__(
             self,
@@ -29,24 +37,33 @@ class ToolRegistry:
             tools_repo_path: str = "",
             version_var="TOOL_VERSION",
     ):
-        self.logger = logging.getLogger("registry")
-        self.client = docker.from_env()
+        self.logger: logging.Logger = logging.getLogger("registry")
+        self.client: docker.DockerClient = docker.from_env()
+        # Using single Requests.Session instance here
+        self.session: requests.Session = requests.Session()
 
-        self.schema_version = "v2"
-        self.hub_url = f"https://hub.docker.com/{self.schema_version}"
-        self.auth_url = "https://auth.docker.io/token"
-        self.registry_service = "registry.docker.io"
-        self.registry_host = "registry.hub.docker.com"
-        self.registry_url = f"https://{self.registry_host}/{self.schema_version}"
-        self.max_page_size = 1000
-        self.version_var = version_var
-        self.config = Configuration(config_path, tools_repo_path)
-        self.max_workers = self.config.max_workers
-        self.tool_cache = self.config.tool_cache
-        self.tool_cache_version = self.config.tool_cache_version
-        self.tools_repo_path = self.config.tools_repo_path
+        self.schema_version: str = "v2"
+        self.registry_name: str = ""
+        self.registry_root: str = ""
+        self.registry_service: str = ""
+        self.auth_digest_type: str = "Bearer"
+        self.auth_url: str = ""
+        self.auth_digest_type: str = ""
+        self.max_page_size: int = 1000
+        self.version_var: str = version_var
+        self.config: Configuration = Configuration(config_path, tools_repo_path)
+        self.max_workers: int = self.config.max_workers
+        self.tool_cache: pathlib.Path = self.config.tool_cache
+        self.tool_cache_version: str = self.config.tool_cache_version
+        self.tools_repo_path: pathlib.Path = self.config.tools_repo_path
+
+    def __del__(self):
+        self.session.close()
 
     def _is_docker_running(self):
+        """
+        Check if Docker Daemon is running
+        """
         try:
             self.client.ping()
             return True
@@ -67,6 +84,26 @@ class ToolRegistry:
             self.logger.debug(
                 f"{error.get('code')}: {error.get('message')} Additional details: {error.get('detail')}"
             )
+
+    def _set_auth_and_service_location(self):
+        """
+        Set registry auth endpoint and actual service location from root url
+        Acquired from the www-authenticate header
+        """
+
+        init_req = self.session.head(f"{self.registry_root}/{self.schema_version}/")
+        www_auth = init_req.headers.get("www-authenticate", "")
+        if not www_auth:
+            raise ValueError("No WWW-Authenticate header - unable to get auth details.")
+        # Parse key value pairs into dict
+        reg = re.compile(r'(\w+)[:=][\s"]?([^",]+)"?')
+        parsed_www = dict(reg.findall(www_auth))
+        self.registry_service = parsed_www.get("service", "")
+        self.auth_url = parsed_www.get("realm", "")
+        try:
+            self.auth_digest_type = www_auth.split(" ", 1)[0]
+        except IndexError():
+            self.logger.warning(f"Unable to get token digest type from {self.registry_root} , using default.")
 
     def _get_registry_service_token(self, session: requests.Session, repo: str) -> str:
         """
@@ -105,12 +142,12 @@ class ToolRegistry:
             if auth:
                 token = next(iter(auth.items()))[1].get("auth")
                 username, password = (
-                            base64.b64decode(token).decode("utf-8").split(":", 1)
-                        )
+                    base64.b64decode(token).decode("utf-8").split(":", 1)
+                )
             else:
                 raise PermissionError(
-                "Unable to find Docker Hub credentials. Please use 'docker login' to log in."
-            )
+                    "Unable to find Docker Hub credentials. Please use 'docker login' to log in."
+                )
         else:
             raise PermissionError(
                 "Unable to find any credentials. Please use 'docker login' to log in."
@@ -150,6 +187,8 @@ class ToolRegistry:
         """
         Parses value from defined variable from container's environment variables.
         In this case, defined variable is expected to contain version information.
+
+        Applies for old V1 manifest.
         """
 
         v1_comp_string = manifest.get("history", [{}])[0].get("v1Compatibility")
@@ -183,7 +222,7 @@ class ToolRegistry:
             self.registry_url + "/" + name + "/manifests/" + tag,
             headers={
                 "Authorization": ("Bearer " + token),
-                "Accept": "application/vnd.docker.distribution.manifest.list.v2+json",
+                "Accept": "application/vnd.docker.distribution.manifest.v2+json",
             },
         )
         if manifest_req.status_code != 200:
@@ -381,7 +420,9 @@ class ToolRegistry:
     def fetch_tags(
             self, session: requests.Session, tool: ToolInfo, update_cache: bool = False
     ):
-        """Fetch remote data to update a tool info"""
+        """Fetch remote data to update a tool info
+        Applies only to Docker Hub
+        """
 
         available_versions: List[VersionInfo] = []
         self.logger.info("fetch %s...", tool.name)

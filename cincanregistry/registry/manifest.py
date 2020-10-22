@@ -21,7 +21,7 @@ class ManifestV2:
         self.mediaType: str = manifest.get("mediaType", "")
         if self.mediaType.casefold() == self.MANIFEST_LIST_MIME.casefold():
             # Manifest list aka "fat manifest"
-            # TODO implement rest
+            # TODO implement rest as separate object
             self.manifests: List[Dict] = manifest.get("manifests", [])
         elif self.mediaType.casefold() == self.MANIFEST_IMAGE_MIME.casefold():
             # Image manifest

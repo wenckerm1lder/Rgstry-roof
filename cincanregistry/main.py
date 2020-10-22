@@ -1,4 +1,4 @@
-from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, ToolInfo
+from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, ToolInfo, DockerHubRegistry
 import argparse
 import sys
 import logging
@@ -416,7 +416,9 @@ def list_handler(args):
     if not hasattr(args, "tools"):
         args.tools = ""
 
-    reg = ToolRegistry(args.config, args.tools)
+    print(args)
+
+    reg = DockerHubRegistry(args.config, args.tools)
 
     if not args.list_sub_command:
 

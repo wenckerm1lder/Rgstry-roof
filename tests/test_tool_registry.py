@@ -1,5 +1,4 @@
 from cincanregistry.registry.toolregistry import ToolRegistry
-from cincanregistry.registry.dockerhub import DockerHubRegistry
 from cincanregistry.configuration import Configuration
 import pathlib
 import logging

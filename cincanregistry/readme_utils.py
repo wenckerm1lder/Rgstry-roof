@@ -1,7 +1,6 @@
-from cincanregistry.registry.dockerhub import DockerHubRegistry
+from cincanregistry.registry.remotes.dockerhub import DockerHubRegistry
 from .metafiles import MetaHandler
 from typing import Union
-import requests
 import pathlib
 import logging
 

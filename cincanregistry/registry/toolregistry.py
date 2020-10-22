@@ -6,7 +6,8 @@ from ._registry import RegistryBase
 from datetime import datetime, timedelta
 from cincanregistry import ToolInfo, VersionMaintainer
 from .daemon import DaemonRegistry
-from .dockerhub import DockerHubRegistry
+from cincanregistry.registry.remotes.dockerhub import DockerHubRegistry
+from cincanregistry.registry.remotes.quay import QuayRegistry
 
 
 class ToolRegistry(RegistryBase):
@@ -18,13 +19,18 @@ class ToolRegistry(RegistryBase):
 
     def __init__(
             self,
+            default_remote,
             *args,
             **kwargs
     ):
         super(ToolRegistry, self).__init__(*args, **kwargs)
+        self.default_remote = default_remote
         self.logger: logging.Logger = logging.getLogger("registry")
+        if self.default_remote.lower() == "quay":
+            self.remote_registry = QuayRegistry(*args, **kwargs)
+        else:
+            self.remote_registry = DockerHubRegistry(*args, **kwargs)
         self.local_registry = DaemonRegistry(*args, **kwargs)
-        self.remote_registry = DockerHubRegistry(*args, **kwargs)
 
     async def get_local_remote_tools(self, defined_tag: str = "") -> Tuple[Dict, Dict]:
         """

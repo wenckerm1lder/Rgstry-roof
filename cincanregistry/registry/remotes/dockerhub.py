@@ -1,7 +1,7 @@
-from ._registry import RemoteRegistry
-from ..utils import parse_file_time, split_tool_tag
-from ..tool_info import ToolInfo, ToolInfoEncoder
-from ..version_info import VersionInfo
+from cincanregistry.registry._registry import RemoteRegistry
+from cincanregistry.utils import parse_file_time, split_tool_tag
+from cincanregistry.tool_info import ToolInfo, ToolInfoEncoder
+from cincanregistry.version_info import VersionInfo
 from typing import Dict, List
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta

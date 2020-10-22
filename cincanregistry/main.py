@@ -1,4 +1,4 @@
-from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, ToolInfo, DockerHubRegistry
+from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, ToolInfo
 import argparse
 import sys
 import logging
@@ -32,7 +32,7 @@ MAX_WD = 30
 EXTRA_FILL = 35
 
 
-class color:
+class ANSIEscape:
     PURPLE = "\033[95m"
     CYAN = "\033[96m"
     DARKCYAN = "\033[36m"
@@ -55,13 +55,13 @@ def print_single_tool_version_check(tool, show_tags: bool = False):
     # Provider name length
     MAX_WN = 25
     MAX_WV = 40
-    print(f"\n{' ':<{PRE_SPACE}}{color.GREEN}  {tool.get('name')}{color.END}")
+    print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.GREEN}  {tool.get('name')}{ANSIEscape.END}")
     # pre-space and text format
     print(f"\n{' ':<{PRE_SPACE}}", end="")
     # Location
-    underlined_loc = f"{color.UNDERLINE}Location{color.END}"
-    underlined_ver = f"{color.UNDERLINE}Version{color.END}"
-    underlined_tags = f"{color.UNDERLINE}Tags{color.END}"
+    underlined_loc = f"{ANSIEscape.UNDERLINE}Location{ANSIEscape.END}"
+    underlined_ver = f"{ANSIEscape.UNDERLINE}Version{ANSIEscape.END}"
+    underlined_tags = f"{ANSIEscape.UNDERLINE}Tags{ANSIEscape.END}"
     # Underline "eats" padding by adding extra chars
     print(f"  {underlined_loc:<{MAX_WN + 8}}", end="")
     print(f"{underlined_ver:<{MAX_WV + 8}}", end="")
@@ -112,9 +112,9 @@ def print_version_check(
     # TODO add maybe tag column somehow
 
     print(f"\n{' ':<{PRE_SPACE}}Color explanations:", end=" ")
-    print(f"{color.GREEN_BACKGROUND}  {color.END} - tool up to date", end=" ")
-    print(f"{color.RED_BACKGROUND}  {color.END} - update available in remote", end=" ")
-    print(f"{color.GRAY_BACKGROUND}  {color.END} - remote differs from tool origin")
+    print(f"{ANSIEscape.GREEN_BACKGROUND}  {ANSIEscape.END} - tool up to date", end=" ")
+    print(f"{ANSIEscape.RED_BACKGROUND}  {ANSIEscape.END} - update available in remote", end=" ")
+    print(f"{ANSIEscape.GRAY_BACKGROUND}  {ANSIEscape.END} - remote differs from tool origin")
 
     if location == "local":
         print(
@@ -128,7 +128,7 @@ def print_version_check(
     )
 
     # pre-space and text format
-    print(f"\n{' ':<{PRE_SPACE}}{color.BOLD}  ", end="")
+    print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.BOLD}  ", end="")
     # name
     print(f"{'Tool name':<{MAX_WN}}", end="")
     # local ver
@@ -141,18 +141,18 @@ def print_version_check(
     print(f"{f'Origin Provider':{MAX_WP}}", end="")
 
     # end text format
-    print(f"{color.END}\n")
+    print(f"{ANSIEscape.END}\n")
 
     for tool_name in sorted(tools):
 
-        coloring = color.GREEN
+        coloring = ANSIEscape.GREEN
 
         tool = tools[tool_name]
 
         if tool.get("updates").get("local") and location in ["local", "both"]:
-            coloring = color.BOLD_RED
+            coloring = ANSIEscape.BOLD_RED
         elif tool.get("updates").get("remote"):
-            coloring = color.GRAY
+            coloring = ANSIEscape.GRAY
         if location == "local":
             if not tool.get("versions").get("local"):
                 continue
@@ -202,7 +202,7 @@ def print_version_check(
             end="",
         )
         # end colored section
-        print(f"{color.END if coloring else None}")
+        print(f"{ANSIEscape.END if coloring else None}")
     print()
 
 
@@ -214,13 +214,13 @@ def print_tools_by_location(
         print(f"{' ':<{PRE_SPACE}} Size as compressed in Remote.")
     if location == "local" and show_size:
         print(f"{' ':<{PRE_SPACE}} Size as uncompressed in Local.")
-    print(f"\n{' ':<{PRE_SPACE}}{color.BOLD}  ", end="")
+    print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.BOLD}  ", end="")
     print(f"{'Tool name':<{MAX_WN}}  ", end="")
     print(f"{f'{location.capitalize()} Version':{MAX_WV}}  ", end="")
     if show_size:
         print(f"{'Size':<{MAX_WS}}   ", end="")
     print(f"{f'{location.capitalize()} Tags':<{MAX_WT}}", end="")
-    print(f"{color.END}\n")
+    print(f"{ANSIEscape.END}\n")
     # if not filter_by:
     # print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
     for tool in sorted(tools):
@@ -267,14 +267,14 @@ def print_tools_by_location(
 
 
 def print_combined_local_remote(tools: dict, show_size=False):
-    print(f"\n{' ':<{PRE_SPACE}}{color.BOLD} ", end="")
+    print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.BOLD} ", end="")
     print(f"{'Tool name':<{MAX_WN}}", end="")
     print(f"{f'Local Version':{MAX_WV}}", end="")
     print(f"{'Remote Version':<{MAX_WV}}", end="")
     if show_size:
         print(f" {'R. Size':<{MAX_WS}}", end="")
     print(f"{f'Description':<{MAX_WD}}", end="")
-    print(f"{color.END}\n")
+    print(f"{ANSIEscape.END}\n")
 
     for tool in sorted(tools):
         l_version = tools[tool].get("local_version")[:CHARS_TO_SHOW]
@@ -416,7 +416,7 @@ def list_handler(args):
     if not hasattr(args, "tools"):
         args.tools = ""
 
-    reg = DockerHubRegistry(args.config, args.tools)
+    reg = ToolRegistry(args.config, args.tools)
 
     if not args.list_sub_command:
 
@@ -425,11 +425,11 @@ def list_handler(args):
             loop = asyncio.get_event_loop()
             try:
                 tools = loop.run_until_complete(
-                    reg.list_tools_local_images(
+                    reg.local_registry.get_tools(
                         defined_tag=args.tag if not args.all else ""
                     )
                 ) if args.local else loop.run_until_complete(
-                    reg.list_tools_registry(
+                    reg.remote_registry.get_tools(
                         defined_tag=args.tag if not args.all else ""
                     )
                 )
@@ -452,7 +452,7 @@ def list_handler(args):
                 )
 
         else:
-            tool_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
+            tool_list = reg.get_tools(defined_tag=args.tag if not args.all else "")
             if not args.all and not args.json and tool_list:
                 print(f"\n  Listing all tools with tag '{args.tag}':\n")
             if not args.json and tool_list:

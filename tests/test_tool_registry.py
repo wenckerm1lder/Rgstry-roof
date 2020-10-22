@@ -1,4 +1,4 @@
-from cincanregistry.registry._registry import ToolRegistry
+from cincanregistry.registry.toolregistry import ToolRegistry
 from cincanregistry.registry.dockerhub import DockerHubRegistry
 from cincanregistry.configuration import Configuration
 import pathlib
@@ -13,16 +13,16 @@ def test_create_registry(mocker, caplog):
     mocker.patch.object(pathlib.Path, "is_file", return_value=False)
 
     logging.getLogger("docker").setLevel(logging.WARNING)
-    reg = DockerHubRegistry()
+    reg = ToolRegistry()
 
     assert reg.logger
-    assert reg.client
-    assert reg.schema_version == "v2"
-    assert reg.registry_root == "https://registry.hub.docker.com"
-    assert reg.auth_url == "https://auth.docker.io/token"
-    assert reg.registry_service == "registry.docker.io"
-    assert reg.max_workers == 30
-    assert reg.max_page_size == 1000
+    assert reg.local_registry.client
+    assert reg.remote_registry.schema_version == "v2"
+    assert reg.remote_registry.registry_root == "https://registry.hub.docker.com"
+    assert reg.remote_registry.auth_url == "https://auth.docker.io/token"
+    assert reg.remote_registry.registry_service == "registry.docker.io"
+    assert reg.remote_registry.max_workers == 30
+    assert reg.remote_registry.max_page_size == 1000
     assert reg.version_var == "TOOL_VERSION"
     assert reg.tool_cache == pathlib.Path.home() / ".cincan" / "cache" / "tools.json"
     assert isinstance(reg.config, Configuration)
@@ -35,14 +35,14 @@ def test_create_registry(mocker, caplog):
 
 def test_is_docker_running(mocker, caplog):
     caplog.set_level(logging.ERROR)
-    reg = DockerHubRegistry()
+    reg = ToolRegistry()
     mocker.patch.object(
-        reg.client,
+        reg.local_registry.client,
         "ping",
         return_value=False,
         side_effect=requests.exceptions.ConnectionError(),
     )
-    assert not reg._is_docker_running()
+    assert not reg.local_registry._is_docker_running()
     logs = [l.message for l in caplog.records]
     assert logs == [
         "Failed to connect to Docker Server. Is it running?",
@@ -50,6 +50,6 @@ def test_is_docker_running(mocker, caplog):
     ]
 
     mocker.patch.object(
-        reg.client, "ping", return_value=True, autospec=True,
+        reg.local_registry.client, "ping", return_value=True, autospec=True,
     )
-    assert reg._is_docker_running()
+    assert reg.local_registry._is_docker_running()

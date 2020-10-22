@@ -1,4 +1,4 @@
-from ._registry import ToolRegistry
+from ._registry import RemoteRegistry
 from ..utils import parse_file_time, split_tool_tag
 from ..tool_info import ToolInfo, ToolInfoEncoder
 from ..version_info import VersionInfo
@@ -12,9 +12,9 @@ import base64
 import json
 
 
-class DockerHubRegistry(ToolRegistry):
+class DockerHubRegistry(RemoteRegistry):
     """
-    Inherits ToolRegistry class to get implementation of
+    Inherits RemoteRegistry class to get implementation of
     Docker Registry HTTP V2 API: https://docs.docker.com/registry/spec/api/
 
     Adds client for external API of Docker Hub in addition of default registry
@@ -133,7 +133,7 @@ class DockerHubRegistry(ToolRegistry):
         if update_cache:
             self.update_cache_by_tool(tool)
 
-    async def list_tools_registry(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
+    async def get_tools(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
         """List tools from registry with help of local c/ache"""
         # get_fetch_start = timeit.default_timer()
         fresh_resp = None

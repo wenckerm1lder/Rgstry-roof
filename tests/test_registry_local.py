@@ -1,6 +1,6 @@
 import docker
 import requests
-from cincanregistry import DockerHubRegistry
+from cincanregistry.registry.daemon import DaemonRegistry
 from cincanregistry.utils import parse_file_time
 from unittest import mock
 from .fake_instances import FAKE_IMAGE_ATTRS, TEST_REPOSITORY, FAKE_IMAGE, FAKE_IMAGE2, FAKE_IMAGE3
@@ -9,7 +9,7 @@ from .fake_instances import FAKE_IMAGE_ATTRS, TEST_REPOSITORY, FAKE_IMAGE, FAKE_
 def test_get_version_by_image_id(mocker):
     mock_image = mock.Mock(spec=docker.models.images.Image)
     mock_image.attrs = FAKE_IMAGE_ATTRS
-    reg = DockerHubRegistry()
+    reg = DaemonRegistry()
     reg.client = mock.Mock()
     mocker.patch.object(
         reg.client, "ping", return_value=True, autospec=True,
@@ -27,7 +27,7 @@ def test_get_version_by_image_id(mocker):
 
 
 def test_create_local_tool_info_by_name(mocker):
-    reg = DockerHubRegistry()
+    reg = DaemonRegistry()
     reg.client = mock.Mock()
     mocker.patch.object(
         reg.client, "ping", return_value=False, side_effect=requests.exceptions.ConnectionError(),

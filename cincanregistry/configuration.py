@@ -33,7 +33,7 @@ class Configuration:
 
         # Local path for 'tools' repository, used for development
         # Command line argument overrides path from conf file
-        self.tools_repo_path = (pathlib.Path(tools_repo_path) if tools_repo_path else None
+        self.tools_repo_path: pathlib.Path = (pathlib.Path(tools_repo_path) if tools_repo_path else None
                                 ) or (
                                    pathlib.Path(self.values.get("tools_repo_path"))
                                    if self.values.get("tools_repo_path")

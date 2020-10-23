@@ -26,7 +26,7 @@ class ManifestV2:
         elif self.mediaType.casefold() == self.MANIFEST_IMAGE_MIME.casefold():
             # Image manifest
             self.config: ConfigReference = ConfigReference(manifest.get("config", {}))
-            self.layers: List[Dict] = manifest.get("layers", [])
+            self.layers: List[LayerObject] = [LayerObject(layer) for layer in manifest.get("layers", [])]
             self.labels: Dict = {}
 
         else:
@@ -47,3 +47,23 @@ class ConfigReference:
         self.digest: str = config.get("digest", "")
         if not self.digest or not self.digest.startswith("sha256:"):
             raise ValueError("Reference digest for configuration object cannot be null or invalid format.")
+
+
+class LayerObject:
+    """
+    Layer object, based on the Manifest V2 schema
+    """
+
+    def __init__(self, layer: Dict):
+        self.mediaType: str = layer.get("mediaType")
+        self.size: int = layer.get("size")
+        self.digest: str = layer.get("digest")
+        self.urls: List = layer.get("urls", [])
+        if not (self.mediaType and self.size and self.digest):
+            raise ValueError("MediaType, size and digest is required for layer.")
+
+
+class ContainerConfig:
+
+    def __init__(self):
+        pass

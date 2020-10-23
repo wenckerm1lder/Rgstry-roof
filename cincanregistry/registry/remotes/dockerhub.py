@@ -74,7 +74,6 @@ class DockerHubRegistry(RemoteRegistry):
         Applies only to Docker Hub
         """
 
-        available_versions: List[VersionInfo] = []
         self.logger.info("fetch %s...", tool.name)
         tool_name, tool_tag = split_tool_tag(tool.name)
         params = {"page_size": self.max_page_size}
@@ -104,27 +103,8 @@ class DockerHubRegistry(RemoteRegistry):
         tag_names = list(map(lambda x: x["name"], tags_sorted))
         first_run = True
         if tag_names:
-            for t in tags_sorted:
-                manifest = self.fetch_manifest(tool_name, t.get("name"))
-                if first_run:
-                    manifest_latest = manifest
-                    first_run = False
-                if manifest:
-                    version, updated = self._get_version_from_manifest(manifest)
-                    if not version:
-                        version = self.VER_UNDEFINED
-                    match = [v for v in available_versions if version == v.version]
-                    if match:
-                        next(iter(match)).tags.add(t.get("name"))
-                    else:
-                        ver_info = VersionInfo(
-                            version,
-                            self.registry_name,
-                            {t.get("name")},
-                            updated,
-                            size=t.get("full_size"),
-                        )
-                        available_versions.append(ver_info)
+            available_versions = self.update_version_from_manifest_by_tags(tool_name, tag_names)
+
         else:
             self.logger.error(f"No tags found for tool {tool_name} for unknown reason.")
             return

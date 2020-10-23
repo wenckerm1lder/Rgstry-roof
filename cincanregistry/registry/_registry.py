@@ -2,12 +2,13 @@ import re
 import json
 import logging
 import pathlib
-from typing import Any, Dict, Union
+from typing import Any, Dict, Union, List
 from abc import ABCMeta, abstractmethod
 import requests
-from cincanregistry import ToolInfo, ToolInfoEncoder
-from cincanregistry.utils import parse_file_time
-from cincanregistry.configuration import Configuration
+from cincanregistry import ToolInfo, ToolInfoEncoder, VersionInfo
+from ..utils import parse_file_time
+from ..configuration import Configuration
+from .manifest import ManifestV2
 
 
 class RegistryBase(metaclass=ABCMeta):
@@ -197,18 +198,24 @@ class RemoteRegistry(RegistryBase):
         return version, updated
 
     def fetch_manifest(
-            self, name: str, tag: str
+            self, name: str, tag: str, token: str = ""
     ) -> Dict[str, Any]:
-        """Fetch docker image manifest information by tag"""
+        """
+        Fetch docker image manifest information by tag
+        Manifest version 1 is deprecated, only V2 used.
 
-        # Get authentication token for tool with pull scope
-        token = self._get_registry_service_token(name)
+        TODO add maybe "fat manifest" support
+        """
+
+        # Get authentication token for tool with pull scope if not provided
+        if not token:
+            token = self._get_registry_service_token(name)
 
         manifest_req = self.session.get(
             f"{self.registry_root}/{self.schema_version}/{name}/manifests/{tag}",
             headers={
                 "Authorization": f"{self.auth_digest_type} {token}",
-                "Accept": "application/vnd.docker.distribution.manifest.v1+json",
+                "Accept": f"application/vnd.docker.distribution.manifest.v2+json",
             },
         )
         if manifest_req.status_code != 200:
@@ -217,4 +224,35 @@ class RemoteRegistry(RegistryBase):
                 f"Error when getting manifest for tool {name}. Code {manifest_req.status_code}",
             )
             return {}
-        return manifest_req.json()
+        return ManifestV2(manifest_req.json())
+
+    def fetch_container_config(self, config_digest:str ):
+
+
+    def update_version_from_manifest_by_tags(self, tool_name: str, tag_names: List[str]) -> List[VersionInfo]:
+        """
+        By given tag name list, fetches corresponding manifests and generates version info
+        """
+        available_versions: List[VersionInfo] = []
+        # Get token only once for one tool because speed
+        token = self._get_registry_service_token(tool_name)
+        for t in tag_names:
+            manifest = self.fetch_manifest(tool_name, t, token)
+            if manifest:
+                version, updated = self._get_version_from_manifest(manifest)
+                if not version:
+                    version = self.VER_UNDEFINED
+                match = [v for v in available_versions if version == v.version]
+                if match:
+                    next(iter(match)).tags.add(t)
+                else:
+                    ver_info = VersionInfo(
+                        version,
+                        self.registry_name,
+                        {t},
+                        updated,
+                        # size=t.get("full_size"),
+                    )
+                    available_versions.append(ver_info)
+
+        return available_versions

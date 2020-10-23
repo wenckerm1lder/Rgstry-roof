@@ -2,6 +2,7 @@ import datetime
 import requests
 import json
 from typing import Dict, List
+from ...utils import split_tool_tag
 from cincanregistry.registry._registry import RemoteRegistry
 from cincanregistry import ToolInfo
 
@@ -40,6 +41,10 @@ class QuayRegistry(RemoteRegistry):
     def __fetch_available_tools(self, next_page: str = "", repo_kind: str = "image", popularity: bool = False,
                                 last_modified: bool = True, public: bool = True, starred: bool = False,
                                 namespace: str = "") -> List[Dict]:
+        """
+        Fetch all Docker images related to namespace
+        See: https://docs.quay.io/api/swagger/#!/repository/listRepos
+        """
         endpoint = "/api/v1/repository"
         params = {
             "next_page": next_page,
@@ -78,8 +83,12 @@ class QuayRegistry(RemoteRegistry):
                 if resp and resp.status_code == 200:
                     resp_cont = resp.json()
                     tools_list += resp_cont.get("repositories")
-                else:
+                elif resp:
                     self._quay_api_error(resp)
+                else:
+                    # Should not happen..
+                    self.logger.error(f"Something went wrong when fetching "
+                                      f"multiple pages of tools in {self.registry_name}")
             except requests.exceptions.ConnectionError as e:
                 self.logger.error(e)
                 return []
@@ -99,19 +108,29 @@ class QuayRegistry(RemoteRegistry):
         pass
 
     def fetch_tags(self, tool: ToolInfo, update_cache: bool = False):
-        endpoint = "/api/v1/repository/{tool.name}"
+        """
+        Fetches available tags for single tool from quay.io HTTP API
+        See: https://docs.quay.io/api/swagger/#!/repository/getRepo
+        """
+        # In case name includes tag, separate it
+        tool_name, tool_tag = split_tool_tag(tool.name)
+        endpoint = f"{self.registry_root}/api/v1/repository/{tool_name}"
         params = {
             "includeTags": True,
             "includeStats": False
         }
+        resp = None
         try:
-            resp = self.session.get(f"{self.registry_root}{endpoint}", params=params)
+            resp = self.session.get(endpoint, params=params)
         except requests.exceptions.ConnectionError as e:
             self.logger.error(e)
         if resp and resp.status_code == 200:
             resp_cont = resp.json()
+            tags = resp_cont.get("tags")
+
         else:
             self.logger.error(f"Failed to fetch tags for image {tool.name} - not updated")
-            self._quay_api_error(resp)
+            if resp:
+                self._quay_api_error(resp)
             return
         pass

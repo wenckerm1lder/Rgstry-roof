@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import List, Union
-from .checkers import UpstreamChecker
-from .utils import format_time, parse_file_time
+from cincanregistry.checkers import UpstreamChecker
+from cincanregistry.utils import format_time, parse_file_time
 import re
 
 

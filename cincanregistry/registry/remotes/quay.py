@@ -1,3 +1,6 @@
+import datetime
+import requests
+import json
 from typing import Dict, List
 from cincanregistry.registry._registry import RemoteRegistry
 from cincanregistry import ToolInfo
@@ -5,7 +8,7 @@ from cincanregistry import ToolInfo
 
 class QuayRegistry(RemoteRegistry):
     """
-    Implements Quay HTTP API partially (enough to be able to list repositories),
+    Implements Quay HTTP API partially (enough to be able to list repositories get some information),
     docs available in here https://docs.quay.io/api/swagger/#!/repository/listRepos
     """
 
@@ -15,10 +18,28 @@ class QuayRegistry(RemoteRegistry):
         self.registry_root = "https://quay.io"
         self._set_auth_and_service_location()
 
+    def _quay_api_error(self, resp: requests.Response):
+        """ Error schema:
+        {
+          "status": 0,
+          "error_message": "string",
+          "title": "string",
+          "error_type": "string",
+          "detail": "string",
+          "type": "string"
+        }
+        """
+        try:
+            resp = resp.json()
+            self.logger.error(f'Quay API error: {resp.get("status")} - {resp.get("error_message")}')
+            self.logger.error(f'Title: {resp.get("title")} Error type: {resp.get("error_type")}'
+                              f'Detail: {resp.get("detail")} Type: {resp.get("type")}')
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Non-schema response with status code: {resp.status_code}")
+
     def __fetch_available_tools(self, next_page: str = "", repo_kind: str = "image", popularity: bool = False,
                                 last_modified: bool = True, public: bool = True, starred: bool = False,
                                 namespace: str = "") -> List[Dict]:
-        tools_list: List[Dict] = []
         endpoint = "/api/v1/repository"
         params = {
             "next_page": next_page,
@@ -30,26 +51,67 @@ class QuayRegistry(RemoteRegistry):
             "namespace": namespace if namespace else self.config.namespace
         }
         if not next_page:
+            # Remove empty param
             params.pop("next_page")
-        resp = self.session.get(f"{self.registry_root}{endpoint}", params=params)
-        if resp.status_code == 200:
+        resp = None
+        try:
+            resp = self.session.get(f"{self.registry_root}{endpoint}", params=params)
+        except requests.exceptions.ConnectionError as e:
+            self.logger.error(e)
+
+        if resp and resp.status_code == 200:
+            # For some reason 200 is returned when namespace does not exist
             self.logger.debug(f"Acquired list of tools from {self.registry_root}")
+            resp_cont = resp.json()
+            if not resp_cont.get("repositories"):
+                self.logger.debug("Seems like namespace does not exist nor have available repositories.")
         else:
             self.logger.error(f"Failed to fetch tools from {self.registry_name}")
-        resp_cont = resp.json()
+            self._quay_api_error(resp)
+            return []
         tools_list = resp_cont.get("repositories")
         while "next_page" in resp_cont.keys():
-            self.logger.debug(f"Did not fetch all tools from the {self.registry_name}. Fetching 100 more...")
+            self.logger.debug(f"Did not fetch all tools from the {self.registry_name}. Fetching possible 100 more...")
             params["next_page"] = resp_cont.get("next_page")
-            resp = self.session.get(f"{self.registry_root}{endpoint}", params=params)
-            resp_cont = resp.json()
-            tools_list += resp_cont.get("repositories")
+            try:
+                resp = self.session.get(f"{self.registry_root}{endpoint}", params=params)
+                if resp and resp.status_code == 200:
+                    resp_cont = resp.json()
+                    tools_list += resp_cont.get("repositories")
+                else:
+                    self._quay_api_error(resp)
+            except requests.exceptions.ConnectionError as e:
+                self.logger.error(e)
+                return []
 
         return tools_list
 
     async def get_tools(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
-        self.__fetch_available_tools()
+        available_tools = self.__fetch_available_tools()
+        tool_list = {}
+        for t in available_tools:
+            name = f"{t.get('namespace')}/{t.get('name')}"
+            timestamp = t.get("last_modified")
+            description = t.get("description")
+            tool_list[name] = ToolInfo(name, datetime.datetime.fromtimestamp(timestamp),
+                                       self.registry_name, description)
+        self.fetch_tags(tool_list.get("cincan/radare2"))
         pass
 
     def fetch_tags(self, tool: ToolInfo, update_cache: bool = False):
+        endpoint = "/api/v1/repository/{tool.name}"
+        params = {
+            "includeTags": True,
+            "includeStats": False
+        }
+        try:
+            resp = self.session.get(f"{self.registry_root}{endpoint}", params=params)
+        except requests.exceptions.ConnectionError as e:
+            self.logger.error(e)
+        if resp and resp.status_code == 200:
+            resp_cont = resp.json()
+        else:
+            self.logger.error(f"Failed to fetch tags for image {tool.name} - not updated")
+            self._quay_api_error(resp)
+            return
         pass

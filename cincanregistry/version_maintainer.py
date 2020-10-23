@@ -1,11 +1,10 @@
 from typing import Dict, List, Tuple, Union
-from .tool_info import ToolInfo
-from .version_info import VersionInfo
+from cincanregistry.models.tool_info import ToolInfo
+from cincanregistry.models.version_info import VersionInfo
 from .checkers import classmap
-from .gitlab_utils import GitLabUtils
 from .utils import parse_file_time, format_time
 from .configuration import Configuration
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 import pathlib
 import json
 from datetime import datetime, timedelta

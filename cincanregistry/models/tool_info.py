@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
-from .version_info import VersionInfo
-from .utils import format_time, parse_file_time
+from cincanregistry.models.version_info import VersionInfo
+from cincanregistry.utils import format_time, parse_file_time
 from json import JSONEncoder
 
 

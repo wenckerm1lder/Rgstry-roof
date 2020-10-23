@@ -147,7 +147,7 @@ class DockerHubRegistry(RemoteRegistry):
                 tool_list[name] = ToolInfo(
                     name,
                     parse_file_time(t["last_updated"]),
-                    "remote",
+                    self.registry_name,
                     description=t.get("description", ""),
                 )
             # update tool info, when required

@@ -62,7 +62,7 @@ class VersionInfo:
     @property
     def docker_origin(self) -> bool:
         """
-        Returns true if this upsream is used to install tool in
+        Returns true if this upstream is used to install tool in
         corresponding dockerfile.
         """
         if isinstance(self._source, UpstreamChecker):

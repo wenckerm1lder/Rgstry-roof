@@ -52,6 +52,9 @@ class ConfigReference:
 class LayerObject:
     """
     Layer object, based on the Manifest V2 schema
+    
+    General MIME: application/vnd.docker.image.rootfs.diff.tar.gz
+    Might be: application/vnd.docker.image.rootfs.foreign.diff.tar.gzip on pull (never push)
     """
 
     def __init__(self, layer: Dict):
@@ -63,7 +66,25 @@ class LayerObject:
             raise ValueError("MediaType, size and digest is required for layer.")
 
 
-class ContainerConfig:
+class ImageConfig:
+    """
+    Based on the config schema: https://github.com/opencontainers/image-spec/blob/master/config.md
+    """
 
-    def __init__(self):
-        pass
+    def __init__(self, image_config: Dict):
+        self.created: str = image_config.get("created", "")
+        self.author: str = image_config.get("author", "")
+        self.architecture: str = image_config.get("architecture")
+        self.os: str = image_config.get("os")
+        # Config used on container creation
+        self.config: Dict = image_config.get("config", {})
+        self.rootfs: Dict = image_config.get("rootfs")
+        self.history: Dict = image_config.get("history", {})
+
+        # some params not in OCI spec, added by Docker #
+        self.container: str = image_config.get("container", "")
+        # Config from the last layer of the build
+        self.container_config: Dict = image_config.get("container_config", {})
+        self.docker_version: str = image_config.get("docker_version", "")
+        if not (self.architecture and self.os and self.rootfs):
+            raise ValueError("Invalid container conf, missing required fields")

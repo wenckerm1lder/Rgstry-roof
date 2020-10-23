@@ -8,7 +8,7 @@ import requests
 from cincanregistry import ToolInfo, ToolInfoEncoder, VersionInfo
 from ..utils import parse_file_time
 from ..configuration import Configuration
-from .manifest import ManifestV2
+from .manifest import ManifestV2, ImageConfig
 
 
 class RegistryBase(metaclass=ABCMeta):
@@ -197,9 +197,22 @@ class RemoteRegistry(RegistryBase):
             )
         return version, updated
 
+    def _get_version_from_image_config(self, conf:ImageConfig) -> str:
+        """
+        By given ImageConfig object, returns version of the tool from specific Env vale
+        :param conf:
+        :return:
+        """
+        env: List[str] = conf.config.get("Env")
+        for var in env:
+            if "".join(var).split("=")[0] == self.version_var:
+                version = "".join(var).split("=")[1]
+                return version
+        return ""
+
     def fetch_manifest(
             self, name: str, tag: str, token: str = ""
-    ) -> Dict[str, Any]:
+    ) -> ManifestV2:
         """
         Fetch docker image manifest information by tag
         Manifest version 1 is deprecated, only V2 used.
@@ -216,7 +229,7 @@ class RemoteRegistry(RegistryBase):
             headers={
                 "Authorization": f"{self.auth_digest_type} {token}",
                 "Accept": f"application/vnd.docker.distribution.manifest.v2+json",
-            },
+            }
         )
         if manifest_req.status_code != 200:
             self._docker_registry_api_error(
@@ -226,8 +239,34 @@ class RemoteRegistry(RegistryBase):
             return {}
         return ManifestV2(manifest_req.json())
 
-    def fetch_container_config(self, config_digest:str ):
+    def fetch_image_config(self, name: str, config_digest: str, token: str = "") -> ImageConfig:
+        """
+        Fetches image configuration JSON for tool by given config digest
+        :param name:
+        :param config_digest:
+        :param token:
+        :return:
+        """
 
+        if not token:
+            token = self._get_registry_service_token(name)
+        try:
+            config_res = self.session.get(
+                f"{self.registry_root}/{self.schema_version}/{name}/blobs/{config_digest}",
+                headers={
+                    "Authorization": f"{self.auth_digest_type} {token}",
+                    "Accept": f"application/vnd.docker.container.image.v1+json",
+                }
+            )
+            if config_res and config_res.status_code == 200:
+                return ImageConfig(config_res.json())
+            else:
+                self.logger.warning(f"Unable to get container configuration for tool {name} with digest {config_digest}"
+                                    f"response code: {config_res.status_code}")
+
+        except requests.ConnectionError as e:
+            self.logger.error(e)
+        return {}
 
     def update_version_from_manifest_by_tags(self, tool_name: str, tag_names: List[str]) -> List[VersionInfo]:
         """
@@ -238,8 +277,11 @@ class RemoteRegistry(RegistryBase):
         token = self._get_registry_service_token(tool_name)
         for t in tag_names:
             manifest = self.fetch_manifest(tool_name, t, token)
+            container_config = self.fetch_image_config(tool_name, manifest.config.digest, token)
+            size = sum([layer.size for layer in manifest.layers])
             if manifest:
-                version, updated = self._get_version_from_manifest(manifest)
+                version = self._get_version_from_image_config(container_config)
+                updated = parse_file_time(container_config.created)
                 if not version:
                     version = self.VER_UNDEFINED
                 match = [v for v in available_versions if version == v.version]
@@ -251,7 +293,7 @@ class RemoteRegistry(RegistryBase):
                         self.registry_name,
                         {t},
                         updated,
-                        # size=t.get("full_size"),
+                        size=size
                     )
                     available_versions.append(ver_info)
 

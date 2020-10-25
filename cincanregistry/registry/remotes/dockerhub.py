@@ -150,40 +150,5 @@ class DockerHubRegistry(RemoteRegistry):
                     self.registry_name,
                     description=t.get("description", ""),
                 )
-            # update tool info, when required
-            old_tools = self.read_tool_cache()
-            updated = 0
-            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
-                loop = asyncio.get_event_loop()
-                tasks = []
-                for t in tool_list.values():
-                    # print(t.name)
-                    # if t.name == "cincan/radare2:latest-stable":
-                    if (
-                            t.name not in old_tools
-                            or t.updated > old_tools[t.name].updated
-                    ):
-                        tasks.append(
-                            loop.run_in_executor(
-                                executor, self.fetch_tags, t
-                            )
-                        )
-                        updated += 1
-                    else:
-                        tool_list[t.name] = old_tools[t.name]
-                        self.logger.debug("no updates for %s", t.name)
-                for _ in await asyncio.gather(*tasks):
-                    pass
 
-            # save the tool list
-            if updated > 0:
-                self.tool_cache.parent.mkdir(parents=True, exist_ok=True)
-                with self.tool_cache.open("w") as f:
-                    self.logger.debug("saving tool cache %s", self.tool_cache)
-                    tool_list[self.CACHE_VERSION_VAR] = self.tool_cache_version
-                    json.dump(tool_list, f, cls=ToolInfoEncoder)
-            # read saved tools and return
-            # self.logger.debug(
-            #     f"Remote update time: {timeit.default_timer() - get_fetch_start} s"
-            # )
-            return self.read_tool_cache()
+            return await self.update_tools_in_parallel(tool_list, self.fetch_tags)

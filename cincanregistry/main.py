@@ -416,7 +416,7 @@ def list_handler(args):
     if not hasattr(args, "tools"):
         args.tools = ""
 
-    reg = ToolRegistry("NotQuay", args.config, args.tools)
+    reg = ToolRegistry("Quay", args.config, args.tools)
 
     if not args.list_sub_command:
 

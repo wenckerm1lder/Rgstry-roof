@@ -1,7 +1,7 @@
 import datetime
 import requests
 import json
-from typing import Dict, List
+from typing import Dict, List, Callable
 from ...utils import split_tool_tag
 from cincanregistry.registry._registry import RemoteRegistry
 from cincanregistry import ToolInfo
@@ -104,8 +104,7 @@ class QuayRegistry(RemoteRegistry):
             description = t.get("description")
             tool_list[name] = ToolInfo(name, datetime.datetime.fromtimestamp(timestamp),
                                        self.registry_name, description)
-        self.fetch_tags(tool_list.get("cincan/radare2"))
-        pass
+        return await self.update_tools_in_parallel(tool_list, self.fetch_tags)
 
     def fetch_tags(self, tool: ToolInfo, update_cache: bool = False):
         """
@@ -113,6 +112,7 @@ class QuayRegistry(RemoteRegistry):
         See: https://docs.quay.io/api/swagger/#!/repository/getRepo
         """
         # In case name includes tag, separate it
+        self.logger.info("fetch %s...", tool.name)
         tool_name, tool_tag = split_tool_tag(tool.name)
         endpoint = f"{self.registry_root}/api/v1/repository/{tool_name}"
         params = {
@@ -127,10 +127,19 @@ class QuayRegistry(RemoteRegistry):
         if resp and resp.status_code == 200:
             resp_cont = resp.json()
             tags = resp_cont.get("tags")
+            tag_names = tags.keys()
+            if tag_names:
+                available_versions = self.update_version_from_manifest_by_tags(tool_name, tag_names)
+            else:
+                self.logger.error(f"No tags found for tool {tool_name}.")
+                return
+            tool.versions = available_versions
+            tool.updated = datetime.datetime.now()
+            if update_cache:
+                self.update_cache_by_tool(tool)
 
         else:
             self.logger.error(f"Failed to fetch tags for image {tool.name} - not updated")
             if resp:
                 self._quay_api_error(resp)
             return
-        pass

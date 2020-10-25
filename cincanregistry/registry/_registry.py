@@ -2,8 +2,10 @@ import re
 import json
 import logging
 import pathlib
-from typing import Any, Dict, Union, List
+import asyncio
+from typing import Any, Dict, Union, List, Callable
 from abc import ABCMeta, abstractmethod
+from concurrent.futures import ThreadPoolExecutor
 import requests
 from cincanregistry import ToolInfo, ToolInfoEncoder, VersionInfo
 from ..utils import parse_file_time
@@ -197,7 +199,7 @@ class RemoteRegistry(RegistryBase):
             )
         return version, updated
 
-    def _get_version_from_image_config(self, conf:ImageConfig) -> str:
+    def _get_version_from_image_config(self, conf: ImageConfig) -> str:
         """
         By given ImageConfig object, returns version of the tool from specific Env vale
         :param conf:
@@ -267,6 +269,46 @@ class RemoteRegistry(RegistryBase):
         except requests.ConnectionError as e:
             self.logger.error(e)
         return {}
+
+    async def update_tools_in_parallel(self, tools: Dict[str, ToolInfo], fetch_function: Callable):
+        """
+        Updates information of tools based on given list by querying all manifests for available tags
+        """
+
+        old_tools = self.read_tool_cache()
+        updated = 0
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            loop = asyncio.get_event_loop()
+            tasks = []
+            for t in tools.values():
+                if (
+                        t.name not in old_tools
+                        or t.updated > old_tools[t.name].updated
+                ):
+                    tasks.append(
+                        loop.run_in_executor(
+                            executor, fetch_function, t
+                        )
+                    )
+                    updated += 1
+                else:
+                    tools[t.name] = old_tools[t.name]
+                    self.logger.debug("no updates for %s", t.name)
+            for _ in await asyncio.gather(*tasks):
+                pass
+
+        # save the tool list
+        if updated > 0:
+            self.tool_cache.parent.mkdir(parents=True, exist_ok=True)
+            with self.tool_cache.open("w") as f:
+                self.logger.debug("saving tool cache %s", self.tool_cache)
+                tools[self.CACHE_VERSION_VAR] = self.tool_cache_version
+                json.dump(tools, f, cls=ToolInfoEncoder)
+        # read saved tools and return
+        # self.logger.debug(
+        #     f"Remote update time: {timeit.default_timer() - get_fetch_start} s"
+        # )
+        return self.read_tool_cache()
 
     def update_version_from_manifest_by_tags(self, tool_name: str, tag_names: List[str]) -> List[VersionInfo]:
         """

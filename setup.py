@@ -15,7 +15,7 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://gitlab.com/cincan/cincan-registry",
-    packages=["cincanregistry", "cincanregistry.checkers"],
+    packages=["cincanregistry", "cincanregistry.checkers", "cincanregistry.models", "cincanregistry.registry", "cincanregistry.registry.remotes"],
     install_requires=["docker>=4.1", "python-gitlab>=2.2.0", "pyyaml"],
     classifiers=[
         "Programming Language :: Python :: 3",

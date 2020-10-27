@@ -423,6 +423,7 @@ def list_handler(args):
         if args.local or args.remote:
 
             loop = asyncio.get_event_loop()
+            loop.set_debug()
             try:
                 tools = loop.run_until_complete(
                     reg.local_registry.get_tools(

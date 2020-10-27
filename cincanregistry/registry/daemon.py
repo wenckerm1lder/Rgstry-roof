@@ -18,7 +18,11 @@ class DaemonRegistry(RegistryBase):
         super(DaemonRegistry, self).__init__(*args, **kwargs)
         self.registry_name = "Docker Server"
         self.logger = logging.getLogger("daemon")
-        self.client: docker.DockerClient = docker.from_env()
+        try:
+            self.client: docker.DockerClient = docker.from_env()
+        except docker.errors.DockerException as e:
+            self.logger.error(f"Failed to connect to Docker server: {e}")
+            self.client = None
 
     def _is_docker_running(self):
         """
@@ -27,12 +31,12 @@ class DaemonRegistry(RegistryBase):
         try:
             self.client.ping()
             return True
-        except ConnectionError:
+        except (ConnectionError, AttributeError):
             self.logger.error("Failed to connect to Docker Server. Is it running?")
             self.logger.error("Not able to list or use local tools.")
             return False
 
-    def _get_version_from_containerconfig_env(self, attrs: dict) -> str:
+    def _get_version_from_container_config_env(self, attrs: dict) -> str:
         """
         Parse version information ENV from local image attributes
         """
@@ -48,7 +52,7 @@ class DaemonRegistry(RegistryBase):
         if not self._is_docker_running():
             return ""
         image = self.client.images.get(image_id)
-        version = self._get_version_from_containerconfig_env(image.attrs)
+        version = self._get_version_from_container_config_env(image.attrs)
         return version
 
     def create_local_tool_info_by_name(self, name: str) -> Union[ToolInfo, None]:
@@ -65,7 +69,7 @@ class DaemonRegistry(RegistryBase):
         versions = []
         for i in images:
             updated = parse_file_time(i.attrs["Created"])
-            version = self._get_version_from_containerconfig_env(i.attrs)
+            version = self._get_version_from_container_config_env(i.attrs)
             if not version:
                 version = self.VER_UNDEFINED
             tags = set(i.tags)
@@ -115,7 +119,7 @@ class DaemonRegistry(RegistryBase):
                 name, tag = split_tool_tag(t)
                 if name.startswith(prefix):
                     if not defined_tag or tag == defined_tag:
-                        version = self._get_version_from_containerconfig_env(i.attrs)
+                        version = self._get_version_from_container_config_env(i.attrs)
                         if name in ret:
                             for j, v in enumerate(ret[name].versions):
                                 if v.version == version:

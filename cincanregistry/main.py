@@ -428,7 +428,6 @@ def list_handler(args):
         if args.local or args.remote:
 
             loop = asyncio.get_event_loop()
-            loop.set_debug()
             try:
                 tools = loop.run_until_complete(
                     reg.local_registry.get_tools(
@@ -443,15 +442,18 @@ def list_handler(args):
             finally:
                 loop.close()
             if tools:
+                location = "local" if args.local else "remote"
                 if not args.all and not args.json:
-                    print(f"\n  Listing all tools with tag '{args.tag}':\n")
+                    print(f"\n  Listing all {location} tools with tag '{args.tag}':\n")
                 elif not args.all and args.json:
                     print(json.dumps(tools, cls=ToolInfoEncoder))
                     exit(0)
                 else:
-                    print(f"\n  Listing all tools :\n")
-
-                location = "local" if args.local else "remote"
+                    if args.local:
+                        print(f"\n  Listing all {location} tools:\n")
+                    else:
+                        print(f"\n  Listing all {location} tools "
+                              f"from {reg.remote_registry.registry_name} ({reg.remote_registry.registry_root}):\n")
 
                 print_tools_by_location(
                     tools, location, args.tag if not args.all else "", args.size
@@ -460,8 +462,11 @@ def list_handler(args):
         else:
             tool_list = reg.get_tools(defined_tag=args.tag if not args.all else "")
             if not args.all and not args.json and tool_list:
-                print(f"\n  Listing all tools with tag '{args.tag}':\n")
+                print(
+                    f"\n  Listing all CinCan tools (remote from {reg.remote_registry.registry_name}) with tag '{args.tag}':\n")
             if not args.json and tool_list:
+                print(
+                    f"\n  Listing all CinCan tools (remote from {reg.remote_registry.registry_name}) with any tag:\n")
                 print_combined_local_remote(tool_list, args.size)
             elif tool_list:
                 print(json.dumps(tool_list))

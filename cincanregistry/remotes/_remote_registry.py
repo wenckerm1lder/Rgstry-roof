@@ -38,7 +38,9 @@ class RemoteRegistry(RegistryBase):
         pass
 
     def __del__(self):
-        self.session.close()
+        """Close requests session if it exists"""
+        if self.session:
+            self.session.close()
 
     def _docker_registry_api_error(
             self, r: requests.Response, custom_error_msg: str = ""

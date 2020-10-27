@@ -36,7 +36,7 @@ class QuayRegistry(RemoteRegistry):
             self.logger.error(f'Title: {resp.get("title")} Error type: {resp.get("error_type")}'
                               f'Detail: {resp.get("detail")} Type: {resp.get("type")}')
         except json.JSONDecodeError as e:
-            self.logger.error(f"Non-schema response with status code: {resp.status_code}")
+            self.logger.error(f"Non-schema response with status code: {resp.status_code} - {e}")
 
     def __fetch_available_tools(self, next_page: str = "", repo_kind: str = "image", popularity: bool = False,
                                 last_modified: bool = True, public: bool = True, starred: bool = False,

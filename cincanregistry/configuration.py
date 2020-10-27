@@ -1,4 +1,4 @@
-import json
+import yaml
 import pathlib
 import logging
 from typing import Dict
@@ -12,7 +12,7 @@ class Configuration:
             config_path) if config_path else pathlib.Path.home() / '.cincan' / 'registry.json'
         if self.file.is_file():
             with self.file.open() as f:
-                self.values: Dict = json.load(f)
+                self.values: Dict = yaml.load(f, Loader=yaml.SafeLoader)
         else:
             self.logger.debug(
                 f"No configuration file found for registry in location: {self.file.absolute()}"
@@ -20,10 +20,11 @@ class Configuration:
             self.values: Dict = {}
         # Maximum threads at once
         self.max_workers: int = 30
-        # Tokens for different platforms, used in version checking and meta file download
+        # Tokens for different platforms used in version checking and meta file download
         self.tokens: Dict = self.values.get("tokens", {})
         # Location for cached meta files
-        self.cache_location: pathlib.Path = pathlib.Path(self.values.get("cache_path")) if self.values.get("cache_path") \
+        self.cache_location: pathlib.Path = pathlib.Path(self.values.get("cache_path")) \
+            if self.values.get("cache_path") \
             else pathlib.Path.home() / ".cincan" / "cache"
         self.cache_lifetime: int = 24  # Cache validity in hours
         # Location for cached Docker Hub manifest information
@@ -33,12 +34,11 @@ class Configuration:
 
         # Local path for 'tools' repository, used for development
         # Command line argument overrides path from conf file
-        self.tools_repo_path: pathlib.Path = (pathlib.Path(tools_repo_path) if tools_repo_path else None
-                                ) or (
-                                   pathlib.Path(self.values.get("tools_repo_path"))
-                                   if self.values.get("tools_repo_path")
-                                   else None
-                               )
+        self.tools_repo_path: pathlib.Path = (pathlib.Path(tools_repo_path) if tools_repo_path else None) or (
+            pathlib.Path(self.values.get("tools_repo_path"))
+            if self.values.get("tools_repo_path")
+            else None
+        )
         # Default branch in GitLab
         self.branch: str = self.values.get("branch", "master")
         # Name for meta files in GitLab
@@ -53,3 +53,25 @@ class Configuration:
         self.prefix: str = "cincan/"
         # GitLab repository
         self.project: str = "tools"
+
+        # Generate config file with default values, using yaml format to enable comments
+        if not self.values:
+            self.logger.debug("Generating configuration file with default values.")
+            with self.file.open("w") as f:
+                print(f"# Configuration file of the cincan-registry Python module\n", file=f)
+                print(f"cache_path: {self.cache_location} # All cache files are in here", file=f)
+                print(f"registry_cache_path: {self.tool_cache} # Contains details about tools "
+                      f"(no version information)", file=f)
+                print(f"tools_repo__path: {self.tools_repo_path} # Path for local 'tools'"
+                      f" repository (Use metafiles from there)", file=f)
+
+                print(f"\n# Configuration related to tool metafiles.", file=f)
+                print(f"\nbranch: {self.branch} # Branch in GitLab for acquiring metafiles", file=f)
+                print(f"meta_filename: {self.meta_filename} # Filename of metafile in GitLab", file=f)
+                print(f"index_filename: {self.index_file} # Filename of index file in GitLab", file=f)
+                print(f"disable_remote: {self.disable_remote} # Disable fetching metafiles from GitLab", file=f)
+                print(f"\ntokens: # Possible authentication tokens to Docker Hub, Quay, GitLab, GitHub and so on.",
+                      file=f)
+                print("    DockerHub: ''", file=f)
+                print("    Quay: ''", file=f)
+                print(file=f)

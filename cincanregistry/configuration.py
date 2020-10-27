@@ -6,7 +6,7 @@ from enum import Enum
 
 
 class Remotes(Enum):
-    _order_ = 'QUAY DOCKERHUB'  # Order is important, first is default
+    _order_ = 'QUAY DOCKERHUB'  # Order is important, the first is default
     QUAY = "Quay"
     DOCKERHUB = "DockerHub"
 
@@ -16,7 +16,7 @@ class Remotes(Enum):
 
 class Configuration:
 
-    def __init__(self, remote_registry, config_path: str = "", tools_repo_path: str = ""):
+    def __init__(self, config_path: str = "", tools_repo_path: str = ""):
         self.logger = logging.getLogger("configuration")
         self.file: pathlib.Path = pathlib.Path(
             config_path) if config_path else pathlib.Path.home() / '.cincan' / 'registry.yaml'
@@ -33,10 +33,7 @@ class Configuration:
             )
             self.values: Dict = {}
         # Override from cmd only if non-default used
-        if remote_registry == list(Remotes)[0]:
-            self.registry = Remotes(self.values.get("registry", str(remote_registry)))
-        else:
-            self.registry = remote_registry
+        self.registry = Remotes(self.values.get("registry", str(list(Remotes)[0])))
         # Maximum threads at once
         self.max_workers: int = 30
         # Tokens for different platforms used in version checking and meta file download

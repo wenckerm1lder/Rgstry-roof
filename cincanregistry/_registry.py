@@ -20,13 +20,12 @@ class RegistryBase(metaclass=ABCMeta):
     REMOTE_NAME_VAR = "__registry"
 
     def __init__(self,
-                 remote_registry: Remotes,
                  config_path: str = "",
                  tools_repo_path: str = "",
                  version_var: str = "TOOL_VERSION"):
         self.logger: logging.Logger = logging.getLogger("registry")
         self.registry_name: str = ""
-        self.config: Configuration = Configuration(remote_registry, config_path, tools_repo_path)
+        self.config: Configuration = Configuration(config_path, tools_repo_path)
         self.version_var: str = version_var
         self.tool_cache: pathlib.Path = self.config.tool_cache
         self.tool_cache_version: str = self.config.tool_cache_version

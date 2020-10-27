@@ -1,3 +1,4 @@
+from cincanregistry import Remotes
 from cincanregistry.toolregistry import ToolRegistry
 from cincanregistry.configuration import Configuration
 import pathlib
@@ -12,7 +13,7 @@ def test_create_registry(mocker, caplog):
     mocker.patch.object(pathlib.Path, "is_file", return_value=False)
 
     logging.getLogger("docker").setLevel(logging.WARNING)
-    reg = ToolRegistry()
+    reg = ToolRegistry(Remotes.DOCKERHUB)
 
     assert reg.logger
     assert reg.local_registry.client
@@ -34,7 +35,7 @@ def test_create_registry(mocker, caplog):
 
 def test_is_docker_running(mocker, caplog):
     caplog.set_level(logging.ERROR)
-    reg = ToolRegistry()
+    reg = ToolRegistry(Remotes.DOCKERHUB)
     mocker.patch.object(
         reg.local_registry.client,
         "ping",

@@ -1,6 +1,7 @@
 from requests.exceptions import ConnectionError
 from datetime import datetime
 from typing import Dict, Union
+from cincanregistry import Remotes
 from cincanregistry.models.tool_info import ToolInfo
 from cincanregistry.models.version_info import VersionInfo
 from cincanregistry.utils import parse_file_time, split_tool_tag
@@ -16,7 +17,7 @@ class DaemonRegistry(RegistryBase):
 
     def __init__(self, *args, **kwargs):
         super(DaemonRegistry, self).__init__(*args, **kwargs)
-        self.registry_name = "Docker Server"
+        self.registry_name = "Docker Daemon"
         self.logger = logging.getLogger("daemon")
         try:
             self.client: docker.DockerClient = docker.from_env()

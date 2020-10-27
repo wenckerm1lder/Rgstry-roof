@@ -18,11 +18,12 @@ class ToolRegistry(RegistryBase):
 
     def __init__(
             self,
+            default_remote: Remotes,
             *args,
             **kwargs
     ):
         super(ToolRegistry, self).__init__(*args, **kwargs)
-        self.default_remote = self.config.registry
+        self.default_remote = default_remote if default_remote != list(Remotes)[0] else self.config.registry
         self.logger: logging.Logger = logging.getLogger("registry")
         if self.default_remote == Remotes.QUAY:
             self.remote_registry = QuayRegistry(*args, **kwargs)

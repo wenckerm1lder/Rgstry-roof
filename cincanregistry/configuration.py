@@ -9,10 +9,14 @@ class Configuration:
     def __init__(self, config_path: str = "", tools_repo_path: str = ""):
         self.logger = logging.getLogger("configuration")
         self.file: pathlib.Path = pathlib.Path(
-            config_path) if config_path else pathlib.Path.home() / '.cincan' / 'registry.json'
+            config_path) if config_path else pathlib.Path.home() / '.cincan' / 'registry.yaml'
         if self.file.is_file():
             with self.file.open() as f:
-                self.values: Dict = yaml.load(f, Loader=yaml.SafeLoader)
+                try:
+                    self.values: Dict = yaml.load(f, Loader=yaml.SafeLoader)
+                except yaml.parser.ParserError as e:
+                    self.logger.error(f"Unable to load configuration file: {e}")
+                    exit(1)
         else:
             self.logger.debug(
                 f"No configuration file found for registry in location: {self.file.absolute()}"

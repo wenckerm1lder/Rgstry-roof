@@ -4,7 +4,7 @@ import pathlib
 from typing import Dict, Union
 from abc import ABCMeta, abstractmethod
 from cincanregistry import ToolInfo, ToolInfoEncoder
-from cincanregistry.configuration import Configuration
+from cincanregistry.configuration import Configuration, Remotes
 
 
 class RegistryBase(metaclass=ABCMeta):
@@ -17,14 +17,16 @@ class RegistryBase(metaclass=ABCMeta):
     """
     VER_UNDEFINED = "undefined"
     CACHE_VERSION_VAR = "__cache_version"
+    REMOTE_NAME_VAR = "__registry"
 
     def __init__(self,
+                 remote_registry: Remotes,
                  config_path: str = "",
                  tools_repo_path: str = "",
                  version_var: str = "TOOL_VERSION"):
         self.logger: logging.Logger = logging.getLogger("registry")
         self.registry_name: str = ""
-        self.config: Configuration = Configuration(config_path, tools_repo_path)
+        self.config: Configuration = Configuration(remote_registry, config_path, tools_repo_path)
         self.version_var: str = version_var
         self.tool_cache: pathlib.Path = self.config.tool_cache
         self.tool_cache_version: str = self.config.tool_cache_version
@@ -40,15 +42,17 @@ class RegistryBase(metaclass=ABCMeta):
         if self.tool_cache.is_file():
             with self.tool_cache.open("r") as f:
                 tools = json.load(f)
-                if not tools.get(self.CACHE_VERSION_VAR) == self.tool_cache_version:
+                if not tools.get(self.CACHE_VERSION_VAR) == self.tool_cache_version or not tools.get(
+                        self.REMOTE_NAME_VAR) == self.registry_name:
                     tools = {}
         with self.tool_cache.open("w") as f:
             tools[self.CACHE_VERSION_VAR] = self.tool_cache_version
+            tools[self.REMOTE_NAME_VAR] = self.registry_name
             tools[tool.name] = dict(tool)
             self.logger.debug(f"Updating tool cache for tool {tool.name}")
             json.dump(tools, f, cls=ToolInfoEncoder)
 
-    def update_cache(self, tools: Dict[str, ToolInfo]):
+    def update_cache(self, tools: Dict[str, Union[ToolInfo, str]]):
         """
         Update tool cache by dict of ToolInfo objects
         """
@@ -56,6 +60,7 @@ class RegistryBase(metaclass=ABCMeta):
         with self.tool_cache.open("w") as f:
             self.logger.debug("saving tool cache %s", self.tool_cache)
             tools[self.CACHE_VERSION_VAR] = self.tool_cache_version
+            tools[self.REMOTE_NAME_VAR] = self.registry_name
             json.dump(tools, f, cls=ToolInfoEncoder)
 
     def read_tool_cache(
@@ -79,11 +84,13 @@ class RegistryBase(metaclass=ABCMeta):
                 self.tool_cache.unlink()
                 return {}
             c_ver = root_json.get(self.CACHE_VERSION_VAR, "")
-            if not c_ver == self.tool_cache_version:
+            c_remote = root_json.get(self.REMOTE_NAME_VAR, "")
+            if not c_ver == self.tool_cache_version or not c_remote == self.registry_name:
                 self.tool_cache.unlink()
                 return {}
             else:
                 del root_json[self.CACHE_VERSION_VAR]
+                del root_json[self.REMOTE_NAME_VAR]
             try:
                 if tool_name:
                     d = root_json.get(tool_name, {})

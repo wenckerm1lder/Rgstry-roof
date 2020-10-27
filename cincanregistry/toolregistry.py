@@ -4,10 +4,9 @@ import logging
 from typing import Tuple, Dict
 from ._registry import RegistryBase
 from datetime import datetime, timedelta
-from cincanregistry import ToolInfo, VersionMaintainer
+from cincanregistry import ToolInfo, VersionMaintainer, Remotes
 from .daemon import DaemonRegistry
-from cincanregistry.remotes import DockerHubRegistry
-from cincanregistry.remotes import QuayRegistry
+from cincanregistry.remotes import DockerHubRegistry, QuayRegistry
 
 
 class ToolRegistry(RegistryBase):
@@ -19,17 +18,19 @@ class ToolRegistry(RegistryBase):
 
     def __init__(
             self,
-            default_remote,
             *args,
             **kwargs
     ):
         super(ToolRegistry, self).__init__(*args, **kwargs)
-        self.default_remote = default_remote
+        self.default_remote = self.config.registry
         self.logger: logging.Logger = logging.getLogger("registry")
-        if self.default_remote.lower() == "quay":
+        if self.default_remote == Remotes.QUAY:
             self.remote_registry = QuayRegistry(*args, **kwargs)
-        else:
+        elif self.default_remote == Remotes.DOCKERHUB:
             self.remote_registry = DockerHubRegistry(*args, **kwargs)
+        else:
+            self.logger.error(f"Unsupported remote registry: {self.default_remote}")
+            exit(1)
         self.local_registry = DaemonRegistry(*args, **kwargs)
 
     async def get_local_remote_tools(self, defined_tag: str = "") -> Tuple[Dict, Dict]:

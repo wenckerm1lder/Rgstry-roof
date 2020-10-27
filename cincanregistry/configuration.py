@@ -2,11 +2,21 @@ import yaml
 import pathlib
 import logging
 from typing import Dict
+from enum import Enum
+
+
+class Remotes(Enum):
+    _order_ = 'QUAY DOCKERHUB'  # Order is important, first is default
+    QUAY = "Quay"
+    DOCKERHUB = "DockerHub"
+
+    def __str__(self):
+        return self.value
 
 
 class Configuration:
 
-    def __init__(self, config_path: str = "", tools_repo_path: str = ""):
+    def __init__(self, remote_registry, config_path: str = "", tools_repo_path: str = ""):
         self.logger = logging.getLogger("configuration")
         self.file: pathlib.Path = pathlib.Path(
             config_path) if config_path else pathlib.Path.home() / '.cincan' / 'registry.yaml'
@@ -22,6 +32,11 @@ class Configuration:
                 f"No configuration file found for registry in location: {self.file.absolute()}"
             )
             self.values: Dict = {}
+        # Override from cmd only if non-default used
+        if remote_registry == list(Remotes)[0]:
+            self.registry = Remotes(self.values.get("registry", str(remote_registry)))
+        else:
+            self.registry = remote_registry
         # Maximum threads at once
         self.max_workers: int = 30
         # Tokens for different platforms used in version checking and meta file download
@@ -34,7 +49,7 @@ class Configuration:
         # Location for cached Docker Hub manifest information
         self.tool_cache: pathlib.Path = pathlib.Path(self.values.get("registry_cache_path")) if self.values.get(
             "registry_cache_path") else self.cache_location / "tools.json"
-        self.tool_cache_version: str = "1.0"
+        self.tool_cache_version: str = "1.1"
 
         # Local path for 'tools' repository, used for development
         # Command line argument overrides path from conf file
@@ -63,6 +78,7 @@ class Configuration:
             self.logger.debug("Generating configuration file with default values.")
             with self.file.open("w") as f:
                 print(f"# Configuration file of the cincan-registry Python module\n", file=f)
+                print(f"registry: {self.registry}  # Default registry where from CinCan tools are used", file=f)
                 print(f"cache_path: {self.cache_location} # All cache files are in here", file=f)
                 print(f"registry_cache_path: {self.tool_cache} # Contains details about tools "
                       f"(no version information)", file=f)

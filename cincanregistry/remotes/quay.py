@@ -4,7 +4,7 @@ import json
 from typing import Dict, List
 from cincanregistry.utils import split_tool_tag
 from cincanregistry.remotes._remote_registry import RemoteRegistry
-from cincanregistry import ToolInfo
+from cincanregistry import ToolInfo, Remotes
 
 
 class QuayRegistry(RemoteRegistry):
@@ -15,7 +15,7 @@ class QuayRegistry(RemoteRegistry):
 
     def __init__(self, *args, **kwargs):
         super(QuayRegistry, self).__init__(*args, **kwargs)
-        self.registry_name = "Quay"
+        self.registry_name = Remotes.QUAY.value
         self.registry_root = "https://quay.io"
         self._set_auth_and_service_location()
 

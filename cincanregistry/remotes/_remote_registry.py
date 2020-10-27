@@ -4,10 +4,9 @@ import re
 from abc import abstractmethod
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import List, Dict, Callable, Union
-
 import requests
 
-from cincanregistry import ToolInfo, ToolInfoEncoder, VersionInfo
+from cincanregistry import ToolInfo, VersionInfo
 from cincanregistry._registry import RegistryBase
 from cincanregistry.models.manifest import ImageConfig, ManifestV2
 from cincanregistry.utils import parse_file_time

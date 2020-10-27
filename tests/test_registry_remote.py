@@ -4,6 +4,7 @@ import datetime
 from unittest import mock
 from cincanregistry import ToolInfo
 from cincanregistry.remotes import DockerHubRegistry
+from cincanregistry.models.manifest import ConfigReference, LayerObject
 from cincanregistry.utils import parse_file_time
 from .fake_instances import FAKE_DOCKER_REGISTRY_ERROR, FAKE_MANIFEST, TEST_REPOSITORY
 
@@ -41,14 +42,10 @@ def test_fetch_manifest(mocker):
     reg = DockerHubRegistry()
     # Test against real API
     manifest = reg.fetch_manifest(TEST_REPOSITORY, "dev")
-    assert manifest.get("tag") == "dev"
-    assert manifest.get("name") == TEST_REPOSITORY
-    assert manifest.get("schemaVersion") == 1
-    assert manifest.get("history")
-    assert manifest.get("signatures")
-    assert manifest.get("fsLayers")
-    assert manifest.get("architecture")
-
+    assert manifest.schemaVersion == 2
+    assert manifest.mediaType == "application/vnd.docker.distribution.manifest.v2+json"
+    assert isinstance(manifest.config, ConfigReference)
+    assert isinstance(manifest.layers[0], LayerObject)
     ret = mock.Mock(ok=True)
     ret.status_code = 404
     ret.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
@@ -56,7 +53,9 @@ def test_fetch_manifest(mocker):
     assert not reg.fetch_manifest(TEST_REPOSITORY, "dev")
 
 
+@pytest.mark.external_api
 def test_get_version_from_manifest(mocker, caplog):
+    """Test for deprecated v1 manifest"""
     reg = DockerHubRegistry()
     assert "1.0", parse_file_time(
         "2020-05-23T19:43:14.106177342Z"

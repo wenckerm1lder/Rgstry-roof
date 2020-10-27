@@ -1,4 +1,4 @@
-from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, ToolInfo
+from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, ToolInfo, Remotes
 import argparse
 import sys
 import logging
@@ -292,7 +292,7 @@ def print_combined_local_remote(tools: dict, show_size=False):
 
 
 def create_head_argparse() -> argparse.ArgumentParser:
-    m_parser = argparse.ArgumentParser()
+    m_parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     m_parser.add_argument(
         "-l",
         "--log",
@@ -300,6 +300,12 @@ def create_head_argparse() -> argparse.ArgumentParser:
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Set the logging level",
         default=None,
+    )
+    m_parser.add_argument(
+        "--registry", help="Registry, where tools are located. Case sensitive. Changes it also permanently"
+                           " into configuration file.", type=Remotes,
+        choices=list(Remotes),
+        default=list(Remotes)[0]  # First value is default to keep definition consistent
     )
     m_parser.add_argument("-q", "--quiet", action="store_true", help="Be quite quiet")
     m_parser.add_argument(
@@ -415,8 +421,7 @@ def list_handler(args):
     # If exported as module and parent parser of 'list' not defining
     if not hasattr(args, "tools"):
         args.tools = ""
-
-    reg = ToolRegistry("Quay", args.config, args.tools)
+    reg = ToolRegistry(args.registry, args.config, args.tools)
 
     if not args.list_sub_command:
 

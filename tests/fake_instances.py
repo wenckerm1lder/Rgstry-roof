@@ -180,6 +180,7 @@ FAKE_IMAGE3 = mock.Mock(spec=docker.models.images.Image)
 FAKE_IMAGE3.attrs = FAKE_IMAGE_ATTRS2
 FAKE_IMAGE3.tags = ["cincan/test:test"]
 
+# Deprecated v1 manifest - not used anymore
 FAKE_MANIFEST = {
     "architecture": "amd64",
     "fsLayers": [

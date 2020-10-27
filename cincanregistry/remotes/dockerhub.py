@@ -1,3 +1,4 @@
+from cincanregistry import Remotes
 from cincanregistry.remotes._remote_registry import RemoteRegistry
 from cincanregistry.utils import parse_file_time, split_tool_tag
 from cincanregistry.models.tool_info import ToolInfo
@@ -18,7 +19,7 @@ class DockerHubRegistry(RemoteRegistry):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.registry_name = "Docker Hub"
+        self.registry_name = Remotes.DOCKERHUB.value
         self.registry_root = "https://registry.hub.docker.com"
         # Page size for Docker Hub
         self.max_page_size: int = 1000

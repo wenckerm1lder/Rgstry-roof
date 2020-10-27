@@ -1,4 +1,4 @@
-from cincanregistry.registry.toolregistry import ToolRegistry
+from cincanregistry.toolregistry import ToolRegistry
 from cincanregistry.configuration import Configuration
 import pathlib
 import logging

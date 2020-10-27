@@ -1,15 +1,11 @@
-from cincanregistry.registry._registry import RemoteRegistry
+from cincanregistry.remotes._remote_registry import RemoteRegistry
 from cincanregistry.utils import parse_file_time, split_tool_tag
-from cincanregistry.models.tool_info import ToolInfo, ToolInfoEncoder
-from cincanregistry.models.version_info import VersionInfo
-from typing import Dict, List
-from concurrent.futures import ThreadPoolExecutor
+from cincanregistry.models.tool_info import ToolInfo
+from typing import Dict
 from datetime import datetime
-import asyncio
 import requests
 import docker
 import base64
-import json
 
 
 class DockerHubRegistry(RemoteRegistry):
@@ -103,7 +99,7 @@ class DockerHubRegistry(RemoteRegistry):
         tag_names = list(map(lambda x: x["name"], tags_sorted))
         first_run = True
         if tag_names:
-            available_versions = self.update_version_from_manifest_by_tags(tool_name, tag_names)
+            available_versions = self.update_versions_from_manifest_by_tags(tool_name, tag_names)
 
         else:
             self.logger.error(f"No tags found for tool {tool_name} for unknown reason.")

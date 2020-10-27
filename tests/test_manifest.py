@@ -1,5 +1,5 @@
 import pytest
-from cincanregistry.registry.manifest import LayerObject, ManifestV2, ConfigReference
+from cincanregistry.models.manifest import LayerObject, ManifestV2, ConfigReference
 
 EXAMPLE_MANIFEST = {
     "schemaVersion": 2,
@@ -68,7 +68,7 @@ def test_layer_object():
     LAYER_OBJ["size"] = ""
 
     with pytest.raises(ValueError) as e:
-        testLayer = LayerObject(LAYER_OBJ)
+        LayerObject(LAYER_OBJ)
 
     LAYER_OBJ["urls"] = ["some-almost-valid-url.com"]
     LAYER_OBJ["size"] = 50
@@ -89,11 +89,11 @@ def test_manifest_object_v2():
 
     with pytest.raises(TypeError):
         EXAMPLE_MANIFEST["schemaVersion"] = 1
-        manifest2 = ManifestV2(EXAMPLE_MANIFEST)
+        ManifestV2(EXAMPLE_MANIFEST)
     with pytest.raises(TypeError):
         EXAMPLE_MANIFEST["schemaVersion"] = 2
         EXAMPLE_MANIFEST["mediaType"] = "NotCorrect"
-        manifest2 = ManifestV2(EXAMPLE_MANIFEST)
+        ManifestV2(EXAMPLE_MANIFEST)
 
 
 def test_config_reference():
@@ -105,9 +105,8 @@ def test_config_reference():
 
     EXAMPLE_MANIFEST["config"]["mediaType"] = "unsupported"
     with pytest.raises(TypeError):
-        conf_ref = ConfigReference(EXAMPLE_MANIFEST.get("config"))
+        ConfigReference(EXAMPLE_MANIFEST.get("config"))
     EXAMPLE_MANIFEST["config"]["mediaType"] = "application/vnd.docker.container.image.v1+json"
     EXAMPLE_MANIFEST["config"]["digest"] = "not-starting-with-sha256"
     with pytest.raises(ValueError):
-        conf_ref = ConfigReference(EXAMPLE_MANIFEST.get("config"))
-
+        ConfigReference(EXAMPLE_MANIFEST.get("config"))

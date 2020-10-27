@@ -6,8 +6,8 @@ from ._registry import RegistryBase
 from datetime import datetime, timedelta
 from cincanregistry import ToolInfo, VersionMaintainer
 from .daemon import DaemonRegistry
-from cincanregistry.registry.remotes.dockerhub import DockerHubRegistry
-from cincanregistry.registry.remotes.quay import QuayRegistry
+from cincanregistry.remotes import DockerHubRegistry
+from cincanregistry.remotes import QuayRegistry
 
 
 class ToolRegistry(RegistryBase):

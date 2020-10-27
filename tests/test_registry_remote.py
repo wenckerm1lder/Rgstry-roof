@@ -3,7 +3,7 @@ import logging
 import datetime
 from unittest import mock
 from cincanregistry import ToolInfo
-from cincanregistry.registry.remotes.dockerhub import DockerHubRegistry
+from cincanregistry.remotes import DockerHubRegistry
 from cincanregistry.utils import parse_file_time
 from .fake_instances import FAKE_DOCKER_REGISTRY_ERROR, FAKE_MANIFEST, TEST_REPOSITORY
 

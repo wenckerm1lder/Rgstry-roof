@@ -1,7 +1,7 @@
 from cincanregistry.models.version_info import VersionInfo
 from cincanregistry.models.tool_info import ToolInfo, ToolInfoEncoder
 from .version_maintainer import VersionMaintainer
-from cincanregistry.registry.toolregistry import ToolRegistry
+from cincanregistry.toolregistry import ToolRegistry
 from .readme_utils import HubReadmeHandler
 from .main import (
     list_handler,

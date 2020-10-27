@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Dict, Union
 from cincanregistry.models.tool_info import ToolInfo
 from cincanregistry.models.version_info import VersionInfo
-from ..utils import parse_file_time, split_tool_tag
+from cincanregistry.utils import parse_file_time, split_tool_tag
 from ._registry import RegistryBase
 import logging
 import docker

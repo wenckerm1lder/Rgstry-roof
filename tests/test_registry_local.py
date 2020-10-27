@@ -1,6 +1,6 @@
 import docker
 import requests
-from cincanregistry.registry.daemon import DaemonRegistry
+from cincanregistry.daemon import DaemonRegistry
 from cincanregistry.utils import parse_file_time
 from unittest import mock
 from .fake_instances import FAKE_IMAGE_ATTRS, TEST_REPOSITORY, FAKE_IMAGE, FAKE_IMAGE2, FAKE_IMAGE3

@@ -64,7 +64,7 @@ class ReadmeHandler(metaclass=ABCMeta):
             self, tool_name: str, tool_path: pathlib.Path = "", many: bool = False, prefix="cincan/"
     ) -> bool:
         """
-        Upload README  and description of tool into Docker Hub.
+        Upload possible README and description of tool into Container Registry.
         Description is first header (H1) of README.
 
         Return True on successful update, False otherwise
@@ -141,7 +141,7 @@ class HubReadmeHandler(DockerHubRegistry, ReadmeHandler):
 
 
 class QuayReadmeHandler(QuayRegistry, ReadmeHandler):
-    """Update description in Quay"""
+    """Update description in Quay Registry Seems like there is only one field for description."""
 
     def __init__(self, *args, **kwargs):
         QuayRegistry.__init__(self, *args, **kwargs)

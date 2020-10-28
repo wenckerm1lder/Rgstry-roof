@@ -464,7 +464,8 @@ def list_handler(args):
             if not args.all and not args.json and tool_list:
                 print(
                     f"\n  Listing all CinCan tools (remote from {reg.remote_registry.registry_name}) with tag '{args.tag}':\n")
-            if not args.json and tool_list:
+                print_combined_local_remote(tool_list, args.size)
+            elif not args.json and tool_list and args.all:
                 print(
                     f"\n  Listing all CinCan tools (remote from {reg.remote_registry.registry_name}) with any tag:\n")
                 print_combined_local_remote(tool_list, args.size)

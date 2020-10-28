@@ -103,7 +103,7 @@ class QuayRegistry(RemoteRegistry):
             timestamp = t.get("last_modified")
             description = t.get("description")
             tool_list[name] = ToolInfo(name, datetime.datetime.fromtimestamp(timestamp),
-                                       self.registry_name, description)
+                                       self.registry_name, description=description)
         return await self.update_tools_in_parallel(tool_list, self.fetch_tags)
 
     def fetch_tags(self, tool: ToolInfo, update_cache: bool = False):

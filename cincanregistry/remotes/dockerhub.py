@@ -5,8 +5,6 @@ from cincanregistry.models.tool_info import ToolInfo
 from typing import Dict
 from datetime import datetime
 import requests
-import docker
-import base64
 
 
 class DockerHubRegistry(RemoteRegistry):
@@ -21,6 +19,7 @@ class DockerHubRegistry(RemoteRegistry):
         super().__init__(*args, **kwargs)
         self.registry_name = Remotes.DOCKERHUB.value
         self.registry_root = "https://registry.hub.docker.com"
+        self.custom_uri: str = "https://docker.io"
         # Page size for Docker Hub
         self.max_page_size: int = 1000
         self._set_auth_and_service_location()
@@ -35,26 +34,8 @@ class DockerHubRegistry(RemoteRegistry):
         """
 
         login_uri = f"{self.registry_root}/{self.schema_version}/users/login/"
-        config = docker.utils.config.load_general_config()
-        auths = (
-            iter(config.get("auths")) if config.get("auths") else None
-        )
-        if auths:
-            auth = {key: value for key, value in config.get("auths").items() if "docker.io" in key}
-            if auth:
-                token = next(iter(auth.items()))[1].get("auth")
-                username, password = (
-                    base64.b64decode(token).decode("utf-8").split(":", 1)
-                )
-            else:
-                raise PermissionError(
-                    "Unable to find Docker Hub credentials. Please use 'docker login' to log in."
-                )
-        else:
-            raise PermissionError(
-                "Unable to find any credentials. Please use 'docker login' to log in."
-            )
-        data = {"username": username, "password": password}
+        self._get_daemon_credentials_for_registry()
+        data = {"username": self.username, "password": self.password}
         headers = {
             "Content-Type": "application/json",  # redundant because json as data parameter
         }
@@ -118,7 +99,7 @@ class DockerHubRegistry(RemoteRegistry):
         try:
             params = {"page_size": 1000}
             fresh_resp = self.session.get(
-                f"{self.registry_root}/{self.schema_version}/repositories/cincan/", params=params
+                f"{self.registry_root}/{self.schema_version}/repositories/{self.config.namespace}/", params=params
             )
         except requests.ConnectionError as e:
             self.logger.warning(e)

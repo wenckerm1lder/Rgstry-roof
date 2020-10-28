@@ -330,16 +330,16 @@ def create_utils_argparse(subparsers: argparse._SubParsersAction):
     readme_parser = sub_utils_parser.add_parser(
         "update-readme",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        help="Update README of tool(s) in Docker Hub. Uses local 'tools' repository as source.",
+        help="Update README of tool(s) in Docker Hub or Quay. Uses local 'tools' repository as source.",
     )
     readme_exclusive_group = readme_parser.add_mutually_exclusive_group()
     readme_exclusive_group.add_argument(
         "--all",
-        help="Update all README files of 'tools' repository into DockerHub.",
+        help="Update all README files of 'tools' repository into DockerHub or Quay (only short description here).",
         action="store_true",
     )
     readme_exclusive_group.add_argument(
-        "-n", "--name", help="Name of the tool to update README in Docker Hub.",
+        "-n", "--name", help="Name of the tool to update README in remote registry.",
     )
 
 

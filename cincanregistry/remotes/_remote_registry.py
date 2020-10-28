@@ -1,5 +1,8 @@
 import asyncio
+from urllib.parse import urlparse
+import docker
 import json
+import base64
 import re
 from abc import abstractmethod
 from concurrent.futures.thread import ThreadPoolExecutor
@@ -23,6 +26,8 @@ class RemoteRegistry(RegistryBase):
         self.schema_version: str = "v2"
         self.registry_root: str = ""
         self.registry_service: str = ""
+        # Url for other endpoint (Non-image-registry)
+        self.custom_uri: str = ""
         self.auth_digest_type: str = "Bearer"
         self.auth_url: str = ""
         self.max_workers: int = self.config.max_workers
@@ -73,6 +78,36 @@ class RemoteRegistry(RegistryBase):
             self.auth_digest_type = www_auth.split(" ", 1)[0]
         except IndexError():
             self.logger.warning(f"Unable to get token digest type from {self.registry_root} , using default.")
+
+    def _get_daemon_credentials_for_registry(self):
+
+        config = docker.utils.config.load_general_config()
+        auths = (
+            iter(config.get("auths")) if config.get("auths") else None
+        )
+        if auths:
+            if self.custom_uri:
+                uri = self.custom_uri
+            else:
+                uri = self.registry_root
+            # top the domain e.g. quay.io
+            top_domain = ".".join(urlparse(uri).netloc.split('.')[-2:])
+            auth = {key: value for key, value in config.get("auths").items() if top_domain in key}
+            if auth:
+                token = next(iter(auth.items()))[1].get("auth")
+                username, password = (
+                    base64.b64decode(token).decode("utf-8").split(":", 1)
+                )
+                self.username = username
+                self.password = password
+            else:
+                raise PermissionError(
+                    "Unable to find Docker Hub credentials. Please use 'docker login' to log in."
+                )
+        else:
+            raise PermissionError(
+                "Unable to find any credentials. Please use 'docker login' to log in."
+            )
 
     def _get_registry_service_token(self, repo: str) -> str:
         """

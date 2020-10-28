@@ -21,8 +21,8 @@ class ReadmeHandler(metaclass=ABCMeta):
         self.index_path = self.tools_repo_path / self.config.index_file
         self.tool_locations = MetaHandler(self.config).read_index_file(self.index_path)
         # Some numbers
-        self.max_size = 100000
-        self.max_description_size = 200
+        self.max_size: int = 100000
+        self.max_description_size: int = 200
 
     def update_readme_all_tools(self, ):
         """
@@ -152,9 +152,12 @@ class QuayReadmeHandler(QuayRegistry, ReadmeHandler):
             raise RuntimeError("'Tools' repository path must be defined.'")
 
         repository_uri = f"{self.registry_root}/api/v1/repository/{prefix + tool_name}"
-        self.session.headers.update({"Authorization": f'Bearer {self.config.tokens.get("Quay")}'})
+        self._get_daemon_credentials_for_registry()
+        self.session.headers.update(
+            {"Authorization": f'Bearer {self.password if self.password else self.config.tokens.get("Quay")}'})
         data = {
             "description": description
         }
         resp = self.session.put(repository_uri, json=data)
         return resp
+

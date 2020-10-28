@@ -64,7 +64,7 @@ class Configuration:
         # Disable meta file download from GitLab
         self.disable_remote: bool = self.values.get("disable_remote", False)
         # GitLab namespace
-        self.namespace: str = "cincan"
+        self.namespace: str = self.values.get("namespace", "cincan").lower()
         # Docker Hub repository
         self.prefix: str = "cincan/"
         # GitLab repository
@@ -75,7 +75,8 @@ class Configuration:
             self.logger.debug("Generating configuration file with default values.")
             with self.file.open("w") as f:
                 print(f"# Configuration file of the cincan-registry Python module\n", file=f)
-                print(f"registry: {self.registry}  # Default registry where from CinCan tools are used", file=f)
+                print(f"registry: {self.registry}  # Default registry wherefrom tools are used", file=f)
+                print(f"namespace: {self.namespace}  # Default namespace wherefrom tools are fetched", file=f)
                 print(f"cache_path: {self.cache_location} # All cache files are in here", file=f)
                 print(f"registry_cache_path: {self.tool_cache} # Contains details about tools "
                       f"(no version information)", file=f)

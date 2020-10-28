@@ -1,37 +1,35 @@
-from cincanregistry.remotes import DockerHubRegistry
+from requests import Response
+from cincanregistry.remotes import DockerHubRegistry, QuayRegistry
+from cincanregistry._registry import RegistryBase
 from .metafiles import MetaHandler
 from typing import Union
+from abc import ABCMeta, abstractmethod
 import pathlib
 import logging
 
 
-class HubReadmeHandler(DockerHubRegistry):
-    """
-    Class for updating README files and description in Docker Hub.
-    """
+class ReadmeHandler(metaclass=ABCMeta):
 
-    def __init__(self, tools_repo_path: Union[str, pathlib.Path], config_path: str = "",
-                 version_var: str = "TOOL_VERSION"):
+    def __init__(self, *args, **kwargs):
         super().__init__(
-            config_path=config_path,
-            tools_repo_path=tools_repo_path,
-            version_var=version_var,
+            *args,
+            **kwargs
         )
         self.logger = logging.getLogger(__name__)
-        self.max_size = 25000
-        self.max_description_size = 100
         if not self.tools_repo_path:
             raise RuntimeError("'Tools' repository path must be defined.'")
         self.index_path = self.tools_repo_path / self.config.index_file
         self.tool_locations = MetaHandler(self.config).read_index_file(self.index_path)
+        # Some numbers
+        self.max_size = 100000
+        self.max_description_size = 200
 
     def update_readme_all_tools(self, ):
         """
         Iterate over all directories, and attempt to push
-        README for corresponding repository in DockerHub
+        README for corresponding repository in registry
         """
         fails = []
-        self._get_hub_session_cookies()
         for tools_root in self.tool_locations:
             # Iterate over different locations: stable or dev tools etc.
             for tool_path in (self.tools_repo_path / tools_root).iterdir():
@@ -45,23 +43,8 @@ class HubReadmeHandler(DockerHubRegistry):
         else:
             self.logger.info("README of every tool updated.")
 
-    def update_readme_single_tool(
-            self, tool_name: str, tool_path: pathlib.Path = "", many: bool = False, prefix="cincan/"
-    ) -> bool:
-        """
-        Upload README  and description of tool into Docker Hub.
-        Description is first header (H1) of README.
+    def get_readme_path(self, tool_path: pathlib.Path, tool_name: str) -> pathlib.Path:
 
-        Return True on successful update, False otherwise
-        """
-        if not self.tools_repo_path:
-            raise RuntimeError("'Tools' repository path must be defined.'")
-
-        # Cookie header updated already - expecting to update many files if "many=True"
-        if not many:
-            self._get_hub_session_cookies()
-
-        repository_uri = f"{self.custom_api_root}/{self.schema_version}/repositories/{prefix + tool_name}/"
         readme_path = pathlib.Path()
         if tool_path:
             readme_path = tool_path / "README.md"
@@ -75,6 +58,21 @@ class HubReadmeHandler(DockerHubRegistry):
                     else:
                         readme_path = tmp_path
                         found = True
+        return readme_path
+
+    def update_readme_single_tool(
+            self, tool_name: str, tool_path: pathlib.Path = "", many: bool = False, prefix="cincan/"
+    ) -> bool:
+        """
+        Upload README  and description of tool into Docker Hub.
+        Description is first header (H1) of README.
+
+        Return True on successful update, False otherwise
+        """
+        if not self.tools_repo_path:
+            raise RuntimeError("'Tools' repository path must be defined.'")
+
+        readme_path = self.get_readme_path(tool_path, tool_name)
         if readme_path.is_file():
             if readme_path.stat().st_size <= self.max_size:
                 with readme_path.open("r") as f:
@@ -89,12 +87,8 @@ class HubReadmeHandler(DockerHubRegistry):
                         self.logger.warning(
                             f"Too long description for tool {tool_name}. Not set."
                         )
-                    data = {
-                        "full_description": content,
-                        "description": description,
-                    }
 
-                    resp = self.session.patch(repository_uri, json=data)
+                    resp = self.post_data(tool_name, prefix, description=description, content=content)
                     if resp.status_code == 200:
                         self.logger.info(
                             f"README and description updated for {tool_name}"
@@ -114,3 +108,53 @@ class HubReadmeHandler(DockerHubRegistry):
             )
         self.logger.warning(f"README not updated for tool {tool_name}")
         return False
+
+    @abstractmethod
+    def post_data(self, tool_name: str, prefix: str, description: str = "", content: str = "") -> Response:
+        pass
+
+
+class HubReadmeHandler(DockerHubRegistry, ReadmeHandler):
+    """
+    Class for updating README files and description in Docker Hub.
+    """
+
+    def __init__(self, *args, **kwargs):
+        DockerHubRegistry.__init__(self, *args, **kwargs)
+        ReadmeHandler.__init__(self)
+        self.max_size = 25000
+        self.max_description_size = 100
+        # Update cookie headers
+        self._get_hub_session_cookies()
+
+    def post_data(self, tool_name: str, prefix: str, description: str = "", content: str = "") -> Response:
+        """Post data to update readme and description, return true on success"""
+        repository_uri = f"{self.registry_root}/{self.schema_version}/repositories/{prefix + tool_name}/"
+
+        data = {
+            "full_description": content,
+            "description": description,
+        }
+
+        resp = self.session.patch(repository_uri, json=data)
+        return resp
+
+
+class QuayReadmeHandler(QuayRegistry, ReadmeHandler):
+    """Update description in Quay"""
+
+    def __init__(self, *args, **kwargs):
+        QuayRegistry.__init__(self, *args, **kwargs)
+        ReadmeHandler.__init__(self)
+
+    def post_data(self, tool_name: str, prefix: str, description: str = "", content: str = "") -> Response:
+        if not self.tools_repo_path:
+            raise RuntimeError("'Tools' repository path must be defined.'")
+
+        repository_uri = f"{self.registry_root}/api/v1/repository/{prefix + tool_name}"
+        self.session.headers.update({"Authorization": f'Bearer {self.config.tokens.get("Quay")}'})
+        data = {
+            "description": description
+        }
+        resp = self.session.put(repository_uri, json=data)
+        return resp

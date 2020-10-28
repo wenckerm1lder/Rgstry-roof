@@ -1,4 +1,4 @@
-from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, ToolInfo, Remotes
+from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, QuayReadmeHandler, ToolInfo, Remotes
 import argparse
 import sys
 import logging
@@ -495,7 +495,13 @@ def list_handler(args):
 
 def utils_handler(args):
     if args.utils_sub_command == "update-readme":
-        reg = HubReadmeHandler(tools_repo_path=args.tools, config_path=args.config)
+        if args.registry == Remotes.DOCKERHUB:
+            reg = HubReadmeHandler(tools_repo_path=args.tools, config_path=args.config)
+        elif args.registry == Remotes.QUAY:
+            reg = QuayReadmeHandler(tools_repo_path=args.tools, config_path=args.config)
+        else:
+            print("Readme update not supported for given registry")
+            sys.exit(1)
         if args.all:
             reg.update_readme_all_tools()
         elif args.name:

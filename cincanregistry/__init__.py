@@ -3,7 +3,7 @@ from cincanregistry.models.tool_info import ToolInfo, ToolInfoEncoder
 from .version_maintainer import VersionMaintainer
 from .configuration import Remotes
 from cincanregistry.toolregistry import ToolRegistry
-from .readme_utils import HubReadmeHandler
+from .readme_utils import HubReadmeHandler, QuayReadmeHandler
 from .main import (
     list_handler,
     utils_handler,
@@ -12,5 +12,5 @@ from .main import (
 )
 
 __all__ = ["ToolInfo", "ToolInfoEncoder", "VersionInfo", "Remotes", "ToolRegistry", "VersionMaintainer",
-           "HubReadmeHandler",
+           "HubReadmeHandler", "QuayReadmeHandler",
            "create_list_argparse", "create_utils_argparse", "list_handler", "utils_handler"]

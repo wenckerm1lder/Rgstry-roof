@@ -87,8 +87,8 @@ class Configuration:
                 print(f"meta_filename: {self.meta_filename} # Filename of metafile in GitLab", file=f)
                 print(f"index_filename: {self.index_file} # Filename of index file in GitLab", file=f)
                 print(f"disable_remote: {self.disable_remote} # Disable fetching metafiles from GitLab", file=f)
-                print(f"\ntokens: # Possible authentication tokens to Docker Hub, Quay, GitLab, GitHub and so on.",
+                print(f"\ntokens: # Possible authentication tokens to Quay, GitLab, GitHub and so on. Quay token is"
+                      f" used for README updating.",
                       file=f)
-                print("    DockerHub: ''", file=f)
                 print("    Quay: ''", file=f)
                 print(file=f)

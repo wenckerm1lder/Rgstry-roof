@@ -90,7 +90,8 @@ def print_single_tool_version_check(tool, show_tags: bool = False):
     # other
     if tool.get("versions").get("origin"):
         print(
-            f"{' ':<{PRE_SPACE}}| {tool.get('versions').get('origin').get('details').get('provider'):<{MAX_WN}}",
+            f"{' ':<{PRE_SPACE}}| Origin ("
+            f"{tool.get('versions').get('origin').get('details').get('provider') + ')':<{MAX_WN - 8}}",
             end="",
         )
         print(f"{tool.get('versions').get('origin').get('version'):<{MAX_WV}}")

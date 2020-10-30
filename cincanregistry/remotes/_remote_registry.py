@@ -26,7 +26,9 @@ class RemoteRegistry(RegistryBase):
         self.schema_version: str = "v2"
         self.registry_root: str = ""
         self.registry_service: str = ""
+        self.image_prefix: str = ""
         self.cincan_namespace: str = ""
+        self.full_prefix: str = ""
         # Url for other endpoint (Non-image-registry)
         self.custom_uri: str = ""
         self.auth_digest_type: str = "Bearer"

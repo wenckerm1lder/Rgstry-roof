@@ -17,7 +17,9 @@ class QuayRegistry(RemoteRegistry):
         super(QuayRegistry, self).__init__(*args, **kwargs)
         self.registry_name = Remotes.QUAY.value
         self.registry_root = "https://quay.io"
+        self.image_prefix = "quay.io"
         self.cincan_namespace: str = "cincan"
+        self.full_prefix = f"{self.image_prefix}/{self.cincan_namespace}"
         self._set_auth_and_service_location()
 
     def _quay_api_error(self, resp: requests.Response):
@@ -100,7 +102,7 @@ class QuayRegistry(RemoteRegistry):
         available_tools = self.__fetch_available_tools()
         tool_list = {}
         for t in available_tools:
-            name = f"{t.get('namespace')}/{t.get('name')}"
+            name = f"{self.image_prefix}/{t.get('namespace')}/{t.get('name')}"
             timestamp = t.get("last_modified")
             description = t.get("description")
             tool_list[name] = ToolInfo(name, datetime.datetime.fromtimestamp(timestamp),
@@ -115,7 +117,9 @@ class QuayRegistry(RemoteRegistry):
         # In case name includes tag, separate it
         self.logger.info("fetch %s...", tool.name)
         tool_name, tool_tag = split_tool_tag(tool.name)
-        endpoint = f"{self.registry_root}/api/v1/repository/{tool_name}"
+        # Use name without registry prefix e.g. quay.io
+        name_without_prefix = "/".join(tool_name.split("/")[-2:])
+        endpoint = f"{self.registry_root}/api/v1/repository/{name_without_prefix}"
         params = {
             "includeTags": True,
             "includeStats": False
@@ -130,7 +134,7 @@ class QuayRegistry(RemoteRegistry):
             tags = resp_cont.get("tags")
             tag_names = tags.keys()
             if tag_names:
-                available_versions = self.update_versions_from_manifest_by_tags(tool_name, tag_names)
+                available_versions = self.update_versions_from_manifest_by_tags(name_without_prefix, tag_names)
             else:
                 self.logger.error(f"No tags found for tool {tool_name}.")
                 return

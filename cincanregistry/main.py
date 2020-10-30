@@ -1,4 +1,5 @@
 from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, QuayReadmeHandler, ToolInfo, Remotes
+from os.path import basename
 import argparse
 import sys
 import logging
@@ -208,9 +209,11 @@ def print_version_check(
 
 
 def print_tools_by_location(
-        tools: Dict[str, ToolInfo], location: str, filter_by: str = "", show_size=False
+        tools: Dict[str, ToolInfo], location: str, prefix="", filter_by: str = "", show_size=False
 ):
     MAX_WV = 41
+    if prefix:
+        print(f"{' ':<{PRE_SPACE}} Using the tools requires prefix '{prefix}/' e.g. 'cincan run {prefix}/<NAME>'\n")
     if location == "remote" and show_size:
         print(f"{' ':<{PRE_SPACE}} Size as compressed in Remote.")
     if location == "local" and show_size:
@@ -232,6 +235,8 @@ def print_tools_by_location(
             size = next(iter(lst.versions)).size
             version = next(iter(lst.versions)).version
             name = lst.name.split(":")[0]
+            if prefix:
+                name = basename( name )
             if filter_by and filter_by not in tags:
                 continue
             print(f"{' ':<{PRE_SPACE}}| ", end="")
@@ -247,6 +252,8 @@ def print_tools_by_location(
                 )
             for i, ver in enumerate(lst.versions):
                 name = lst.name.split(":")[0] if first_print else ""
+                if prefix:
+                    name = basename(name)
                 tags = ",".join(lst.versions[i].tags)
                 version = ver.version
                 size = ver.size
@@ -267,7 +274,9 @@ def print_tools_by_location(
     print()
 
 
-def print_combined_local_remote(tools: dict, show_size=False):
+def print_combined_local_remote(tools: dict, prefix: str = "", show_size=False):
+    if prefix:
+        print(f"{' ':<{PRE_SPACE}} Using the tools requires prefix '{prefix}/' e.g. 'cincan run {prefix}/<NAME>'")
     print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.BOLD} ", end="")
     print(f"{'Tool name':<{MAX_WN}}", end="")
     print(f"{f'Local Version':{MAX_WV}}", end="")
@@ -283,7 +292,7 @@ def print_combined_local_remote(tools: dict, show_size=False):
         description = tools[tool].get("description")
 
         print(f"{' ':<{PRE_SPACE}}|", end="")
-        print(f"{tool:<{MAX_WN}}", end="")
+        print(f" {basename(tool):<{MAX_WN}}", end="")
         print(f"{l_version:{MAX_WV}}", end="")
         print(f"{r_version:{MAX_WV}}", end="")
         if show_size:
@@ -431,7 +440,7 @@ def list_handler(args):
             try:
                 tools = loop.run_until_complete(
                     reg.local_registry.get_tools(
-                        defined_tag=args.tag if not args.all else ""
+                        defined_tag=args.tag if not args.all else "", prefix=reg.remote_registry.full_prefix
                     )
                 ) if args.local else loop.run_until_complete(
                     reg.remote_registry.get_tools(
@@ -456,7 +465,7 @@ def list_handler(args):
                               f"from {reg.remote_registry.registry_name} ({reg.remote_registry.registry_root}):\n")
 
                 print_tools_by_location(
-                    tools, location, args.tag if not args.all else "", args.size
+                    tools, location, prefix=reg.remote_registry.full_prefix, filter_by=(args.tag if not args.all else ""), show_size=args.size
                 )
 
         else:
@@ -464,11 +473,11 @@ def list_handler(args):
             if not args.all and not args.json and tool_list:
                 print(
                     f"\n  Listing all CinCan tools (remote from {reg.remote_registry.registry_name}) with tag '{args.tag}':\n")
-                print_combined_local_remote(tool_list, args.size)
+                print_combined_local_remote(tool_list, prefix=reg.remote_registry.full_prefix, show_size=args.size)
             elif not args.json and tool_list and args.all:
                 print(
                     f"\n  Listing all CinCan tools (remote from {reg.remote_registry.registry_name}) with any tag:\n")
-                print_combined_local_remote(tool_list, args.size)
+                print_combined_local_remote(tool_list, prefix=reg.remote_registry.full_prefix, show_size=args.size)
             elif tool_list:
                 print(json.dumps(tool_list))
             else:

@@ -43,7 +43,7 @@ class ToolRegistry(RegistryBase):
         Get remote and local tools in parallel to increase performance
         """
         tasks = [
-            self.local_registry.get_tools(defined_tag),
+            self.local_registry.get_tools(defined_tag, prefix=self.remote_registry.full_prefix),
             self.remote_registry.get_tools(defined_tag),
         ]
         local_tools, remote_tools = await asyncio.ensure_future(asyncio.gather(*tasks))
@@ -149,8 +149,8 @@ class ToolRegistry(RegistryBase):
             remote_tools_with_origin_version = await maintainer.check_upstream_versions(
                 remote_tools
             )
-            # Local tools, without checking
-            local_tools = await self.local_registry.get_tools()
+            # Local tools, without checking and corresponding the configured registry
+            local_tools = await self.local_registry.get_tools(prefix=self.remote_registry.full_prefix)
             for t in remote_tools_with_origin_version:
                 r_tool = remote_tools_with_origin_version.get(
                     t

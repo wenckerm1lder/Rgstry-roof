@@ -135,8 +135,7 @@ class MetaHandler:
                 p = pathlib.Path(file.get("path"))
                 if p.parent.name in tools:
                     meta_paths.append(p)
-                    if len(tools) == 1:
-                        break
+
         if not meta_paths:
             raise FileNotFoundError(
                 f"No single meta file ({self.config.meta_filename})"

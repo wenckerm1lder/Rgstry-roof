@@ -19,8 +19,10 @@ class DockerHubRegistry(RemoteRegistry):
         super().__init__(*args, **kwargs)
         self.registry_name = Remotes.DOCKERHUB.value
         self.registry_root = "https://registry.hub.docker.com"
-        self.custom_uri: str = "https://docker.io"
-        self.cincan_namespace: str = "cincan"
+        self.image_prefix = ""
+        self.cincan_namespace = "cincan"
+        self.full_prefix = self.cincan_namespace
+        self.custom_uri = "https://docker.io"
         # Page size for Docker Hub
         self.max_page_size: int = 1000
         self._set_auth_and_service_location()

@@ -1,4 +1,5 @@
 from typing import Dict, List, Tuple, Union
+from os.path import basename
 from cincanregistry.models.tool_info import ToolInfo
 from cincanregistry.models.version_info import VersionInfo
 from .checkers import classmap
@@ -52,7 +53,8 @@ class VersionMaintainer:
             if tool_dir.name in self.tool_dirs:
                 for tool_path in tool_dir.iterdir():
                     if (tool_path / self.meta_filename).is_file():
-                        self.able_to_check[f"{self.config.namespace}/{tool_path.stem}"] = tool_path
+                        # Only basename - upstream checking works with different registries
+                        self.able_to_check[f"{tool_path.stem}"] = tool_path
         if not self.able_to_check:
             self.logger.error(
                 f"No single configuration for upstream check found."
@@ -87,7 +89,8 @@ class VersionMaintainer:
             self, tool_name: str, local_tool: ToolInfo, remote_tool: ToolInfo
     ) -> Tuple[ToolInfo, ToolInfo]:
         self._generate_meta_files(tool_name)
-        tool_path = self.able_to_check.get(tool_name)
+        # Tool name might contain registry root or namespace, include only basename
+        tool_path = self.able_to_check.get(basename(tool_name))
         if not tool_path:
             raise FileNotFoundError(f"Upstream check not implemented for {tool_name}.")
         if remote_tool:
@@ -205,7 +208,8 @@ class VersionMaintainer:
         self._generate_meta_files(tools)
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
             for t in tools:
-                tool_path = self.able_to_check.get(t)
+                # Basename is needed - version check works with different registries
+                tool_path = self.able_to_check.get(basename(t))
                 if tool_path:
                     tool = tools.get(t)
                     loop = asyncio.get_event_loop()

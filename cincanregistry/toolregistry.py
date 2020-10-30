@@ -24,8 +24,9 @@ class ToolRegistry(RegistryBase):
 
     ):
         super(ToolRegistry, self).__init__(*args, **kwargs)
-        self.default_remote = default_remote if default_remote != list(Remotes)[0] else self.config.registry
         self.logger: logging.Logger = logging.getLogger("registry")
+        self.default_remote = default_remote if (
+                    default_remote is not None and default_remote != list(Remotes)[0]) else self.config.registry
         if self.default_remote == Remotes.QUAY:
             self.remote_registry = QuayRegistry(*args, **kwargs)
         elif self.default_remote == Remotes.DOCKERHUB:
@@ -121,12 +122,12 @@ class ToolRegistry(RegistryBase):
         versions = {}
         if tool:
             l_tool = self.local_registry.create_local_tool_info_by_name(tool)
-            r_tool = self.read_tool_cache(tool)
+            r_tool = self.remote_registry.read_tool_cache(tool)
             now = datetime.now()
             if not r_tool:
-                r_tool = ToolInfo(tool, datetime.min, "remote")
+                r_tool = ToolInfo(tool, datetime.min, self.remote_registry.registry_name)
             if not r_tool.updated or not (
-                    now - timedelta(hours=24) <= r_tool.updated <= now
+                    now - timedelta(hours=self.config.cache_lifetime) <= r_tool.updated <= now
             ):
                 self.remote_registry.fetch_tags(r_tool, update_cache=True)
             if l_tool or (r_tool and not r_tool.updated == datetime.min):

@@ -228,6 +228,7 @@ class RemoteRegistry(RegistryBase):
         """
 
         old_tools = self.read_tool_cache()
+
         updated = 0
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
             loop = asyncio.get_event_loop()

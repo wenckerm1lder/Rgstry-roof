@@ -33,7 +33,7 @@ class Configuration:
             )
             self.values: Dict = {}
         # Override from cmd only if non-default used
-        self.registry = Remotes(self.values.get("registry", str(list(Remotes)[0])))
+        self.registry = Remotes(self.values.get("registry")) or list(Remotes)[0]
         # Maximum threads at once
         self.max_workers: int = 30
         # Tokens for different platforms used in version checking and meta file download

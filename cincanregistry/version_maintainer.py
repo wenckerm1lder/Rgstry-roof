@@ -52,7 +52,7 @@ class VersionMaintainer:
             if tool_dir.name in self.tool_dirs:
                 for tool_path in tool_dir.iterdir():
                     if (tool_path / self.meta_filename).is_file():
-                        self.able_to_check[f"{self.config.prefix}{tool_path.stem}"] = tool_path
+                        self.able_to_check[f"{self.config.namespace}/{tool_path.stem}"] = tool_path
         if not self.able_to_check:
             self.logger.error(
                 f"No single configuration for upstream check found."

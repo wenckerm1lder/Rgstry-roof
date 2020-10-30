@@ -17,6 +17,7 @@ class QuayRegistry(RemoteRegistry):
         super(QuayRegistry, self).__init__(*args, **kwargs)
         self.registry_name = Remotes.QUAY.value
         self.registry_root = "https://quay.io"
+        self.cincan_namespace: str = "cincan"
         self._set_auth_and_service_location()
 
     def _quay_api_error(self, resp: requests.Response):
@@ -53,7 +54,7 @@ class QuayRegistry(RemoteRegistry):
             "last_modified": last_modified,
             "public": public,
             "starred": starred,
-            "namespace": namespace if namespace else self.config.namespace
+            "namespace": namespace if namespace else self.cincan_namespace
         }
         if not next_page:
             # Remove empty param

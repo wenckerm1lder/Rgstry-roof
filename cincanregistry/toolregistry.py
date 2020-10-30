@@ -35,6 +35,8 @@ class ToolRegistry(RegistryBase):
             self.logger.error(f"Unsupported remote registry: {self.default_remote}")
             exit(1)
         self.local_registry = DaemonRegistry(*args, **kwargs)
+        if not self.config.namespace:
+            self.config.namespace = self.remote_registry.cincan_namespace
 
     async def get_local_remote_tools(self, defined_tag: str = "") -> Tuple[Dict, Dict]:
         """

@@ -20,6 +20,7 @@ class DockerHubRegistry(RemoteRegistry):
         self.registry_name = Remotes.DOCKERHUB.value
         self.registry_root = "https://registry.hub.docker.com"
         self.custom_uri: str = "https://docker.io"
+        self.cincan_namespace: str = "cincan"
         # Page size for Docker Hub
         self.max_page_size: int = 1000
         self._set_auth_and_service_location()
@@ -79,7 +80,6 @@ class DockerHubRegistry(RemoteRegistry):
             reverse=True,
         )
         tag_names = list(map(lambda x: x["name"], tags_sorted))
-        first_run = True
         if tag_names:
             available_versions = self.update_versions_from_manifest_by_tags(tool_name, tag_names)
 
@@ -99,7 +99,7 @@ class DockerHubRegistry(RemoteRegistry):
         try:
             params = {"page_size": 1000}
             fresh_resp = self.session.get(
-                f"{self.registry_root}/{self.schema_version}/repositories/{self.config.namespace}/", params=params
+                f"{self.registry_root}/{self.schema_version}/repositories/{self.cincan_namespace}/", params=params
             )
         except requests.ConnectionError as e:
             self.logger.warning(e)

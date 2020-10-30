@@ -1,6 +1,7 @@
 import pathlib
 import logging
 import yaml
+from os.path import basename
 from datetime import timedelta, datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Union, List
@@ -10,7 +11,7 @@ from .gitlab_utils import GitLabUtils
 from .configuration import Configuration
 
 
-class MetaHandler():
+class MetaHandler:
     """Class for fetching and caching meta files from GitLab"""
 
     def __init__(self,
@@ -21,6 +22,7 @@ class MetaHandler():
         self.config = config
         self.force_refresh = force_refresh
         self.tool_dirs = []
+        self.cincan_namespace: str = "cincan"
 
     def _is_old_metafile_usable(self, local_path: pathlib.Path) -> bool:
 
@@ -104,20 +106,21 @@ class MetaHandler():
 
         self.logger.info(
             f"Fetching meta information files from GitLab"
-            f" (https://gitlab.com/{self.config.namespace}/{self.config.project})"
+            f" (https://gitlab.com/{self.cincan_namespace}/{self.config.project})"
             f" into path '{self.config.cache_location}'"
         )
         gitlab_client = GitLabUtils(
-            namespace=self.config.namespace, project=self.config.project, token=self.config.tokens.get("gitlab", "")
+            namespace=self.cincan_namespace, project=self.config.project, token=self.config.tokens.get("gitlab", "")
         )
         self.read_index_file(self._get_index_file(gitlab_client))
         if isinstance(tools, str):
             tools = [tools]
         # tools with 'cincan' prefix
+        # TODO might not work with all registries
         tools = [
-            i.split("/", 1)[1]
+            basename(i)
             for i in tools
-            if i.startswith(self.config.prefix)
+            if f"{self.config.namespace}/" in i
         ]
         # NOTE slower at lower tool amounts but safer method
         # Get list of all files in repository
@@ -137,7 +140,7 @@ class MetaHandler():
         if not meta_paths:
             raise FileNotFoundError(
                 f"No single meta file ({self.config.meta_filename})"
-                f" found from GitLab ({self.config.namespace}/{self.config.project})"
+                f" found from GitLab ({self.cincan_namespace}/{self.config.project})"
             )
 
         # Write and fetch each file from GitLab

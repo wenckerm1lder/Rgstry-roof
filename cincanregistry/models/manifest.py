@@ -1,4 +1,5 @@
 from typing import Dict, List
+import json
 
 
 class ManifestV2:
@@ -15,6 +16,7 @@ class ManifestV2:
         """
         Image manifest or Manifest list
         """
+        self.dict_form = manifest
         self.schemaVersion: int = manifest.get("schemaVersion", None)
         if self.schemaVersion != 2:
             raise TypeError(f"Unsupported Manifest schema version: {self.schemaVersion}")
@@ -31,6 +33,9 @@ class ManifestV2:
 
         else:
             raise TypeError(f"Unsupported Manifest MIME type: {self.mediaType}")
+
+    def __str__(self):
+        return json.dumps(self.dict_form, indent=2)
 
 
 class ConfigReference:

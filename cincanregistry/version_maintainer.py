@@ -17,6 +17,7 @@ class VersionMaintainer:
     """
     Class for getting possible new versions for tools in ToolRegistry
     """
+    META_TIMESTAMP_VAR = "__metafile_timestamp"
 
     def __init__(
             self,
@@ -60,13 +61,26 @@ class VersionMaintainer:
 
     def _generate_meta_files(self, tools: [List, str]):
 
+        # Check based on timestamp of existing index file, if we need a update
+        try:
+            mtime = datetime.fromtimestamp((self.config.cache_location / self.config.index_file).stat().st_mtime)
+        except FileNotFoundError:
+            mtime = None
+        need_update = True
+        if mtime:
+            now = datetime.now()
+            if now - timedelta(hours=self.config.cache_lifetime) <= mtime <= now:
+                self.logger.debug(f"Metafiles are checked last time {mtime}, no need for update.")
+                need_update = False
+
         meta_handler = MetaHandler(self.config, self.force_refresh)
-        if not self.disable_remote_download:
+        if not self.disable_remote_download and need_update:
             meta_handler.get_meta_files_from_gitlab(tools, self.config.branch)
-            self.tool_dirs = meta_handler.tool_dirs
+        if not self.disable_remote_download:
+            self.tool_dirs = meta_handler.read_index_file(self.config.cache_location / self.config.index_file)
         else:
             self.logger.debug("Download disabled, nothing to generate.")
-            self.tool_dirs = meta_handler.read_index_file(self.config.tools_repo_path / "index.yml")
+            self.tool_dirs = meta_handler.read_index_file(self.config.tools_repo_path / self.config.index_file)
         self._set_available_checkers()
 
     def get_versions_single_tool(

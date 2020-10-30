@@ -47,6 +47,10 @@ class MetaHandler():
             return False
 
     def _get_index_file(self, client: GitLabUtils) -> bytes:
+        file_content = client.get_file_by_path(self.config.index_file, ref=self.config.branch).decode()
+        # Cache content
+        with (self.config.cache_location / self.config.index_file).open("wb") as f:
+            f.write(file_content)
         return client.get_file_by_path(self.config.index_file, ref=self.config.branch).decode()
 
     def read_index_file(self, index_f: Union[bytes, pathlib.Path]) -> List:

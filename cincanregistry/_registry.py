@@ -1,3 +1,4 @@
+from io import UnsupportedOperation
 import json
 import logging
 import pathlib
@@ -5,6 +6,7 @@ from typing import Dict, Union
 from abc import ABCMeta, abstractmethod
 from cincanregistry import ToolInfo, ToolInfoEncoder
 from cincanregistry.configuration import Configuration, Remotes
+from cincanregistry.version_maintainer import VersionMaintainer
 
 
 class RegistryBase(metaclass=ABCMeta):
@@ -88,6 +90,7 @@ class RegistryBase(metaclass=ABCMeta):
                 self.tool_cache.unlink()
                 return {}
             else:
+                # These keys make reading hard, ignore them at this point
                 del root_json[self.CACHE_VERSION_VAR]
                 del root_json[self.REMOTE_NAME_VAR]
             try:

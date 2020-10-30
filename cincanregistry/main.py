@@ -303,8 +303,7 @@ def create_head_argparse() -> argparse.ArgumentParser:
         default=None,
     )
     m_parser.add_argument(
-        "--registry", help="Registry, where tools are located. Case sensitive. Changes it also permanently"
-                           " into configuration file.", type=Remotes,
+        "--registry", help="Registry, where tools are located. Case sensitive.", type=Remotes,
         choices=list(Remotes),
         default=list(Remotes)[0]  # First value is default to keep definition consistent
     )
@@ -422,7 +421,7 @@ def list_handler(args):
     # If exported as module and parent parser of 'list' not defining
     if not hasattr(args, "tools"):
         args.tools = ""
-    reg = ToolRegistry(args.registry, args.config, args.tools)
+    reg = ToolRegistry(args.config, args.tools, default_remote=args.registry)
 
     if not args.list_sub_command:
 

@@ -18,9 +18,10 @@ class ToolRegistry(RegistryBase):
 
     def __init__(
             self,
-            default_remote: Remotes,
             *args,
-            **kwargs
+            default_remote: Remotes = None,
+            **kwargs,
+
     ):
         super(ToolRegistry, self).__init__(*args, **kwargs)
         self.default_remote = default_remote if default_remote != list(Remotes)[0] else self.config.registry

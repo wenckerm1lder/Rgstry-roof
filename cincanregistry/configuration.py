@@ -33,7 +33,7 @@ class Configuration:
             )
             self.values: Dict = {}
         # Override from cmd only if non-default used
-        self.registry = Remotes(self.values.get("registry")) or list(Remotes)[0]
+        self.registry = Remotes(self.values.get("registry")) if self.values.get("registry") else list(Remotes)[0]
         # Maximum threads at once
         self.max_workers: int = 30
         # Tokens for different platforms used in version checking and meta file download
@@ -64,7 +64,9 @@ class Configuration:
         # Disable meta file download from GitLab
         self.disable_remote: bool = self.values.get("disable_remote", False)
         # Namespace for fetching list of tools
-        self.namespace: str = self.values.get("namespace", "").lower()
+        self.namespace: str = self.values.get("namespace", "")
+        if self.namespace and isinstance(str, self.namespace):
+            self.namespace.lower()
         # GitLab repository
         self.project: str = "tools"
 

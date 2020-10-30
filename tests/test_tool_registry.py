@@ -13,7 +13,7 @@ def test_create_registry(mocker, caplog):
     mocker.patch.object(pathlib.Path, "is_file", return_value=False)
 
     logging.getLogger("docker").setLevel(logging.WARNING)
-    reg = ToolRegistry(Remotes.DOCKERHUB)
+    reg = ToolRegistry(default_remote=Remotes.DOCKERHUB)
 
     assert reg.logger
     assert reg.local_registry.client
@@ -35,7 +35,7 @@ def test_create_registry(mocker, caplog):
 
 def test_is_docker_running(mocker, caplog):
     caplog.set_level(logging.ERROR)
-    reg = ToolRegistry(Remotes.DOCKERHUB)
+    reg = ToolRegistry()
     mocker.patch.object(
         reg.local_registry.client,
         "ping",

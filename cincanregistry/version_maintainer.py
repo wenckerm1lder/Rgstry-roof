@@ -72,7 +72,7 @@ class VersionMaintainer:
         ]
         # Let's see if some files exist already. Index file exists if we have downloaded meta files
 
-        if (self.meta_files_location / self.config.index_file).is_file():
+        if (self.meta_files_location / self.config.index_file).is_file() and not self.force_refresh:
             for tool_dir in self.meta_files_location.iterdir():
                 if tool_dir.is_file():
                     continue

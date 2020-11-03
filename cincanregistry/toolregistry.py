@@ -1,3 +1,4 @@
+import sys
 import asyncio
 import json
 import logging
@@ -124,10 +125,13 @@ class ToolRegistry(RegistryBase):
         )
         versions = {}
         if tool:
+            if "/" in tool:
+                self.logger.error("Give only name of the tool, without prefixes or namespaces related to tool image.")
+                sys.exit(1)
             tool_name = basename(tool)
             tool_with_namespace = f"{self.remote_registry.full_prefix}/{tool_name}"
             l_tool = self.local_registry.create_local_tool_info_by_name(tool_with_namespace)
-            r_tool = self.remote_registry.read_tool_cache(tool_with_namespace)
+            r_tool = self.remote_registry.read_tool_cache(tool_with_namespace) if not force_refresh else {}
 
             now = datetime.now()
             if not r_tool:

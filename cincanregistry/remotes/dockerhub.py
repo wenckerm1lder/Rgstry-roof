@@ -25,7 +25,6 @@ class DockerHubRegistry(RemoteRegistry):
         self.custom_uri = "https://docker.io"
         # Page size for Docker Hub
         self.max_page_size: int = 1000
-        self._set_auth_and_service_location()
 
     def _get_hub_session_cookies(self):
         """
@@ -54,7 +53,8 @@ class DockerHubRegistry(RemoteRegistry):
         Fetch remote data to update a tool info. Gives more information than using regular registry /tags/list method
         Applies only to Docker Hub
         """
-
+        if not self.auth_url:
+            self._set_auth_and_service_location()
         self.logger.info("fetch %s...", tool.name)
         tool_name, tool_tag = split_tool_tag(tool.name)
         params = {"page_size": self.max_page_size}
@@ -98,6 +98,7 @@ class DockerHubRegistry(RemoteRegistry):
         # get_fetch_start = timeit.default_timer()
         fresh_resp = None
         # Get fresh list of tools from remote registry
+        self._set_auth_and_service_location()
         try:
             params = {"page_size": 1000}
             fresh_resp = self.session.get(

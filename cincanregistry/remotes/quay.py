@@ -114,6 +114,8 @@ class QuayRegistry(RemoteRegistry):
         Fetches available tags for single tool from quay.io HTTP API
         See: https://docs.quay.io/api/swagger/#!/repository/getRepo
         """
+        if not self.auth_url:
+            self._set_auth_and_service_location()
         # In case name includes tag, separate it
         self.logger.info("fetch %s...", tool.name)
         tool_name, tool_tag = split_tool_tag(tool.name)

@@ -236,7 +236,7 @@ def print_tools_by_location(
             version = next(iter(lst.versions)).version
             name = lst.name.split(":")[0]
             if prefix:
-                name = basename( name )
+                name = basename(name)
             if filter_by and filter_by not in tags:
                 continue
             print(f"{' ':<{PRE_SPACE}}| ", end="")
@@ -430,6 +430,8 @@ def list_handler(args):
     # If exported as module and parent parser of 'list' not defining
     if not hasattr(args, "tools"):
         args.tools = ""
+    if not hasattr(args, "registry"):
+        args.registry = None
     reg = ToolRegistry(args.config, args.tools, default_remote=args.registry)
 
     if not args.list_sub_command:
@@ -465,7 +467,8 @@ def list_handler(args):
                               f"from {reg.remote_registry.registry_name} ({reg.remote_registry.registry_root}):\n")
 
                 print_tools_by_location(
-                    tools, location, prefix=reg.remote_registry.full_prefix, filter_by=(args.tag if not args.all else ""), show_size=args.size
+                    tools, location, prefix=reg.remote_registry.full_prefix,
+                    filter_by=(args.tag if not args.all else ""), show_size=args.size
                 )
 
         else:

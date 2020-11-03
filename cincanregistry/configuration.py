@@ -66,7 +66,7 @@ class Configuration:
         # Namespace for fetching list of tools
         self.namespace: str = self.values.get("namespace", "")
         if self.namespace and isinstance(str, self.namespace):
-            self.namespace.lower()
+            self.namespace = self.namespace.lower()
         # GitLab repository
         self.project: str = "tools"
 
@@ -76,7 +76,8 @@ class Configuration:
             with self.file.open("w") as f:
                 print(f"# Configuration file of the cincan-registry Python module\n", file=f)
                 print(f"registry: {self.registry}  # Default registry wherefrom tools are used", file=f)
-                print(f"namespace: {self.namespace}  # Overrides default cincan namespaces for tool registries", file=f)
+                # print(f"namespace: {self.namespace}
+                # Overrides default cincan namespaces for tool registries", file=f)
                 print(f"cache_path: {self.cache_location} # All cache files are in here", file=f)
                 print(f"registry_cache_path: {self.tool_cache} # Contains details about tools "
                       f"(no version information)", file=f)

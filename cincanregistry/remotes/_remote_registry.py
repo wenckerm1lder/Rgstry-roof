@@ -117,6 +117,8 @@ class RemoteRegistry(RegistryBase):
         Gets Bearer token with 'pull' scope for single repository
         in Docker Registry HTTP API V2 by default.
         """
+        if not self.auth_url and not self.registry_service:
+            self._set_auth_and_service_location()
         params = {
             "service": self.registry_service,
             "scope": f"repository:{repo}:pull",

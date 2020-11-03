@@ -14,7 +14,7 @@ def test_create_registry(mocker, caplog):
 
     logging.getLogger("docker").setLevel(logging.WARNING)
     reg = ToolRegistry(default_remote=Remotes.DOCKERHUB)
-
+    reg.remote_registry._set_auth_and_service_location()
     assert reg.logger
     assert reg.local_registry.client
     assert reg.remote_registry.schema_version == "v2"

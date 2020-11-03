@@ -277,7 +277,7 @@ def print_tools_by_location(
 def print_combined_local_remote(tools: dict, prefix: str = "", show_size=False):
     if prefix:
         print(f"{' ':<{PRE_SPACE}} Using the tools requires prefix '{prefix}/' e.g. 'cincan run {prefix}/<NAME>'")
-    print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.BOLD} ", end="")
+    print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.BOLD}  ", end="")
     print(f"{'Tool name':<{MAX_WN}}", end="")
     print(f"{f'Local Version':{MAX_WV}}", end="")
     print(f"{'Remote Version':<{MAX_WV}}", end="")
@@ -291,8 +291,8 @@ def print_combined_local_remote(tools: dict, prefix: str = "", show_size=False):
         r_version = tools[tool].get("remote_version")[:CHARS_TO_SHOW]
         description = tools[tool].get("description")
 
-        print(f"{' ':<{PRE_SPACE}}|", end="")
-        print(f" {basename(tool):<{MAX_WN}}", end="")
+        print(f"{' ':<{PRE_SPACE}}| ", end="")
+        print(f"{basename(tool):<{MAX_WN}}", end="")
         print(f"{l_version:{MAX_WV}}", end="")
         print(f"{r_version:{MAX_WV}}", end="")
         if show_size:

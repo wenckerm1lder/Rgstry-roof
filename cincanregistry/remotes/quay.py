@@ -20,7 +20,6 @@ class QuayRegistry(RemoteRegistry):
         self.image_prefix = "quay.io"
         self.cincan_namespace: str = "cincan"
         self.full_prefix = f"{self.image_prefix}/{self.cincan_namespace}"
-        self._set_auth_and_service_location()
 
     def _quay_api_error(self, resp: requests.Response):
         """ Error schema:
@@ -99,6 +98,7 @@ class QuayRegistry(RemoteRegistry):
         return tools_list
 
     async def get_tools(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
+        self._set_auth_and_service_location()
         available_tools = self.__fetch_available_tools()
         tool_list = {}
         for t in available_tools:

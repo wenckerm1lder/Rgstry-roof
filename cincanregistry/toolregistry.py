@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from os.path import basename
 from typing import Tuple, Dict
 from ._registry import RegistryBase
 from datetime import datetime, timedelta
@@ -26,7 +27,7 @@ class ToolRegistry(RegistryBase):
         super(ToolRegistry, self).__init__(*args, **kwargs)
         self.logger: logging.Logger = logging.getLogger("registry")
         self.default_remote = default_remote if (
-                    default_remote is not None and default_remote != list(Remotes)[0]) else self.config.registry
+                default_remote is not None and default_remote != list(Remotes)[0]) else self.config.registry
         if self.default_remote == Remotes.QUAY:
             self.remote_registry = QuayRegistry(*args, **kwargs)
         elif self.default_remote == Remotes.DOCKERHUB:
@@ -123,25 +124,29 @@ class ToolRegistry(RegistryBase):
         )
         versions = {}
         if tool:
-            l_tool = self.local_registry.create_local_tool_info_by_name(tool)
-            r_tool = self.remote_registry.read_tool_cache(tool)
+            tool_name = basename(tool)
+            tool_with_namespace = f"{self.remote_registry.full_prefix}/{tool_name}"
+            l_tool = self.local_registry.create_local_tool_info_by_name(tool_with_namespace)
+            r_tool = self.remote_registry.read_tool_cache(tool_with_namespace)
+
             now = datetime.now()
             if not r_tool:
-                r_tool = ToolInfo(tool, datetime.min, self.remote_registry.registry_name)
+                r_tool = ToolInfo(tool_with_namespace, datetime.min, self.remote_registry.registry_name)
             if not r_tool.updated or not (
                     now - timedelta(hours=self.config.cache_lifetime) <= r_tool.updated <= now
             ):
                 self.remote_registry.fetch_tags(r_tool, update_cache=True)
             if l_tool or (r_tool and not r_tool.updated == datetime.min):
                 l_tool, r_tool = maintainer.get_versions_single_tool(
-                    tool, l_tool, r_tool
+                    tool_with_namespace, l_tool, r_tool
                 )
                 versions = await maintainer.list_versions_single(
                     l_tool, r_tool, only_updates
                 )
             else:
                 raise FileNotFoundError(
-                    f"Given tool {tool} not found locally or remotely."
+                    f"Given tool {tool} not found locally or remotely. Please, give only the basename of the tool,"
+                    f"without prefixes."
                 )
         else:
             remote_tools = await self.remote_registry.get_tools()

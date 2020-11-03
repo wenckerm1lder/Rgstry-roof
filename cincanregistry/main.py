@@ -166,8 +166,8 @@ def print_version_check(
 
         # pre-space and color
         print(f"{coloring}{' ':<{PRE_SPACE}}| ", end="")
-        # name
-        print(f"{tool_name:<{MAX_WN}}", end="")
+        # name, only base
+        print(f"{basename(tool_name):<{MAX_WN}}", end="")
         # local version
         versions = tool.get("versions")
         l_ver = versions.get("local").get("version") if versions.get("local") else ""

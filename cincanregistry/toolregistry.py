@@ -126,7 +126,8 @@ class ToolRegistry(RegistryBase):
         versions = {}
         if tool:
             if "/" in tool:
-                self.logger.error("Give only name of the tool, without prefixes or namespaces related to tool image.")
+                self.logger.error("Give only name of the tool, without prefixes or namespaces related to tool image."
+                                  f" Tool must be in default registry: {self.default_remote}.")
                 sys.exit(1)
             tool_name = basename(tool)
             tool_with_namespace = f"{self.remote_registry.full_prefix}/{tool_name}"

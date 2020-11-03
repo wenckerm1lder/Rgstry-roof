@@ -73,6 +73,8 @@ class Configuration:
         # Generate config file with default values, using yaml format to enable comments
         if not self.values:
             self.logger.debug("Generating configuration file with default values.")
+            # Make directory if it does not exist
+            self.file.parent.mkdir(parents=True, exist_ok=True)
             with self.file.open("w") as f:
                 print(f"# Configuration file of the cincan-registry Python module\n", file=f)
                 print(f"registry: {self.registry}  # Default registry wherefrom tools are used", file=f)

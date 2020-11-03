@@ -1,6 +1,7 @@
 import pathlib
 import logging
 import yaml
+from os.path import basename
 from datetime import timedelta, datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Union, List
@@ -10,7 +11,7 @@ from .gitlab_utils import GitLabUtils
 from .configuration import Configuration
 
 
-class MetaHandler():
+class MetaHandler:
     """Class for fetching and caching meta files from GitLab"""
 
     def __init__(self,
@@ -21,6 +22,7 @@ class MetaHandler():
         self.config = config
         self.force_refresh = force_refresh
         self.tool_dirs = []
+        self.cincan_namespace: str = "cincan"
 
     def _is_old_metafile_usable(self, local_path: pathlib.Path) -> bool:
 
@@ -47,6 +49,10 @@ class MetaHandler():
             return False
 
     def _get_index_file(self, client: GitLabUtils) -> bytes:
+        file_content = client.get_file_by_path(self.config.index_file, ref=self.config.branch).decode()
+        # Cache content
+        with (self.config.cache_location / self.config.index_file).open("wb") as f:
+            f.write(file_content)
         return client.get_file_by_path(self.config.index_file, ref=self.config.branch).decode()
 
     def read_index_file(self, index_f: Union[bytes, pathlib.Path]) -> List:
@@ -78,6 +84,8 @@ class MetaHandler():
                     f"File {str(path)} in wrong place at GitLab repository, skipping..."
                 )
                 return
+            # Path contains its location in GitLab (Stable, dev etc.), remote it
+            path = pathlib.Path("/".join(path.parts[1:]))
             file_path = self.config.cache_location / path
             # Make subdirectory - should be tool name
             file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -90,8 +98,10 @@ class MetaHandler():
 
     def get_meta_files_from_gitlab(
             self, tools: [List, str], branch: str
-    ):
-
+    ) -> bool:
+        """
+        Return true if new meta files
+        """
         if tools:
             # Create store location directory
             self.config.cache_location.mkdir(parents=True, exist_ok=True)
@@ -100,21 +110,16 @@ class MetaHandler():
 
         self.logger.info(
             f"Fetching meta information files from GitLab"
-            f" (https://gitlab.com/{self.config.namespace}/{self.config.project})"
+            f" (https://gitlab.com/{self.cincan_namespace}/{self.config.project})"
             f" into path '{self.config.cache_location}'"
         )
         gitlab_client = GitLabUtils(
-            namespace=self.config.namespace, project=self.config.project, token=self.config.tokens.get("gitlab", "")
+            namespace=self.cincan_namespace, project=self.config.project, token=self.config.tokens.get("gitlab", "")
         )
         self.read_index_file(self._get_index_file(gitlab_client))
-        if isinstance(tools, str):
-            tools = [tools]
+
         # tools with 'cincan' prefix
-        tools = [
-            i.split("/", 1)[1]
-            for i in tools
-            if i.startswith(self.config.prefix)
-        ]
+
         # NOTE slower at lower tool amounts but safer method
         # Get list of all files in repository
         # meta_tools contain only tools with meta files - no extra 404 later
@@ -128,13 +133,14 @@ class MetaHandler():
                 p = pathlib.Path(file.get("path"))
                 if p.parent.name in tools:
                     meta_paths.append(p)
-                    if len(tools) == 1:
-                        break
+
         if not meta_paths:
-            raise FileNotFoundError(
-                f"No single meta file ({self.config.meta_filename})"
-                f" found from GitLab ({self.config.namespace}/{self.config.project})"
-            )
+            self.logger.debug(f"No single meta file found from GitLab for tools: {', '.join(tools)}")
+            # raise FileNotFoundError(
+            #     f"No single meta file ({self.config.meta_filename})"
+            #     f" found from GitLab ({self.cincan_namespace}/{self.config.project})"
+            # )
+            return False
 
         # Write and fetch each file from GitLab
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
@@ -155,4 +161,5 @@ class MetaHandler():
                     pass
 
             self.logger.info("Required metafiles checked.")
+            return True
 

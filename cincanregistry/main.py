@@ -1,4 +1,5 @@
-from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, ToolInfo
+from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, QuayReadmeHandler, ToolInfo, Remotes
+from os.path import basename
 import argparse
 import sys
 import logging
@@ -32,7 +33,7 @@ MAX_WD = 30
 EXTRA_FILL = 35
 
 
-class color:
+class ANSIEscape:
     PURPLE = "\033[95m"
     CYAN = "\033[96m"
     DARKCYAN = "\033[36m"
@@ -55,13 +56,13 @@ def print_single_tool_version_check(tool, show_tags: bool = False):
     # Provider name length
     MAX_WN = 25
     MAX_WV = 40
-    print(f"\n{' ':<{PRE_SPACE}}{color.GREEN}  {tool.get('name')}{color.END}")
+    print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.GREEN}  {tool.get('name')}{ANSIEscape.END}")
     # pre-space and text format
     print(f"\n{' ':<{PRE_SPACE}}", end="")
     # Location
-    underlined_loc = f"{color.UNDERLINE}Location{color.END}"
-    underlined_ver = f"{color.UNDERLINE}Version{color.END}"
-    underlined_tags = f"{color.UNDERLINE}Tags{color.END}"
+    underlined_loc = f"{ANSIEscape.UNDERLINE}Location{ANSIEscape.END}"
+    underlined_ver = f"{ANSIEscape.UNDERLINE}Version{ANSIEscape.END}"
+    underlined_tags = f"{ANSIEscape.UNDERLINE}Tags{ANSIEscape.END}"
     # Underline "eats" padding by adding extra chars
     print(f"  {underlined_loc:<{MAX_WN + 8}}", end="")
     print(f"{underlined_ver:<{MAX_WV + 8}}", end="")
@@ -90,7 +91,8 @@ def print_single_tool_version_check(tool, show_tags: bool = False):
     # other
     if tool.get("versions").get("origin"):
         print(
-            f"{' ':<{PRE_SPACE}}| {tool.get('versions').get('origin').get('details').get('provider'):<{MAX_WN}}",
+            f"{' ':<{PRE_SPACE}}| Origin ("
+            f"{tool.get('versions').get('origin').get('details').get('provider') + ')':<{MAX_WN - 8}}",
             end="",
         )
         print(f"{tool.get('versions').get('origin').get('version'):<{MAX_WV}}")
@@ -112,9 +114,9 @@ def print_version_check(
     # TODO add maybe tag column somehow
 
     print(f"\n{' ':<{PRE_SPACE}}Color explanations:", end=" ")
-    print(f"{color.GREEN_BACKGROUND}  {color.END} - tool up to date", end=" ")
-    print(f"{color.RED_BACKGROUND}  {color.END} - update available in remote", end=" ")
-    print(f"{color.GRAY_BACKGROUND}  {color.END} - remote differs from tool origin")
+    print(f"{ANSIEscape.GREEN_BACKGROUND}  {ANSIEscape.END} - tool up to date", end=" ")
+    print(f"{ANSIEscape.RED_BACKGROUND}  {ANSIEscape.END} - update available in remote", end=" ")
+    print(f"{ANSIEscape.GRAY_BACKGROUND}  {ANSIEscape.END} - remote differs from tool origin")
 
     if location == "local":
         print(
@@ -128,7 +130,7 @@ def print_version_check(
     )
 
     # pre-space and text format
-    print(f"\n{' ':<{PRE_SPACE}}{color.BOLD}  ", end="")
+    print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.BOLD}  ", end="")
     # name
     print(f"{'Tool name':<{MAX_WN}}", end="")
     # local ver
@@ -141,18 +143,18 @@ def print_version_check(
     print(f"{f'Origin Provider':{MAX_WP}}", end="")
 
     # end text format
-    print(f"{color.END}\n")
+    print(f"{ANSIEscape.END}\n")
 
     for tool_name in sorted(tools):
 
-        coloring = color.GREEN
+        coloring = ANSIEscape.GREEN
 
         tool = tools[tool_name]
 
         if tool.get("updates").get("local") and location in ["local", "both"]:
-            coloring = color.BOLD_RED
+            coloring = ANSIEscape.BOLD_RED
         elif tool.get("updates").get("remote"):
-            coloring = color.GRAY
+            coloring = ANSIEscape.GRAY
         if location == "local":
             if not tool.get("versions").get("local"):
                 continue
@@ -164,8 +166,8 @@ def print_version_check(
 
         # pre-space and color
         print(f"{coloring}{' ':<{PRE_SPACE}}| ", end="")
-        # name
-        print(f"{tool_name:<{MAX_WN}}", end="")
+        # name, only base
+        print(f"{basename(tool_name):<{MAX_WN}}", end="")
         # local version
         versions = tool.get("versions")
         l_ver = versions.get("local").get("version") if versions.get("local") else ""
@@ -202,25 +204,27 @@ def print_version_check(
             end="",
         )
         # end colored section
-        print(f"{color.END if coloring else None}")
+        print(f"{ANSIEscape.END if coloring else None}")
     print()
 
 
 def print_tools_by_location(
-        tools: Dict[str, ToolInfo], location: str, filter_by: str = "", show_size=False
+        tools: Dict[str, ToolInfo], location: str, prefix="", filter_by: str = "", show_size=False
 ):
     MAX_WV = 41
+    if prefix:
+        print(f"{' ':<{PRE_SPACE}} Using the tools requires prefix '{prefix}/' e.g. 'cincan run {prefix}/<NAME>'\n")
     if location == "remote" and show_size:
         print(f"{' ':<{PRE_SPACE}} Size as compressed in Remote.")
     if location == "local" and show_size:
         print(f"{' ':<{PRE_SPACE}} Size as uncompressed in Local.")
-    print(f"\n{' ':<{PRE_SPACE}}{color.BOLD}  ", end="")
+    print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.BOLD}  ", end="")
     print(f"{'Tool name':<{MAX_WN}}  ", end="")
     print(f"{f'{location.capitalize()} Version':{MAX_WV}}  ", end="")
     if show_size:
         print(f"{'Size':<{MAX_WS}}   ", end="")
     print(f"{f'{location.capitalize()} Tags':<{MAX_WT}}", end="")
-    print(f"{color.END}\n")
+    print(f"{ANSIEscape.END}\n")
     # if not filter_by:
     # print(f"{' ':<{PRE_SPACE}}{'':-<{MAX_WN + MAX_WT + MAX_WV + EXTRA_FILL}}")
     for tool in sorted(tools):
@@ -231,6 +235,8 @@ def print_tools_by_location(
             size = next(iter(lst.versions)).size
             version = next(iter(lst.versions)).version
             name = lst.name.split(":")[0]
+            if prefix:
+                name = basename( name )
             if filter_by and filter_by not in tags:
                 continue
             print(f"{' ':<{PRE_SPACE}}| ", end="")
@@ -246,6 +252,8 @@ def print_tools_by_location(
                 )
             for i, ver in enumerate(lst.versions):
                 name = lst.name.split(":")[0] if first_print else ""
+                if prefix:
+                    name = basename(name)
                 tags = ",".join(lst.versions[i].tags)
                 version = ver.version
                 size = ver.size
@@ -266,15 +274,17 @@ def print_tools_by_location(
     print()
 
 
-def print_combined_local_remote(tools: dict, show_size=False):
-    print(f"\n{' ':<{PRE_SPACE}}{color.BOLD} ", end="")
+def print_combined_local_remote(tools: dict, prefix: str = "", show_size=False):
+    if prefix:
+        print(f"{' ':<{PRE_SPACE}} Using the tools requires prefix '{prefix}/' e.g. 'cincan run {prefix}/<NAME>'")
+    print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.BOLD} ", end="")
     print(f"{'Tool name':<{MAX_WN}}", end="")
     print(f"{f'Local Version':{MAX_WV}}", end="")
     print(f"{'Remote Version':<{MAX_WV}}", end="")
     if show_size:
         print(f" {'R. Size':<{MAX_WS}}", end="")
     print(f"{f'Description':<{MAX_WD}}", end="")
-    print(f"{color.END}\n")
+    print(f"{ANSIEscape.END}\n")
 
     for tool in sorted(tools):
         l_version = tools[tool].get("local_version")[:CHARS_TO_SHOW]
@@ -282,7 +292,7 @@ def print_combined_local_remote(tools: dict, show_size=False):
         description = tools[tool].get("description")
 
         print(f"{' ':<{PRE_SPACE}}|", end="")
-        print(f"{tool:<{MAX_WN}}", end="")
+        print(f" {basename(tool):<{MAX_WN}}", end="")
         print(f"{l_version:{MAX_WV}}", end="")
         print(f"{r_version:{MAX_WV}}", end="")
         if show_size:
@@ -292,7 +302,7 @@ def print_combined_local_remote(tools: dict, show_size=False):
 
 
 def create_head_argparse() -> argparse.ArgumentParser:
-    m_parser = argparse.ArgumentParser()
+    m_parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     m_parser.add_argument(
         "-l",
         "--log",
@@ -300,6 +310,11 @@ def create_head_argparse() -> argparse.ArgumentParser:
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Set the logging level",
         default=None,
+    )
+    m_parser.add_argument(
+        "--registry", help="Registry, where tools are located. Case sensitive.", type=Remotes,
+        choices=list(Remotes),
+        default=list(Remotes)[0]  # First value is default to keep definition consistent
     )
     m_parser.add_argument("-q", "--quiet", action="store_true", help="Be quite quiet")
     m_parser.add_argument(
@@ -324,16 +339,16 @@ def create_utils_argparse(subparsers: argparse._SubParsersAction):
     readme_parser = sub_utils_parser.add_parser(
         "update-readme",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-        help="Update README of tool(s) in Docker Hub. Uses local 'tools' repository as source.",
+        help="Update README of tool(s) in Docker Hub or Quay. Uses local 'tools' repository as source.",
     )
     readme_exclusive_group = readme_parser.add_mutually_exclusive_group()
     readme_exclusive_group.add_argument(
         "--all",
-        help="Update all README files of 'tools' repository into DockerHub.",
+        help="Update all README files of 'tools' repository into DockerHub or Quay (only short description here).",
         action="store_true",
     )
     readme_exclusive_group.add_argument(
-        "-n", "--name", help="Name of the tool to update README in Docker Hub.",
+        "-n", "--name", help="Name of the tool to update README in remote registry.",
     )
 
 
@@ -415,8 +430,7 @@ def list_handler(args):
     # If exported as module and parent parser of 'list' not defining
     if not hasattr(args, "tools"):
         args.tools = ""
-
-    reg = ToolRegistry(args.config, args.tools)
+    reg = ToolRegistry(args.config, args.tools, default_remote=args.registry)
 
     if not args.list_sub_command:
 
@@ -425,11 +439,11 @@ def list_handler(args):
             loop = asyncio.get_event_loop()
             try:
                 tools = loop.run_until_complete(
-                    reg.list_tools_local_images(
-                        defined_tag=args.tag if not args.all else ""
+                    reg.local_registry.get_tools(
+                        defined_tag=args.tag if not args.all else "", prefix=reg.remote_registry.full_prefix
                     )
                 ) if args.local else loop.run_until_complete(
-                    reg.list_tools_registry(
+                    reg.remote_registry.get_tools(
                         defined_tag=args.tag if not args.all else ""
                     )
                 )
@@ -437,26 +451,33 @@ def list_handler(args):
             finally:
                 loop.close()
             if tools:
+                location = "local" if args.local else "remote"
                 if not args.all and not args.json:
-                    print(f"\n  Listing all tools with tag '{args.tag}':\n")
+                    print(f"\n  Listing all {location} tools with tag '{args.tag}':\n")
                 elif not args.all and args.json:
                     print(json.dumps(tools, cls=ToolInfoEncoder))
                     exit(0)
                 else:
-                    print(f"\n  Listing all tools :\n")
-
-                location = "local" if args.local else "remote"
+                    if args.local:
+                        print(f"\n  Listing all {location} tools:\n")
+                    else:
+                        print(f"\n  Listing all {location} tools "
+                              f"from {reg.remote_registry.registry_name} ({reg.remote_registry.registry_root}):\n")
 
                 print_tools_by_location(
-                    tools, location, args.tag if not args.all else "", args.size
+                    tools, location, prefix=reg.remote_registry.full_prefix, filter_by=(args.tag if not args.all else ""), show_size=args.size
                 )
 
         else:
-            tool_list = reg.list_tools(defined_tag=args.tag if not args.all else "")
+            tool_list = reg.get_tools(defined_tag=args.tag if not args.all else "")
             if not args.all and not args.json and tool_list:
-                print(f"\n  Listing all tools with tag '{args.tag}':\n")
-            if not args.json and tool_list:
-                print_combined_local_remote(tool_list, args.size)
+                print(
+                    f"\n  Listing all CinCan tools (remote from {reg.remote_registry.registry_name}) with tag '{args.tag}':\n")
+                print_combined_local_remote(tool_list, prefix=reg.remote_registry.full_prefix, show_size=args.size)
+            elif not args.json and tool_list and args.all:
+                print(
+                    f"\n  Listing all CinCan tools (remote from {reg.remote_registry.registry_name}) with any tag:\n")
+                print_combined_local_remote(tool_list, prefix=reg.remote_registry.full_prefix, show_size=args.size)
             elif tool_list:
                 print(json.dumps(tool_list))
             else:
@@ -484,7 +505,13 @@ def list_handler(args):
 
 def utils_handler(args):
     if args.utils_sub_command == "update-readme":
-        reg = HubReadmeHandler(tools_repo_path=args.tools, config_path=args.config)
+        if args.registry == Remotes.DOCKERHUB:
+            reg = HubReadmeHandler(tools_repo_path=args.tools, config_path=args.config)
+        elif args.registry == Remotes.QUAY:
+            reg = QuayReadmeHandler(tools_repo_path=args.tools, config_path=args.config)
+        else:
+            print("Readme update not supported for given registry")
+            sys.exit(1)
         if args.all:
             reg.update_readme_all_tools()
         elif args.name:

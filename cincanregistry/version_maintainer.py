@@ -1,11 +1,11 @@
 from typing import Dict, List, Tuple, Union
-from .tool_info import ToolInfo
-from .version_info import VersionInfo
+from os.path import basename
+from cincanregistry.models.tool_info import ToolInfo
+from cincanregistry.models.version_info import VersionInfo
 from .checkers import classmap
-from .gitlab_utils import GitLabUtils
 from .utils import parse_file_time, format_time
 from .configuration import Configuration
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor
 import pathlib
 import json
 from datetime import datetime, timedelta
@@ -18,6 +18,7 @@ class VersionMaintainer:
     """
     Class for getting possible new versions for tools in ToolRegistry
     """
+    META_TIMESTAMP_VAR = "__metafile_timestamp"
 
     def __init__(
             self,
@@ -49,32 +50,66 @@ class VersionMaintainer:
 
         """
         for tool_dir in self.meta_files_location.iterdir():
-            if tool_dir.name in self.tool_dirs:
-                for tool_path in tool_dir.iterdir():
-                    if (tool_path / self.meta_filename).is_file():
-                        self.able_to_check[f"{self.config.prefix}{tool_path.stem}"] = tool_path
+            if tool_dir.is_file():
+                continue
+            for tool_path in tool_dir.iterdir():
+                if tool_path.is_file() and tool_path.name == self.meta_filename:
+                    # Only basename - upstream checking works with different registries
+                    self.able_to_check[f"{tool_path.parent.stem}"] = tool_path
         if not self.able_to_check:
             self.logger.error(
                 f"No single configuration for upstream check found."
                 f" Something is wrong in path {self.meta_files_location}"
             )
 
-    def _generate_meta_files(self, tools: [List, str]):
+    def _generate_meta_files(self, tools: Dict):
+
+        # TODO might not work with all registries
+        tools_list = [
+            basename(i)
+            for i in tools
+            if f"{self.config.namespace}/" in i
+        ]
+        # Let's see if some files exist already. Index file exists if we have downloaded meta files
+
+        if (self.meta_files_location / self.config.index_file).is_file():
+            for tool_dir in self.meta_files_location.iterdir():
+                if tool_dir.is_file():
+                    continue
+                for tool_path in tool_dir.iterdir():
+                    if tool_path.is_file() and tool_path.name == self.meta_filename:
+                        mtime = datetime.fromtimestamp(tool_path.stat().st_mtime)
+                        now = datetime.now()
+                        if now - timedelta(hours=self.config.cache_lifetime) <= mtime <= now:
+                            # Meta file updated recently enough
+                            # Only basename - upstream checking works with different registries
+                            self.able_to_check[f"{tool_path.parent.stem}"] = tool_path
+                            # Remove existing file from list
+                            # tools_list[:] = [t for t in tools if basename(t) != tool_path.parent.stem]
+                            try:
+                                tools_list.remove(tool_path.parent.stem)
+                            except ValueError:
+                                # Value not found from list
+                                continue
 
         meta_handler = MetaHandler(self.config, self.force_refresh)
+        new_files = False
+        if not self.disable_remote_download and tools_list:
+            new_files = meta_handler.get_meta_files_from_gitlab(tools_list, self.config.branch)
         if not self.disable_remote_download:
-            meta_handler.get_meta_files_from_gitlab(tools, self.config.branch)
-            self.tool_dirs = meta_handler.tool_dirs
+            self.tool_dirs = meta_handler.read_index_file(self.config.cache_location / self.config.index_file)
         else:
             self.logger.debug("Download disabled, nothing to generate.")
-            self.tool_dirs = meta_handler.read_index_file(self.config.tools_repo_path / "index.yml")
-        self._set_available_checkers()
+            self.tool_dirs = meta_handler.read_index_file(self.config.tools_repo_path / self.config.index_file)
+        if tools_list and new_files:
+            self._set_available_checkers()
 
     def get_versions_single_tool(
             self, tool_name: str, local_tool: ToolInfo, remote_tool: ToolInfo
     ) -> Tuple[ToolInfo, ToolInfo]:
-        self._generate_meta_files(tool_name)
-        tool_path = self.able_to_check.get(tool_name)
+        self._generate_meta_files({tool_name: remote_tool})
+        # Tool name might contain registry root or namespace, include only basename
+        tool_path = self.able_to_check.get(basename(tool_name))
         if not tool_path:
             raise FileNotFoundError(f"Upstream check not implemented for {tool_name}.")
         if remote_tool:
@@ -86,7 +121,7 @@ class VersionMaintainer:
 
     def _set_single_tool_upstream_versions(self, tool_path: pathlib.Path, tool: ToolInfo):
 
-        with open(tool_path / self.meta_filename) as f:
+        with tool_path.open() as f:
             conf = json.load(f)
             # Expect list or single object in "upstreams" value
             for tool_info in (
@@ -101,7 +136,7 @@ class VersionMaintainer:
                         f"JSON configuration. "
                     )
                     continue
-                cache_d = self._read_checker_cache(tool_path.stem, provider)
+                cache_d = self._read_checker_cache(tool_path.parent.name, provider)
                 if cache_d and not self.force_refresh:
                     ver_obj = self._handle_checker_cache_data(cache_d, tool_info)
                     if ver_obj:
@@ -128,7 +163,7 @@ class VersionMaintainer:
                 )
 
                 self._write_checker_cache(
-                    tool_path.stem,
+                    tool_path.parent.stem,
                     provider,
                     {
                         "version": ver_obj.version,
@@ -192,7 +227,8 @@ class VersionMaintainer:
         self._generate_meta_files(tools)
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
             for t in tools:
-                tool_path = self.able_to_check.get(t)
+                # Basename is needed - version check works with different registries
+                tool_path = self.able_to_check.get(basename(t))
                 if tool_path:
                     tool = tools.get(t)
                     loop = asyncio.get_event_loop()

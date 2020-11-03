@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import List, Union
-from .checkers import UpstreamChecker
-from .utils import format_time, parse_file_time
+from cincanregistry.checkers import UpstreamChecker
+from cincanregistry.utils import format_time, parse_file_time
 import re
 
 
@@ -62,7 +62,7 @@ class VersionInfo:
     @property
     def docker_origin(self) -> bool:
         """
-        Returns true if this upsream is used to install tool in
+        Returns true if this upstream is used to install tool in
         corresponding dockerfile.
         """
         if isinstance(self._source, UpstreamChecker):

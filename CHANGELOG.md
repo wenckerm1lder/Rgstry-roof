@@ -2,6 +2,25 @@
 
 All notable changes in project will be documented in here.
 
+## [UNRELEASED]
+
+### Added
+
+  * Added support for Quay Registry
+  * Added support for V2 manifest specification
+  * Use time to measure validity of cached meta files
+  * Namespace of registry is "dynamic"
+
+### Changed
+
+  * Use Quay Registry as default instead of Docker Hub
+  * Structure of the code revamped for more modular
+  * Listing uses only the name of the tool instead of full image name including registry path
+
+### Removed
+
+  * Manifest V1 support
+
 ## [0.1.2]
 
 ### Changed

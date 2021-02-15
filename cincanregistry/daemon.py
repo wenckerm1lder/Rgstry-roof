@@ -82,10 +82,10 @@ class DaemonRegistry(RegistryBase):
                 if v == version:
                     v.tags.union(tags)
                     break
-                else:
-                    versions.append(
-                        VersionInfo(version, source, tags, updated, size=size)
-                    )
+            else:
+                versions.append(
+                    VersionInfo(version, source, tags, updated, size=size)
+                )
         tool.versions = versions
         return tool
 

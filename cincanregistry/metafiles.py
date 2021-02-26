@@ -84,8 +84,6 @@ class MetaHandler:
                     f"File {str(path)} in wrong place at GitLab repository, skipping..."
                 )
                 return
-            # Path contains its location in GitLab (Stable, dev etc.), remote it
-            path = pathlib.Path("/".join(path.parts[1:]))
             file_path = self.config.cache_location / path
             # Make subdirectory - should be tool name
             file_path.parent.mkdir(parents=True, exist_ok=True)

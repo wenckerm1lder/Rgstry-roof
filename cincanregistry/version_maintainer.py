@@ -49,18 +49,21 @@ class VersionMaintainer:
         Gets dictionary of tools, whereas upstream/origin check is supported.
 
         """
-        for tool_dir in self.tool_dirs.iterdir():
-            if tool_dir.is_file():
-                continue
-            for tool_path in tool_dir.iterdir():
-                if tool_path.is_file() and tool_path.name == self.meta_filename:
-                    # Only basename - upstream checking works with different registries
-                    self.able_to_check[f"{tool_path.parent.stem}"] = tool_path
-        if not self.able_to_check:
-            self.logger.error(
-                f"No single configuration for upstream check found."
-                f" Something is wrong in path {self.meta_files_location}"
-            )
+        for tool_state in self.tool_dirs:
+            tool_state_path = pathlib.Path(self.meta_files_location / tool_state)
+            if tool_state_path.is_dir():
+                for tool_dir in tool_state_path.iterdir():
+                    if tool_dir.is_file():
+                        continue
+                    for tool_path in tool_dir.iterdir():
+                        if tool_path.is_file() and tool_path.name == self.meta_filename:
+                            # Only basename - upstream checking works with different registries
+                            self.able_to_check[f"{tool_path.parent.stem}"] = tool_path
+                if not self.able_to_check:
+                    self.logger.error(
+                        f"No single configuration for upstream check found."
+                        f" Something is wrong in path {self.meta_files_location}"
+                    )
 
     def _generate_meta_files(self, tools: Dict):
 
@@ -71,38 +74,41 @@ class VersionMaintainer:
             if f"{self.config.namespace}/" in i
         ]
         meta_handler = MetaHandler(self.config, self.force_refresh)
-        if not self.disable_remote_download:
-            self.tool_dirs = meta_handler.read_index_file(self.config.cache_location / self.config.index_file)
-        else:
-            self.logger.debug("Download disabled, nothing to generate.")
-            self.tool_dirs = meta_handler.read_index_file(self.config.tools_repo_path / self.config.index_file)
 
         # Let's see if some files exist already. Index file exists if we have downloaded meta files
 
         if (self.meta_files_location / self.config.index_file).is_file() and not self.force_refresh:
+            if not self.disable_remote_download:
+                self.tool_dirs = meta_handler.read_index_file(self.config.cache_location / self.config.index_file)
+            else:
+                self.logger.debug("Download disabled, nothing to generate.")
+                self.tool_dirs = meta_handler.read_index_file(self.config.tools_repo_path / self.config.index_file)
             for tool_dir in self.tool_dirs:
-                for tool in (self.meta_files_location / tool_dir).iterdir():
-                    if tool.is_file():
-                        continue
-                    for tool_path in tool.iterdir():
-                        if tool_path.is_file() and tool_path.name == self.meta_filename:
-                            mtime = datetime.fromtimestamp(tool_path.stat().st_mtime)
-                            now = datetime.now()
-                            if now - timedelta(hours=self.config.cache_lifetime) <= mtime <= now:
-                                # Meta file updated recently enough
-                                # Only basename - upstream checking works with different registries
-                                self.able_to_check[f"{tool_path.parent.stem}"] = tool_path
-                                # Remove existing file from list
-                                # tools_list[:] = [t for t in tools if basename(t) != tool_path.parent.stem]
-                                try:
-                                    tools_list.remove(tool_path.parent.stem)
-                                except ValueError:
-                                    # Value not found from list
-                                    continue
+                if (self.meta_files_location / tool_dir).is_dir():
+                    for tool in (self.meta_files_location / tool_dir).iterdir():
+                        if tool.is_file():
+                            continue
+                        for tool_path in tool.iterdir():
+                            if tool_path.is_file() and tool_path.name == self.meta_filename:
+                                mtime = datetime.fromtimestamp(tool_path.stat().st_mtime)
+                                now = datetime.now()
+                                if now - timedelta(hours=self.config.cache_lifetime) <= mtime <= now:
+                                    # Meta file updated recently enough
+                                    # Only basename - upstream checking works with different registries
+                                    self.able_to_check[f"{tool_path.parent.stem}"] = tool_path
+                                    # Remove existing file from list
+                                    # tools_list[:] = [t for t in tools if basename(t) != tool_path.parent.stem]
+                                    try:
+                                        tools_list.remove(tool_path.parent.stem)
+                                    except ValueError:
+                                        # Value not found from list
+                                        continue
 
         new_files = False
         if not self.disable_remote_download and tools_list:
             new_files = meta_handler.get_meta_files_from_gitlab(tools_list, self.config.branch)
+            if not self.tool_dirs:
+                self.tool_dirs = meta_handler.read_index_file(self.config.cache_location / self.config.index_file)
         if tools_list and new_files:
             self.logger.debug("Setting available checkers...")
             self._set_available_checkers()

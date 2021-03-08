@@ -33,7 +33,7 @@ class ToolInfo:
         self._name: str = name
         self._updated: datetime = updated
         self.location: str = location
-        self.versions: List[VersionInfo] = versions or []
+        self.versions: List[VersionInfo] = versions or []  # Local versions
         self.upstream_v: List[VersionInfo] = upstream_v or []
         self.description = description
 

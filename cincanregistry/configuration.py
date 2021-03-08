@@ -42,6 +42,7 @@ class Configuration:
         self.cache_location: pathlib.Path = pathlib.Path(self.values.get("cache_path")) \
             if self.values.get("cache_path") \
             else pathlib.Path.home() / ".cincan" / "cache"
+        self.tool_db = self.cache_location / "tooldb.sqlite"
         self.cache_lifetime: int = 24  # Cache validity in hours
         # Location for cached Docker Hub manifest information
         self.tool_cache: pathlib.Path = pathlib.Path(self.values.get("registry_cache_path")) if self.values.get(

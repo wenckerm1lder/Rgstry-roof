@@ -23,9 +23,9 @@ class ToolInfo:
             name: str,
             updated: datetime,
             location: str,
+            description: str = "",
             versions: List[VersionInfo] = None,
             upstream_v: List[VersionInfo] = None,
-            description: str = "",
     ):
 
         if not name or not isinstance(name, str):
@@ -33,7 +33,7 @@ class ToolInfo:
         self._name: str = name
         self._updated: datetime = updated
         self.location: str = location
-        self.versions: List[VersionInfo] = versions or []  # Local versions
+        self.versions: List[VersionInfo] = versions or []  # Local or Remote versions (Not origin/very upstream)
         self.upstream_v: List[VersionInfo] = upstream_v or []
         self.description = description
 

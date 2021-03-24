@@ -38,6 +38,10 @@ class UpstreamChecker(metaclass=ABCMeta):
             )
         self.logger.debug(f"Instancing tool {self.tool}")
 
+    def __str__(self) -> str:
+        """Return provider name in lowercase, in case called as string format"""
+        return self.provider.lower()
+
     def __iter__(self):
         yield "uri", self.uri,
         yield "repository", self.repository,

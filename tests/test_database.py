@@ -26,7 +26,49 @@ def test_configure(tmp_path, caplog):
     assert db_path.is_file()
 
 
-def test_db_tool_data(tmp_path, caplog):
+def test_db_tool_data_insert(tmp_path, caplog):
+    caplog.set_level(logging.DEBUG)
+    db_path = tmp_path / "test_db.sqlite"
+    config = Configuration()
+    config.tool_db = db_path
+    test_db = ToolDatabase(config)
+    tool_obj = ToolInfo(**FAKE_TOOL_INFO)
+    with test_db.transaction():
+        test_db.insert_tool_info(tool_obj)
+        # Duplicate insert, should be handled gracefully
+        test_db.insert_tool_info(tool_obj)
+    # Read data
+    tools = test_db.get_tools()
+    assert len(tools) == 1
+    assert tools[0].description == FAKE_TOOL_INFO.get("description")
+    assert tools[0].name == FAKE_TOOL_INFO.get("name")
+    assert tools[0].updated == FAKE_TOOL_INFO.get("updated")
+    assert tools[0].location == FAKE_TOOL_INFO.get("location")
+
+
+def test_insert_tool_list(tmp_path, caplog):
+    caplog.set_level(logging.DEBUG)
+    db_path = tmp_path / "test_db.sqlite"
+    config = Configuration()
+    config.tool_db = db_path
+    test_db = ToolDatabase(config)
+    tools = [ToolInfo(**FAKE_TOOL_INFO), ToolInfo(**FAKE_TOOL_INFO2)]
+    with test_db.transaction():
+        test_db.insert_tool_info(tools)
+    # Read values
+    tools_from_db = test_db.get_tools()
+    assert len(tools_from_db) == 2
+    assert tools[0].description == FAKE_TOOL_INFO.get("description")
+    assert tools[0].name == FAKE_TOOL_INFO.get("name")
+    assert tools[0].updated == FAKE_TOOL_INFO.get("updated")
+    assert tools[0].location == FAKE_TOOL_INFO.get("location")
+    assert tools[1].description == FAKE_TOOL_INFO2.get("description")
+    assert tools[1].name == FAKE_TOOL_INFO2.get("name")
+    assert tools[1].updated == FAKE_TOOL_INFO2.get("updated")
+    assert tools[1].location == FAKE_TOOL_INFO2.get("location")
+
+
+def test_db_tool_data_insert_with_versions(tmp_path, caplog):
     caplog.set_level(logging.DEBUG)
     db_path = tmp_path / "test_db.sqlite"
     config = Configuration()
@@ -37,7 +79,15 @@ def test_db_tool_data(tmp_path, caplog):
     tool_obj = ToolInfo(**FAKE_TOOL_INFO)
     tool_obj.versions.append(ver1)
     tool_obj.upstream_v.append(ver2)
+    with test_db.transaction():
+        test_db.insert_tool_info(tool_obj)
+        # Duplicate insert, should be handled gracefully
+        test_db.insert_tool_info(tool_obj)
 
+
+def test_invalid_types():
+    # TODO add tests with invalid data type inserts, handle them gracefully on the code
+    pass
 
 @pytest.fixture(scope="session", autouse=True)
 def delete_temporary_files(request, tmp_path_factory):

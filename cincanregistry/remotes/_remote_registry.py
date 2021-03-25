@@ -9,7 +9,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from typing import List, Dict, Callable, Union
 import requests
 
-from cincanregistry import ToolInfo, VersionInfo
+from cincanregistry import ToolInfo, VersionInfo, VersionType
 from cincanregistry._registry import RegistryBase
 from cincanregistry.models.manifest import ImageConfig, ManifestV2
 from cincanregistry.utils import parse_file_time
@@ -286,6 +286,7 @@ class RemoteRegistry(RegistryBase):
                 else:
                     ver_info = VersionInfo(
                         version,
+                        VersionType.REMOTE,
                         self.registry_name,
                         {t},
                         updated,

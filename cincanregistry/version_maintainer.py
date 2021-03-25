@@ -1,7 +1,7 @@
 from typing import Dict, List, Tuple, Union
 from os.path import basename
 from cincanregistry.models.tool_info import ToolInfo
-from cincanregistry.models.version_info import VersionInfo
+from cincanregistry.models.version_info import VersionInfo, VersionType
 from .checkers import classmap
 from .utils import parse_file_time, format_time
 from .configuration import Configuration
@@ -150,7 +150,7 @@ class VersionMaintainer:
                 if cache_d and not self.force_refresh:
                     ver_obj = self._handle_checker_cache_data(cache_d, tool_info)
                     if ver_obj:
-                        tool.upstream_v.append(ver_obj)
+                        tool.versions.append(ver_obj)
                         self.logger.debug(
                             f"Using cached upstream version info for tool {tool.name:<{40}}"
                         )
@@ -166,6 +166,7 @@ class VersionMaintainer:
                 updated = datetime.now()
                 ver_obj = VersionInfo(
                     upstream_info.get_version(),
+                    VersionType.UPSTREAM,
                     upstream_info,
                     {"latest"},
                     updated,
@@ -182,7 +183,7 @@ class VersionMaintainer:
                         "extra_info": upstream_info.extra_info,
                     },
                 )
-                tool.upstream_v.append(ver_obj)
+                tool.versions.append(ver_obj)
 
     def _read_checker_cache(self, tool_name: str, provider: str) -> dict:
 
@@ -212,6 +213,7 @@ class VersionMaintainer:
             )
             ver_obj = VersionInfo(
                 data.get("version"),
+                VersionType.UPSTREAM,
                 dummy_checker,
                 {"latest"},
                 timestamp,
@@ -299,8 +301,8 @@ class VersionMaintainer:
                 if not isinstance(v.source, str)
                 else v.source,
             }
-            for v in r_tool.upstream_v
-            if not v.origin and v.source
+            for v in r_tool.versions
+            if not v.origin and v.source and v.version_type == VersionType.UPSTREAM
         ]
         tool_info["updates"] = {}
 

@@ -1,9 +1,8 @@
 from requests.exceptions import ConnectionError
 from datetime import datetime
 from typing import Dict, Union
-from cincanregistry import Remotes
 from cincanregistry.models.tool_info import ToolInfo
-from cincanregistry.models.version_info import VersionInfo
+from cincanregistry.models.version_info import VersionInfo, VersionType
 from cincanregistry.utils import parse_file_time, split_tool_tag
 from ._registry import RegistryBase
 import logging
@@ -63,9 +62,8 @@ class DaemonRegistry(RegistryBase):
         images = self.client.images.list(name, filters={"dangling": False})
         if not images:
             return None
-        source = "local"
         name, tag = split_tool_tag(name)
-        tool = ToolInfo(name, datetime.now(), source)
+        tool = ToolInfo(name, datetime.now(), self.registry_name)
         images.sort(key=lambda x: parse_file_time(x.attrs["Created"]), reverse=True)
         versions = []
         for i in images:
@@ -76,7 +74,7 @@ class DaemonRegistry(RegistryBase):
             tags = set(i.tags)
             size = i.attrs.get("Size")
             if not versions:
-                versions.append(VersionInfo(version, source, tags, updated, size=size))
+                versions.append(VersionInfo(version, VersionType.LOCAL, self.registry_name, tags, updated, size=size))
                 continue
             for v in versions:
                 if v == version:
@@ -84,7 +82,7 @@ class DaemonRegistry(RegistryBase):
                     break
             else:
                 versions.append(
-                    VersionInfo(version, source, tags, updated, size=size)
+                    VersionInfo(version, VersionType.LOCAL, self.registry_name, tags, updated, size=size)
                 )
         tool.versions = versions
         return tool
@@ -137,6 +135,7 @@ class DaemonRegistry(RegistryBase):
                                 ret[name].versions.append(
                                     VersionInfo(
                                         version,
+                                        VersionType.LOCAL,
                                         self.registry_name,
                                         set(stripped_tags),
                                         updated,
@@ -146,6 +145,7 @@ class DaemonRegistry(RegistryBase):
                         else:
                             ver_info = VersionInfo(
                                 version,
+                                VersionType.LOCAL,
                                 self.registry_name,
                                 set(stripped_tags),
                                 updated,

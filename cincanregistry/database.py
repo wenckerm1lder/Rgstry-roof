@@ -150,12 +150,22 @@ class ToolDatabase:
             self.logger.debug("Running executemany for insert, NOT logged precisely...")
             tool_list = [(i.name, format_time(i.updated), i.location, i.description) for i in tool_info]
             self.cursor.executemany(s_command, tool_list)
+            # All versions from all tools
+            for t in tool_info:
+                # Local or remote versions
+                self.insert_version_info(t.name, t.versions)
+                # Upstream versions
+                self.insert_version_info(t.name, t.upstream_v)
 
     def get_tools(self) -> List[ToolInfo]:
         with self.transaction():
             self.execute(f"SELECT name, updated, location, description from {TABLE_TOOLS}")
             rows = self.cursor.fetchall()
             return [self.row_into_tool_info_obj(i) for i in rows]
+
+    def get_versions_by_tool_and_source(self, tool_name: str, source: str) -> List[VersionInfo]:
+        """Get versions of tool by name and source of the versions"""
+        pass
 
     @staticmethod
     def row_into_version_info_obj(row: sqlite3.Row) -> VersionInfo:

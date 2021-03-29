@@ -1,5 +1,7 @@
 import pathlib
 import logging
+import yaml
+from os.path import basename
 from datetime import timedelta, datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Union, List
@@ -9,16 +11,18 @@ from .gitlab_utils import GitLabUtils
 from .configuration import Configuration
 
 
-class MetaHandler():
+class MetaHandler:
     """Class for fetching and caching meta files from GitLab"""
 
     def __init__(self,
                  config: Configuration,
-                 force_refresh
+                 force_refresh: bool = False
                  ):
         self.logger = logging.getLogger("metahandler")
         self.config = config
         self.force_refresh = force_refresh
+        self.tool_dirs = []
+        self.cincan_namespace: str = "cincan"
 
     def _is_old_metafile_usable(self, local_path: pathlib.Path) -> bool:
 
@@ -44,6 +48,22 @@ class MetaHandler():
             )
             return False
 
+    def _get_index_file(self, client: GitLabUtils) -> bytes:
+        file_content = client.get_file_by_path(self.config.index_file, ref=self.config.branch).decode()
+        # Cache content
+        with (self.config.cache_location / self.config.index_file).open("wb") as f:
+            f.write(file_content)
+        return client.get_file_by_path(self.config.index_file, ref=self.config.branch).decode()
+
+    def read_index_file(self, index_f: Union[bytes, pathlib.Path]) -> List:
+        """Get index file, which tells paths for tools"""
+        if isinstance(index_f, pathlib.Path):
+            with index_f.open("r") as f:
+                index_f = f.read()
+        yaml_obj = yaml.safe_load(index_f)
+        self.tool_dirs = yaml_obj.get("tools")
+        return self.tool_dirs
+
     def cache_metafile_by_path(
             self, client: GitLabUtils, path: pathlib.Path, ref: str
     ) -> Union[pathlib.Path, None]:
@@ -58,7 +78,8 @@ class MetaHandler():
             resp = None
         if resp:
             file_data = resp.decode()
-            if str(path).count("/") > 1 or str(path).startswith("_"):
+            if str(path).count("/") > 2 or str(path).startswith("_") or not str(path).startswith(
+                    tuple(self.tool_dirs)):
                 self.logger.warning(
                     f"File {str(path)} in wrong place at GitLab repository, skipping..."
                 )
@@ -75,8 +96,10 @@ class MetaHandler():
 
     def get_meta_files_from_gitlab(
             self, tools: [List, str], branch: str
-    ):
-
+    ) -> bool:
+        """
+        Return true if new meta files
+        """
         if tools:
             # Create store location directory
             self.config.cache_location.mkdir(parents=True, exist_ok=True)
@@ -85,43 +108,37 @@ class MetaHandler():
 
         self.logger.info(
             f"Fetching meta information files from GitLab"
-            f" (https://gitlab.com/{self.config.namespace}/{self.config.project})"
+            f" (https://gitlab.com/{self.cincan_namespace}/{self.config.project})"
             f" into path '{self.config.cache_location}'"
         )
         gitlab_client = GitLabUtils(
-            namespace=self.config.namespace, project=self.config.project, token=self.config.tokens.get("gitlab", "")
+            namespace=self.cincan_namespace, project=self.config.project, token=self.config.tokens.get("gitlab", "")
         )
+        self.read_index_file(self._get_index_file(gitlab_client))
 
-        if isinstance(tools, str):
-            tools = [tools]
         # tools with 'cincan' prefix
-        tools = [
-            (pathlib.Path(i.split("/", 1)[1]) / self.config.meta_filename)
-            for i in tools
-            if i.startswith(self.config.prefix)
-        ]
 
         # NOTE slower at lower tool amounts but safer method
         # Get list of all files in repository
         # meta_tools contain only tools with meta files - no extra 404 later
-        if len(tools) > 1:
-            files = gitlab_client.get_full_tree(
-                ref=branch
-            )
-            # Get paths of each meta file
-            meta_paths = []
-            for file in files:
-                if file.get("name") == self.config.meta_filename:
-                    p = pathlib.Path(file.get("path"))
-                    if p in tools:
-                        meta_paths.append(p)
-            if not meta_paths:
-                raise FileNotFoundError(
-                    f"No single meta file ({self.config.meta_filename})"
-                    f" found from GitLab ({self.config.namespace}/{self.config.project})"
-                )
-        else:
-            meta_paths = tools
+        files = gitlab_client.get_full_tree(
+            ref=branch
+        )
+        # Get paths of each meta file
+        meta_paths = []
+        for file in files:
+            if file.get("name") == self.config.meta_filename:
+                p = pathlib.Path(file.get("path"))
+                if p.parent.name in tools:
+                    meta_paths.append(p)
+
+        if not meta_paths:
+            self.logger.debug(f"No single meta file found from GitLab for tools: {', '.join(tools)}")
+            # raise FileNotFoundError(
+            #     f"No single meta file ({self.config.meta_filename})"
+            #     f" found from GitLab ({self.cincan_namespace}/{self.config.project})"
+            # )
+            return False
 
         # Write and fetch each file from GitLab
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
@@ -142,3 +159,5 @@ class MetaHandler():
                     pass
 
             self.logger.info("Required metafiles checked.")
+            return True
+

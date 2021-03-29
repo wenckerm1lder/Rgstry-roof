@@ -1,14 +1,24 @@
+from enum import Enum
 from datetime import datetime, timedelta
 from typing import List, Union
-from .checkers import UpstreamChecker
-from .utils import format_time, parse_file_time
+from cincanregistry.checkers import UpstreamChecker
+from cincanregistry.utils import format_time, parse_file_time
 import re
+
+
+class VersionType(Enum):
+    """There can be following types of different versions"""
+    LOCAL = "local"  # On your machine
+    REMOTE = "remote"  # On remote Docker registry e.g. Quay
+    UPSTREAM = "upstream"  # Origin of the tool, e.g. GitHub
+    UNDEFINED = "undefined"
 
 
 class VersionInfo:
     def __init__(
             self,
             version: str,
+            version_type: VersionType,
             source: Union[str, UpstreamChecker],
             tags: set,
             updated: datetime = None,
@@ -16,6 +26,7 @@ class VersionInfo:
             size: Union[int, float] = None,
     ):
         self._version: str = str(version)
+        self._version_type: VersionType = version_type
         self._source: Union[str, UpstreamChecker] = source
         self._origin: bool = origin
         self._tags: set = tags
@@ -52,6 +63,17 @@ class VersionInfo:
         self._version = str(version)
 
     @property
+    def version_type(self) -> VersionType:
+        return self._version_type
+
+    @version_type.setter
+    def version_type(self, version_type: VersionType):
+        """Set type of Version (see enum VersionType)"""
+        if not version_type:
+            raise ValueError("Cannot set empty value for type.")
+        self._version_type = version_type
+
+    @property
     def provider(self) -> str:
         """Returns provider of upstream source, eg. GitHub """
         if isinstance(self._source, UpstreamChecker):
@@ -62,7 +84,7 @@ class VersionInfo:
     @property
     def docker_origin(self) -> bool:
         """
-        Returns true if this upsream is used to install tool in
+        Returns true if this upstream is used to install tool in
         corresponding dockerfile.
         """
         if isinstance(self._source, UpstreamChecker):
@@ -87,7 +109,7 @@ class VersionInfo:
         self._source = checker
 
     @property
-    def origin(self) -> str:
+    def origin(self) -> bool:
         if isinstance(self._source, UpstreamChecker):
             self._origin = self._source.origin
         return self._origin
@@ -142,7 +164,7 @@ class VersionInfo:
 
     @size.setter
     def size(self, value: Union[int, float]):
-        "Size as integer or float, expected to be in bytes"
+        """Size as integer or float, expected to be in bytes"""
         if isinstance(value, float) or isinstance(value, int):
             self._size = value
         else:
@@ -214,6 +236,7 @@ class VersionInfo:
 
     def __iter__(self):
         yield "version", self.version,
+        yield "version_type", self.version_type.value
         yield "source", self.source if isinstance(self.source, str) else dict(
             self.source
         ),

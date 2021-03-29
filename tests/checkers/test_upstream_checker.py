@@ -133,3 +133,8 @@ def test_upstream_checker_tag_sort():
             checker._sort_latest_tag(tags, tag_key="ver").get("ver")
             == "1.2.32-release-third"
     )
+
+
+def test_string_format():
+    checker = FakeChecker(FAKE_CHECKER_CONF, FAKE_CHECKER_TOKEN)
+    assert FAKE_CHECKER_CONF.get("provider").lower() == str(checker)

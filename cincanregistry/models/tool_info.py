@@ -1,12 +1,11 @@
 from datetime import datetime
 from typing import List
-from .version_info import VersionInfo
-from .utils import format_time, parse_file_time
+from cincanregistry.models.version_info import VersionInfo, VersionType
+from cincanregistry.utils import format_time, parse_file_time
 from json import JSONEncoder
 
 
 def _map_sub_versions(ver: VersionInfo):
-
     norm_ver = ver.get_normalized_ver()
     # Can't map if there are only  non-digits or hash
     if isinstance(norm_ver, str):
@@ -23,9 +22,8 @@ class ToolInfo:
             name: str,
             updated: datetime,
             location: str,
-            versions: List[VersionInfo] = None,
-            upstream_v: List[VersionInfo] = None,
             description: str = "",
+            versions: List[VersionInfo] = None,
     ):
 
         if not name or not isinstance(name, str):
@@ -33,8 +31,7 @@ class ToolInfo:
         self._name: str = name
         self._updated: datetime = updated
         self.location: str = location
-        self.versions: List[VersionInfo] = versions or []
-        self.upstream_v: List[VersionInfo] = upstream_v or []
+        self.versions: List[VersionInfo] = versions or []  # Local, Remote, Upstream see class VersionType
         self.description = description
 
     @property
@@ -51,39 +48,48 @@ class ToolInfo:
             raise ValueError("Given time is not 'datetime' object.")
         self._updated = dt
 
+    def _get_origin_version(self, for_docker: bool = False) -> VersionInfo:
+        """Method for finding either origin or docker origin version"""
+        v_origin = None
+        if self.versions:
+            for v in self.versions:
+                if v.version_type == VersionType.UPSTREAM:
+                    if v.origin:
+                        v_origin = v
+                        break
+                    elif for_docker and v.docker_origin:
+                        v_origin = v
+                        break
+        if v_origin:
+            return v_origin
+        else:
+            return VersionInfo("Not implemented", VersionType.UNDEFINED, "", set(), datetime.min)
+
     def get_origin_version(self) -> VersionInfo:
         """
-        Returns version from the upstream versions, which is marked
-        as very origin of the tool.
-        """
-        if self.upstream_v:
-            for v in self.upstream_v:
-                if v.origin:
-                    return v
-        return VersionInfo("Not implemented", "", set(), datetime.min)
+         Returns version from the upstream versions, which is marked
+         as very origin of the tool.
+         """
+        return self._get_origin_version()
 
     def get_docker_origin_version(self) -> VersionInfo:
         """
-        Returns version from the upstream versions, which is marked
-        as install source in dockerfile.
-        """
-        if self.upstream_v:
-            for v in self.upstream_v:
-                if v.docker_origin:
-                    return v
-        return VersionInfo("Not implemented", "", set(), datetime.min)
+         Returns version from the upstream versions, which is marked
+         as install source for Dockerfile.
+         """
+        return self._get_origin_version(for_docker=True)
 
     def get_latest(self, in_upstream: bool = False) -> VersionInfo:
         """
-        Attempts to return latest version from available versions.
-        By default, not checking upstream
-        """
+         Attempts to return latest version from available versions.
+         By default, not checking upstream
+         """
+        to_include = self.versions if in_upstream else [i for i in self.versions if
+                                                        i.version_type != VersionType.UPSTREAM]
         latest = next(
             iter(
                 sorted(
-                    self.versions
-                    if not in_upstream
-                    else (self.upstream_v if self.upstream_v else []),
+                    to_include,
                     reverse=True,
                     key=lambda s: _map_sub_versions(s),
                 )
@@ -91,7 +97,7 @@ class ToolInfo:
             None,
         )
         if not latest:
-            return VersionInfo("undefined", "", set(), datetime.min)
+            return VersionInfo("undefined", VersionType.UNDEFINED, "", set(), datetime.min)
         else:
             return latest
 
@@ -100,8 +106,8 @@ class ToolInfo:
         yield "updated", format_time(self.updated),
         yield "location", self.location,
         yield "versions", [dict(v) for v in self.versions],
-        if self.upstream_v:
-            yield "upstream_v", [dict(v) for v in self.upstream_v],
+        # if self.upstream_v:
+        #     yield "upstream_v", [dict(v) for v in self.upstream_v],
         yield "description", self.description
 
     def __str__(self):
@@ -133,8 +139,8 @@ class ToolInfo:
                 params[k] = parse_file_time(v)
             elif k == "versions":
                 params[k] = [VersionInfo.from_dict(ver) for ver in v] if v else []
-            elif k == "upstream_v":
-                params[k] = [VersionInfo.from_dict(ver) for ver in v] if v else []
+            # elif k == "upstream_v":
+            #     params[k] = [VersionInfo.from_dict(ver) for ver in v] if v else []
             else:
                 params[k] = v
 

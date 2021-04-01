@@ -1,15 +1,14 @@
-import sqlite3
-import logging
 import datetime
-import pathlib
+import logging
+import sqlite3
 from contextlib import contextmanager
 from typing import List, Union, Any, Tuple
-from .configuration import Configuration
-from .utils import format_time, parse_file_time
-from .checkers import classmap
+
 from . import ToolInfo
 from . import VersionInfo
-import datetime
+from .checkers import classmap
+from .configuration import Configuration
+from .utils import format_time, parse_file_time
 
 # sqlite3.register_adapter(datetime.datetime, adapt_datetime)
 TABLE_TOOLS = "tools"
@@ -41,7 +40,7 @@ c_metadata = f'''CREATE TABLE if not exists {TABLE_METADATA}(
 
 c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     id INTEGER PRIMARY KEY,
-    tool_id INTEGER NOT NULL,
+    tool_id TEXT NOT NULL,
     meta_id TEXT,
     version TEXT,
     source TEXT NOT NULL,
@@ -119,13 +118,13 @@ class ToolDatabase:
         s_command = f"INSERT INTO {TABLE_VERSION_DATA}(tool_id, meta_id, version, source, " \
                     f"origin, tags, size, created, updated) VALUES (?,?,?,?,?,?,?,?,?)"
         if isinstance(version_info, VersionInfo):
-            meta_id = str(version_info.source) if str(version_info.source) in classmap else ""
+            meta_id = str(version_info.source) if str(version_info.source) in classmap else None
             self.execute(s_command,
-                         (tool_name, meta_id, version_info.version, version_info.source, version_info.origin,
+                         (tool_name, meta_id, version_info.version, str(version_info.source), version_info.origin,
                           ",".join(list(version_info.tags)), version_info.size, v_time, v_time))
         elif isinstance(version_info, List):
             self.logger.debug("Running executemany for insert, NOT logged precisely...")
-            version_list = [(tool_name, str(i.source) if str(i.source) in classmap else "", i.version, i.source,
+            version_list = [(tool_name, str(i.source) if str(i.source) in classmap else None, i.version, str(i.source),
                              i.origin, ",".join(list(i.tags)), i.size, v_time, v_time) for
                             i in version_info]
             self.cursor.executemany(s_command, version_list)
@@ -142,26 +141,27 @@ class ToolDatabase:
             self.execute(s_command, (tool_info.name,
                                      format_time(tool_info.updated), tool_info.location,
                                      tool_info.description))
-            # Local or remote versions
+            # Local, remote or upstream versions
             self.insert_version_info(tool_info.name, tool_info.versions)
-            # Upstream versions
-            self.insert_version_info(tool_info.name, tool_info.upstream_v)
         else:
             self.logger.debug("Running executemany for insert, NOT logged precisely...")
             tool_list = [(i.name, format_time(i.updated), i.location, i.description) for i in tool_info]
             self.cursor.executemany(s_command, tool_list)
             # All versions from all tools
-            for t in tool_info:
-                # Local or remote versions
-                self.insert_version_info(t.name, t.versions)
-                # Upstream versions
-                self.insert_version_info(t.name, t.upstream_v)
+            # Local, remote or upstream versions
+            self.insert_version_info(t.name, t.versions)
 
     def get_tools(self) -> List[ToolInfo]:
-        with self.transaction():
-            self.execute(f"SELECT name, updated, location, description from {TABLE_TOOLS}")
-            rows = self.cursor.fetchall()
-            return [self.row_into_tool_info_obj(i) for i in rows]
+        self.execute(f"SELECT name, updated, location, description from {TABLE_TOOLS}")
+        rows = self.cursor.fetchall()
+        return [self.row_into_tool_info_obj(i) for i in rows]
+
+    def get_versions_by_tool(self, tool_name: str):
+        """Get all versions by tool name"""
+        s_get_versions = f"SELECT * FROM {TABLE_VERSION_DATA} WHERE tool_id = '{tool_name}';"
+        self.execute(s_get_versions)
+        rows = self.cursor.fetchall()
+        print()
 
     def get_versions_by_tool_and_source(self, tool_name: str, source: str) -> List[VersionInfo]:
         """Get versions of tool by name and source of the versions"""

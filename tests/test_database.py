@@ -38,7 +38,8 @@ def test_db_tool_data_insert(tmp_path, caplog):
         # Duplicate insert, should be handled gracefully
         test_db.insert_tool_info(tool_obj)
     # Read data
-    tools = test_db.get_tools()
+    with test_db.transaction():
+        tools = test_db.get_tools()
     assert len(tools) == 1
     assert tools[0].description == FAKE_TOOL_INFO.get("description")
     assert tools[0].name == FAKE_TOOL_INFO.get("name")
@@ -56,7 +57,8 @@ def test_insert_tool_list(tmp_path, caplog):
     with test_db.transaction():
         test_db.insert_tool_info(tools)
     # Read values
-    tools_from_db = test_db.get_tools()
+    with test_db.transaction():
+        tools_from_db = test_db.get_tools()
     assert len(tools_from_db) == 2
     assert tools[0].description == FAKE_TOOL_INFO.get("description")
     assert tools[0].name == FAKE_TOOL_INFO.get("name")
@@ -78,12 +80,15 @@ def test_db_tool_data_insert_with_versions(tmp_path, caplog):
     ver2 = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
     tool_obj = ToolInfo(**FAKE_TOOL_INFO)
     tool_obj.versions.append(ver1)
-    tool_obj.upstream_v.append(ver2)
+    tool_obj.versions.append(ver2)
     with test_db.transaction():
         test_db.insert_tool_info(tool_obj)
         # Duplicate insert, should be handled gracefully
         test_db.insert_tool_info(tool_obj)
-
+        n_tools = test_db.get_versions_by_tool(tool_obj.name)
+        assert len(n_tools) == 1
+        test_db.get_versions_by_tool()
+        assert len(n_tools[0].versions) == 2
 
 def test_invalid_types():
     # TODO add tests with invalid data type inserts, handle them gracefully on the code

@@ -66,16 +66,16 @@ class ToolDatabase:
         self.logger = logging.getLogger("database")
         try:
             self.db_conn = sqlite3.connect(f"file:{config.tool_db}?mode=rw", uri=True)
+            self.db_conn.row_factory = sqlite3.Row
             self.cursor = self.db_conn.cursor()
             self.logger.debug("Database exists already.")
         except sqlite3.OperationalError:
             self.logger.debug("Creating new database file...")
             self.db_conn = sqlite3.connect(str(config.tool_db))
+            self.db_conn.row_factory = sqlite3.Row
             self.cursor = self.db_conn.cursor()
             self.configure()
             self.create_tables_if_not_exist()
-        # Use Row objects instead of tuples
-        self.db_conn.row_factory = sqlite3.Row
         self.create_custom_functions()
 
         # self.create_tables_if_not_exist()
@@ -162,11 +162,8 @@ class ToolDatabase:
     def get_tool_by_name(self, tool_name: str) -> Union[ToolInfo, None]:
         """Get tool by name"""
         self.execute(f"SELECT name, updated, location, description from {TABLE_TOOLS} WHERE {TABLE_TOOLS}.name = '{tool_name}'")
-        t = self.row_into_tool_info_obj(self.cursor.fetchone())
-        if t:
-            return t
-        else:
-            return None
+        t = self.cursor.fetchone()
+        return self.row_into_tool_info_obj(t) if t else None
 
     def get_tools(self) -> List[ToolInfo]:
         self.execute(f"SELECT name, updated, location, description from {TABLE_TOOLS}")
@@ -197,7 +194,7 @@ class ToolDatabase:
         origin = bool(row["origin"])
         return VersionInfo(version=row["version"], version_type=row["version_type"],
                            source=row["source"],
-                           tags=set(row["tags"].split(',')), updated=row["updated"],
+                           tags=set(row["tags"].split(',')), updated=parse_file_time(row["updated"]),
                            origin=origin, size=size)
 
     def row_into_tool_info_obj(self, row: sqlite3.Row) -> ToolInfo:

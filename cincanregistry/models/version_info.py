@@ -1,11 +1,11 @@
-from enum import Enum
+from enum import Enum, unique
 from datetime import datetime, timedelta
 from typing import List, Union
 from cincanregistry.checkers import UpstreamChecker
 from cincanregistry.utils import format_time, parse_file_time
 import re
 
-
+@unique
 class VersionType(Enum):
     """There can be following types of different versions"""
     LOCAL = "local"  # On your machine
@@ -26,7 +26,10 @@ class VersionInfo:
             size: Union[int, float] = None,
     ):
         self._version: str = str(version)
-        self._version_type: VersionType = version_type
+        if not isinstance(version_type, VersionType):
+            self._version_type = VersionType(value=version_type)
+        else:
+            self._version_type: VersionType = version_type
         self._source: Union[str, UpstreamChecker] = source
         self._origin: bool = origin
         self._tags: set = tags

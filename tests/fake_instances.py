@@ -22,7 +22,7 @@ from copy import deepcopy
 TEST_REPOSITORY = "cincan/test"
 
 FAKE_VERSION_INFO_NO_CHECKER = {
-    "version": 0.9,
+    "version": "0.9",
     "version_type": VersionType.REMOTE,
     "source": "no_checker_case",
     "tags": {"latest", "latest-stable"},

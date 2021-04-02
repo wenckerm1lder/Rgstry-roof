@@ -43,12 +43,13 @@ c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     tool_id TEXT NOT NULL,
     meta_id TEXT,
     version TEXT,
+    version_type TEXT,
     source TEXT NOT NULL,
+    tags TEXT NOT NULL, -- comma separated string
+    updated TEXT NOT NULL,
     origin INTEGER NOT NULL,
-    tags TEXT NOT NULL,
     size TEXT NOT NULL,
     created TEXT NOT NULL,
-    updated TEXT NOT NULL,
     FOREIGN KEY (meta_id)
         REFERENCES {TABLE_METADATA} (meta_id)
     FOREIGN KEY (tool_id)
@@ -73,6 +74,8 @@ class ToolDatabase:
             self.cursor = self.db_conn.cursor()
             self.configure()
             self.create_tables_if_not_exist()
+        # Use Row objects instead of tuples
+        self.db_conn.row_factory = sqlite3.Row
         self.create_custom_functions()
 
         # self.create_tables_if_not_exist()
@@ -115,17 +118,22 @@ class ToolDatabase:
             self.logger.debug("Empty version list provided...nothing to add.")
             return
         v_time = format_time(datetime.datetime.now())
-        s_command = f"INSERT INTO {TABLE_VERSION_DATA}(tool_id, meta_id, version, source, " \
-                    f"origin, tags, size, created, updated) VALUES (?,?,?,?,?,?,?,?,?)"
+        s_command = f"INSERT INTO {TABLE_VERSION_DATA}(tool_id, meta_id, version, version_type, source, " \
+                    f"tags, updated, origin, size, created) VALUES (?,?,?,?,?,?,?,?,?,?)"
         if isinstance(version_info, VersionInfo):
+            # Insert raw size, meta_id by checking existing upstream checkers, created time last param
             meta_id = str(version_info.source) if str(version_info.source) in classmap else None
             self.execute(s_command,
-                         (tool_name, meta_id, version_info.version, str(version_info.source), version_info.origin,
-                          ",".join(list(version_info.tags)), version_info.size, v_time, v_time))
+                         (tool_name, meta_id, version_info.version, version_info.version_type.value,
+                          str(version_info.source),
+                          ",".join(list(version_info.tags)), v_time, version_info.origin, version_info.raw_size(),
+                          v_time))
         elif isinstance(version_info, List):
             self.logger.debug("Running executemany for insert, NOT logged precisely...")
-            version_list = [(tool_name, str(i.source) if str(i.source) in classmap else None, i.version, str(i.source),
-                             i.origin, ",".join(list(i.tags)), i.size, v_time, v_time) for
+            # Insert raw size, meta_id by checking existing upstream checkers
+            version_list = [(tool_name, str(i.source) if str(i.source) in classmap else None, i.version,
+                             i.version_type.value, str(i.source),
+                             ",".join(list(i.tags)), v_time, i.origin, i.raw_size(), v_time) for
                             i in version_info]
             self.cursor.executemany(s_command, version_list)
 
@@ -151,6 +159,15 @@ class ToolDatabase:
             # Local, remote or upstream versions
             self.insert_version_info(t.name, t.versions)
 
+    def get_tool_by_name(self, tool_name: str) -> Union[ToolInfo, None]:
+        """Get tool by name"""
+        self.execute(f"SELECT name, updated, location, description from {TABLE_TOOLS} WHERE {TABLE_TOOLS}.name = '{tool_name}'")
+        t = self.row_into_tool_info_obj(self.cursor.fetchone())
+        if t:
+            return t
+        else:
+            return None
+
     def get_tools(self) -> List[ToolInfo]:
         self.execute(f"SELECT name, updated, location, description from {TABLE_TOOLS}")
         rows = self.cursor.fetchall()
@@ -161,27 +178,35 @@ class ToolDatabase:
         s_get_versions = f"SELECT * FROM {TABLE_VERSION_DATA} WHERE tool_id = '{tool_name}';"
         self.execute(s_get_versions)
         rows = self.cursor.fetchall()
-        print()
+        return [self.row_into_version_info_obj(r) for r in rows]
 
     def get_versions_by_tool_and_source(self, tool_name: str, source: str) -> List[VersionInfo]:
         """Get versions of tool by name and source of the versions"""
         pass
 
-    @staticmethod
-    def row_into_version_info_obj(row: sqlite3.Row) -> VersionInfo:
+    def row_into_version_info_obj(self, row: sqlite3.Row) -> VersionInfo:
         """Convert Row object into VersionInfo object"""
-        # if len(row) < 4:
-        #     raise ValueError(f"Row in {TABLE_TOOLS} table should have 4 values.")
+        try:
+            if __debug__:
+                self.logger.debug(f"Version size is type of {type(row)}")
+            # DB has raw size by default, could be integers instead of strings
+            size = int(row["size"])
+        except ValueError:
+            size = row["size"]
+        # No booleans in SQLite, convert integer back
+        origin = bool(row["origin"])
+        return VersionInfo(version=row["version"], version_type=row["version_type"],
+                           source=row["source"],
+                           tags=set(row["tags"].split(',')), updated=row["updated"],
+                           origin=origin, size=size)
 
-        pass
-
-    @staticmethod
-    def row_into_tool_info_obj(row: sqlite3.Row) -> ToolInfo:
+    def row_into_tool_info_obj(self, row: sqlite3.Row) -> ToolInfo:
         """Convert Row object into ToolInfo object"""
         if len(row) < 4:
             raise ValueError(f"Row in {TABLE_TOOLS} table should have 4 values.")
         name, updated, location, description = row
-        return ToolInfo(name=name, updated=parse_file_time(updated), location=location, description=description)
+        return ToolInfo(name=name, updated=parse_file_time(updated), location=location, description=description,
+                        versions=self.get_versions_by_tool(name))
 
     @contextmanager
     def transaction(self):

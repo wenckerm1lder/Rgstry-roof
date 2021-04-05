@@ -90,6 +90,7 @@ FAKE_DOCKER_REGISTRY_ERROR = {
     "errors": [{"message": "Big error...", "code": 400, "detail": "This is why!"}]
 }
 
+# Manifest Schema v1
 FAKE_IMAGE_ATTRS = {
     "Architecture": "amd64",
     "Author": "",

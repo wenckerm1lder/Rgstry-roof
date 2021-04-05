@@ -24,7 +24,7 @@ c_tool = f'''CREATE TABLE if not exists {TABLE_TOOLS}(
 '''
 # For meta_id, refer for available options file cincanregistry.checkers._init_ and classmap
 c_metadata = f'''CREATE TABLE if not exists {TABLE_METADATA}(
-    meta_id TEXT PRIMARY KEY,
+    meta_id INTEGER PRIMARY KEY,
     tool_id TEXT NOT NULL,
     uri TEXT UNIQUE, -- It should be impossible to be two identical uris for different providers
     repository TEXT NOT NULL,
@@ -35,13 +35,14 @@ c_metadata = f'''CREATE TABLE if not exists {TABLE_METADATA}(
     origin INTEGER NOT NULL, 
     docker_origin INTEGER NOT NULL,
     FOREIGN KEY (tool_id)
-        REFERENCES {TABLE_TOOLS} (name)
+        REFERENCES {TABLE_TOOLS} (name),
+    UNIQUE (uri, repository, tool, provider) ON CONFLICT REPLACE 
 );'''
 
 c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     id INTEGER PRIMARY KEY,
     tool_id TEXT NOT NULL,
-    meta_id TEXT,
+    meta_id INTEGER,
     version TEXT,
     version_type TEXT,
     source TEXT NOT NULL,
@@ -53,7 +54,9 @@ c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     FOREIGN KEY (meta_id)
         REFERENCES {TABLE_METADATA} (meta_id)
     FOREIGN KEY (tool_id)
-        REFERENCES {TABLE_TOOLS} (name)
+        REFERENCES {TABLE_TOOLS} (name),
+    -- We should not have duplicate versions from same origin - no use
+    UNIQUE (version, version_type, source) ON CONFLICT REPLACE
 );'''
 
 
@@ -157,11 +160,13 @@ class ToolDatabase:
             self.cursor.executemany(s_command, tool_list)
             # All versions from all tools
             # Local, remote or upstream versions
-            self.insert_version_info(t.name, t.versions)
+            for t in tool_info:
+                self.insert_version_info(t.name, t.versions)
 
     def get_tool_by_name(self, tool_name: str) -> Union[ToolInfo, None]:
         """Get tool by name"""
-        self.execute(f"SELECT name, updated, location, description from {TABLE_TOOLS} WHERE {TABLE_TOOLS}.name = '{tool_name}'")
+        self.execute(
+            f"SELECT name, updated, location, description from {TABLE_TOOLS} WHERE {TABLE_TOOLS}.name = '{tool_name}'")
         t = self.cursor.fetchone()
         return self.row_into_tool_info_obj(t) if t else None
 

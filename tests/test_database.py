@@ -1,6 +1,7 @@
 import logging
 import pathlib
 import shutil
+from copy import deepcopy
 
 import pytest
 
@@ -13,6 +14,22 @@ from .fake_instances import (
     FAKE_TOOL_INFO,
     FAKE_TOOL_INFO2,
 )
+
+
+@pytest.fixture(scope='function')
+def base_db(request, tmp_path):
+    # Make sample database for other tests
+    db_path = tmp_path / "test_db.sqlite"
+    config = Configuration()
+    config.tool_db = db_path
+    test_db = ToolDatabase(config)
+    ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
+    ver2 = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
+    tool_obj = ToolInfo(**FAKE_TOOL_INFO)
+    tool_obj.versions.append(ver1)
+    tool_obj.versions.append(ver2)
+    test_db.insert_tool_info(tool_obj)
+    yield test_db
 
 
 def test_configure(tmp_path, caplog):
@@ -100,21 +117,33 @@ def test_db_tool_data_insert_with_versions(tmp_path, caplog):
         assert len(n_tools[0].versions) == 4
 
 
-def test_get_tool_by_name(tmp_path, caplog):
+def test_db_insert_duplicate_version(caplog, tmp_path):
     caplog.set_level(logging.DEBUG)
     db_path = tmp_path / "test_db.sqlite"
     config = Configuration()
     config.tool_db = db_path
     test_db = ToolDatabase(config)
     ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
-    ver2 = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
+    ver2 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
+    cp_FAKE_VERSION_INFO_NO_CHECKER = deepcopy(FAKE_VERSION_INFO_NO_CHECKER)
+    cp_FAKE_VERSION_INFO_NO_CHECKER["version"] = "1.1"
+    ver3 = VersionInfo(**cp_FAKE_VERSION_INFO_NO_CHECKER)
     tool_obj = ToolInfo(**FAKE_TOOL_INFO)
     tool_obj.versions.append(ver1)
     tool_obj.versions.append(ver2)
-    test_db.insert_tool_info(tool_obj)
-    tool = test_db.get_tool_by_name(FAKE_TOOL_INFO.get("name"))
+    tool_obj.versions.append(ver3)
+    with test_db.transaction():
+        test_db.insert_tool_info(tool_obj)
+        tools_db = test_db.get_tools()
+        assert len(tools_db[0].versions) == 2
+
+
+def test_get_tool_by_name(tmp_path, caplog, base_db):
+    """Tool by name, uses default db"""
+    caplog.set_level(logging.DEBUG)
+    tool = base_db.get_tool_by_name(FAKE_TOOL_INFO.get("name"))
     assert tool.name == FAKE_TOOL_INFO.get("name")
-    tool = test_db.get_tool_by_name("non-existing")
+    tool = base_db.get_tool_by_name("non-existing")
     assert not tool
 
 

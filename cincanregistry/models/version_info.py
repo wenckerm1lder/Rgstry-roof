@@ -1,9 +1,11 @@
-from enum import Enum, unique
+import re
 from datetime import datetime, timedelta
+from enum import Enum, unique
 from typing import List, Union
+
 from cincanregistry.checkers import UpstreamChecker
 from cincanregistry.utils import format_time, parse_file_time
-import re
+
 
 @unique
 class VersionType(Enum):

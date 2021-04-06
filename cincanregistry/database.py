@@ -14,6 +14,7 @@ from .utils import format_time, parse_file_time
 TABLE_TOOLS = "tools"
 TABLE_METADATA = "metadata"
 TABLE_VERSION_DATA = "version_data"
+# TABLE_CHECKER = "checker_extra"
 
 c_tool = f'''CREATE TABLE if not exists {TABLE_TOOLS}(
     -- id INTEGER PRIMARY KEY, -- autoincrement could prevent reuse of deleted rows
@@ -56,6 +57,7 @@ c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     size TEXT NOT NULL,
     -- when created in database
     created TEXT NOT NULL,
+    extra_info TEXT,
     FOREIGN KEY (meta_id)
         REFERENCES {TABLE_METADATA} (meta_id),
     FOREIGN KEY (tool_id, tool_location) 
@@ -63,6 +65,15 @@ c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     -- We should not have duplicate versions from same origin - no use
     UNIQUE (tool_id, version, version_type, source) ON CONFLICT REPLACE
 );'''
+
+
+# c_checker_extra = f'''CREATE TABLE if not exists {TABLE_CHECKER}(
+#     id INTEGER PRIMARY KEY,
+#     version_id INTEGER NOT NULL,
+#     extra_info TEXT NOT NULL,
+#     FOREIGN KEY (version_id)
+#         REFERENCES {TABLE_VERSION_DATA} (id) ON DELETE CASCADE ,
+# );'''
 
 
 # FOREIGN KEY (tool_id)
@@ -196,8 +207,11 @@ class ToolDatabase:
         rows = self.cursor.fetchall()
         return [self.row_into_tool_info_obj(i) for i in rows]
 
-    def get_versions_by_tool(self, tool_name: str, version_type: VersionType = None, provider: str = ""):
-        """Get all versions by tool name, or by version_type if set"""
+    def get_versions_by_tool(self, tool_name: str, version_type: VersionType = None, provider: str = "",
+                             latest: bool = False) -> Union[List[VersionInfo], VersionInfo]:
+        """Get all versions by tool name, by version_type, provider if set
+        return single VersionInfo object if latest set
+        """
         s_get_versions = f"SELECT * FROM {TABLE_VERSION_DATA} WHERE tool_id = ?"
         params = [tool_name]
         if version_type:
@@ -207,10 +221,25 @@ class ToolDatabase:
         if provider:
             s_get_versions += f" AND source = ?"
             params.append(provider)
+        if latest:
+            s_get_versions += f" ORDER BY updated DESC LIMIT 1"
 
         self.execute(s_get_versions, tuple(params))
+        if latest:
+            row = self.cursor.fetchone()
+            return self.row_into_version_info_obj(row)
         rows = self.cursor.fetchall()
         return [self.row_into_version_info_obj(r) for r in rows]
+
+    def get_meta_information(self, tool_name: str, provider: str) -> sqlite3.Row:
+        params = [tool_name, provider]
+        s_get_meta = f"SELECT * FROM {TABLE_METADATA} WHERE tool_id = ? AND provider = ?"
+        self.execute(s_get_meta, tuple(params))
+        rows = self.cursor.fetchall()
+        if len(rows) != 1:
+            self.logger.error(
+                f"Possible duplicates for meta data for tool {tool_name} with provider {provider}. Report bug.")
+        return rows[0]
 
     def row_into_version_info_obj(self, row: sqlite3.Row) -> VersionInfo:
         """Convert Row object into VersionInfo object"""
@@ -221,8 +250,17 @@ class ToolDatabase:
             size = row["size"]
         # No booleans in SQLite, convert integer back
         origin = bool(row["origin"])
+        if row["source"] and (row["source"].lower() in classmap.keys()):
+            upstream_info = self.get_meta_information(row["tool_id"], classmap.get(row["source"].lower()))
+            dummy_checker = classmap.get(row["source"].lower())(
+                upstream_info,
+                version=row["version"],
+                extra_info=row["extra_info"]
+            )
+        else:
+            dummy_checker = None
         return VersionInfo(version=row["version"], version_type=row["version_type"],
-                           source=row["source"],
+                           source=dummy_checker or row["source"],
                            tags=set(row["tags"].split(',')), updated=parse_file_time(row["updated"]),
                            origin=origin, size=size)
 

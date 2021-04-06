@@ -8,7 +8,7 @@ def parse_file_time(string: str) -> datetime.datetime:
 
 
 def format_time(time: datetime.datetime) -> str:
-    """Format time as we would like to see it"""
+    """Format time as we would like to see it in ISO8601"""
     return time.strftime("%Y-%m-%dT%H:%M:%S")
 
 

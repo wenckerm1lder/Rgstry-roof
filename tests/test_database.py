@@ -187,6 +187,29 @@ def test_get_tool_by_remote(base_db):
     tools = base_db.get_tools(remote_name=FAKE_TOOL_INFO.get("location"))
     assert len(tools) == 2
 
+
+def test_get_latest_version_by_provider(base_db):
+    tmp_checker = {
+        "version": "1.9",
+        "version_type": VersionType.REMOTE,
+        "source": "no_checker_case",
+        "tags": {"latest", "latest-stable"},
+        "updated": datetime(2021, 3, 3, 13, 37, ),
+        "size": 89529754,
+    }
+    with base_db.transaction():
+        base_db.insert_version_info(ToolInfo(**FAKE_TOOL_INFO), VersionInfo(**tmp_checker))
+        version = base_db.get_versions_by_tool(FAKE_TOOL_INFO.get("name"), provider=tmp_checker.get("source"),
+                                               latest=True)
+        assert version.version == "1.9"
+        # Replace existing record with identical data but different date
+        tmp_checker["updated"] = datetime(2018, 3, 3, 13, 37, )
+        base_db.insert_version_info(ToolInfo(**FAKE_TOOL_INFO), VersionInfo(**tmp_checker))
+        version = base_db.get_versions_by_tool(FAKE_TOOL_INFO.get("name"), provider=tmp_checker.get("source"),
+                                               latest=True)
+        assert version.version == "0.9"
+
+
 def test_invalid_types():
     # TODO add tests with invalid data type inserts, handle them gracefully on the code
     pass

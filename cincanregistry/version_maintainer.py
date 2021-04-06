@@ -138,12 +138,12 @@ class VersionMaintainer:
         with tool_path.open() as f:
             conf = json.load(f)
             # Expect list or single object in "upstreams" value
-            for tool_info in (
+            for upstream_info in (
                     conf.get("upstreams")
                     if isinstance(conf.get("upstreams"), List)
                     else [conf.get("upstreams")]
             ):
-                provider = tool_info.get("provider").lower()
+                provider = upstream_info.get("provider").lower()
                 if provider not in classmap.keys():
                     self.logger.error(
                         f"No upstream checker implemented for tool '{tool.name}' with provider '{provider}'. Check "
@@ -152,7 +152,7 @@ class VersionMaintainer:
                     continue
                 cache_d = self._read_checker_cache(tool_path.parent.name, provider)
                 if cache_d and not self.force_refresh:
-                    ver_obj = self._handle_checker_cache_data(cache_d, tool_info)
+                    ver_obj = self._handle_checker_cache_data(cache_d, upstream_info)
                     if ver_obj:
                         tool.versions.append(ver_obj)
                         self.logger.debug(
@@ -161,12 +161,12 @@ class VersionMaintainer:
                         continue
 
                 self.logger.info(
-                    f"Fetching origin version information from provider {tool_info.get('provider')}"
+                    f"Fetching origin version information from provider {upstream_info.get('provider')}"
                     f" for tool {tool.name:<{40}}"
                 )
-                token_provider = tool_info.get("token_provider") or provider
+                token_provider = upstream_info.get("token_provider") or provider
                 token = self.tokens.get(token_provider) if self.tokens else ""
-                upstream_info = classmap.get(provider)(tool_info, token=token)
+                upstream_info = classmap.get(provider)(upstream_info, token=token)
                 updated = datetime.now()
                 ver_obj = VersionInfo(
                     upstream_info.get_version(),
@@ -183,9 +183,10 @@ class VersionMaintainer:
                 )
                 tool.versions.append(ver_obj)
 
-    def _read_checker_cache(self, tool_name: str, provider: str) -> dict:
+    def _read_checker_cache(self, tool_name: str, provider: str) -> VersionInfo:
         """Read version data of tool by provider from db"""
-        self.db.get_versions_by_tool(tool_name, VersionType.UPSTREAM)
+        version = self.db.get_versions_by_tool(tool_name, VersionType.UPSTREAM, provider=provider.lower(), latest=True)
+        return version
 
         # path = self.config.cache_location / tool_name / f"{provider}_cache.json"
         # if path.is_file():

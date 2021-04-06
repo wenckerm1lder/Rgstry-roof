@@ -58,8 +58,8 @@ c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     created TEXT NOT NULL,
     FOREIGN KEY (meta_id)
         REFERENCES {TABLE_METADATA} (meta_id),
-    FOREIGN KEY (tool_id, tool_location)
-        REFERENCES {TABLE_TOOLS} (name, location),
+    FOREIGN KEY (tool_id, tool_location) 
+        REFERENCES {TABLE_TOOLS} (name, location) ON DELETE CASCADE ,
     -- We should not have duplicate versions from same origin - no use
     UNIQUE (tool_id, version, version_type, source) ON CONFLICT REPLACE
 );'''
@@ -188,7 +188,7 @@ class ToolDatabase:
         """
         command = f"SELECT name, updated, location, description from {TABLE_TOOLS}"
         if remote_name:
-            command += f" AND {TABLE_TOOLS}.location = '{remote_name}'"
+            command += f" WHERE {TABLE_TOOLS}.location = '{remote_name}'"
         self.execute(command)
         rows = self.cursor.fetchall()
         return [self.row_into_tool_info_obj(i) for i in rows]
@@ -209,8 +209,6 @@ class ToolDatabase:
     def row_into_version_info_obj(self, row: sqlite3.Row) -> VersionInfo:
         """Convert Row object into VersionInfo object"""
         try:
-            if __debug__:
-                self.logger.debug(f"Version size is type of {type(row)}")
             # DB has raw size by default, could be integers instead of strings
             size = int(row["size"])
         except ValueError:

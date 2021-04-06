@@ -97,6 +97,8 @@ class DaemonRegistry(RegistryBase):
         Only tools with starts with 'prefix' are listed.
         Additionally, if tag is defined, tool must have this tag
         before it is listed.
+
+        TODO seems to be blocking, async useless
         """
         if not self._is_docker_running():
             return {}

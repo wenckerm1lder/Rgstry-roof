@@ -184,6 +184,8 @@ def test_get_tool_by_remote(base_db):
     tool = base_db.get_single_tool(tool_name=FAKE_TOOL_INFO.get("name"), remote_name=FAKE_TOOL_INFO.get("location"))
     assert tool.name == FAKE_TOOL_INFO.get("name")
 
+    tools = base_db.get_tools(remote_name=FAKE_TOOL_INFO.get("location"))
+    assert len(tools) == 2
 
 def test_invalid_types():
     # TODO add tests with invalid data type inserts, handle them gracefully on the code

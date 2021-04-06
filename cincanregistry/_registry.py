@@ -1,10 +1,9 @@
-import json
 import logging
 import pathlib
 from abc import ABCMeta, abstractmethod
 from typing import Dict, Union
 
-from cincanregistry import ToolInfo, ToolInfoEncoder
+from cincanregistry import ToolInfo
 from cincanregistry.configuration import Configuration
 from cincanregistry.database import ToolDatabase
 
@@ -39,32 +38,15 @@ class RegistryBase(metaclass=ABCMeta):
         pass
 
     def update_cache_by_tool(self, tool: ToolInfo):
-        self.tool_cache.parent.mkdir(parents=True, exist_ok=True)
-        tools = {}
-        if self.tool_cache.is_file():
-            with self.tool_cache.open("r") as f:
-                tools = json.load(f)
-                if not tools.get(self.CACHE_VERSION_VAR) == self.tool_cache_version or not tools.get(
-                        self.REMOTE_NAME_VAR) == self.registry_name:
-                    tools = {}
-        with self.tool_cache.open("w") as f:
-            tools[self.CACHE_VERSION_VAR] = self.tool_cache_version
-            tools[self.REMOTE_NAME_VAR] = self.registry_name
-            tools[tool.name] = dict(tool)
-            self.logger.debug(f"Updating tool cache for tool {tool.name}")
-            json.dump(tools, f, cls=ToolInfoEncoder)
+        with self.db.transaction():
+            self.db.insert_tool_info(tool)
 
     def update_cache(self, tools: Dict[str, Union[ToolInfo, str]]):
         """
-        Update tool cache by dict of ToolInfo objects
+        Update tool cache by dict of ToolInfo objects. SQLite database used
         """
-        self.db.insert_tool_info([tools.get(i) for i in tools.keys()])
-        # self.tool_cache.parent.mkdir(parents=True, exist_ok=True)
-        # with self.tool_cache.open("w") as f:
-        #     self.logger.debug("saving tool cache %s", self.tool_cache)
-        #     tools[self.CACHE_VERSION_VAR] = self.tool_cache_version
-        #     tools[self.REMOTE_NAME_VAR] = self.registry_name
-        #     json.dump(tools, f, cls=ToolInfoEncoder)
+        with self.db.transaction():
+            self.db.insert_tool_info([tools.get(i) for i in tools.keys()])
 
     # def read_remote_versions_from_db(
     #         self, tool_name: str = ""
@@ -78,36 +60,36 @@ class RegistryBase(metaclass=ABCMeta):
     #         return self.db.get_single_tool(tool_name=tool_name)
     #     else:
     #         tools = self.db.get_tools()
-        # json.decoder.JSONDecodeError
-        # if not self.tool_cache.exists():
-        #     return {}
-        # r = {}
-        # with self.tool_cache.open("r") as f:
-        #     try:
-        #         root_json = json.load(f)
-        #     except json.decoder.JSONDecodeError:
-        #         self.logger.warning(
-        #             f"Something wrong with '{self.tool_cache.stem}' cache, deleting it ..."
-        #         )
-        #         self.tool_cache.unlink()
-        #         return {}
-        #     c_ver = root_json.get(self.CACHE_VERSION_VAR, "")
-        #     c_remote = root_json.get(self.REMOTE_NAME_VAR, "")
-        #     if not c_ver == self.tool_cache_version or not c_remote == self.registry_name:
-        #         self.tool_cache.unlink()
-        #         return {}
-        #     else:
-        #         # These keys make reading hard, ignore them at this point
-        #         del root_json[self.CACHE_VERSION_VAR]
-        #         del root_json[self.REMOTE_NAME_VAR]
-        #     try:
-        #         if tool_name:
-        #             d = root_json.get(tool_name, {})
-        #             return ToolInfo.from_dict(d) if d else {}
-        #         for name, j in root_json.items():
-        #             r[name] = ToolInfo.from_dict(j)
-        #     # If cache is modified to contain extra variables
-        #     except TypeError:
-        #         self.tool_cache.unlink()
-        #         return {}
-        # return r
+    # json.decoder.JSONDecodeError
+    # if not self.tool_cache.exists():
+    #     return {}
+    # r = {}
+    # with self.tool_cache.open("r") as f:
+    #     try:
+    #         root_json = json.load(f)
+    #     except json.decoder.JSONDecodeError:
+    #         self.logger.warning(
+    #             f"Something wrong with '{self.tool_cache.stem}' cache, deleting it ..."
+    #         )
+    #         self.tool_cache.unlink()
+    #         return {}
+    #     c_ver = root_json.get(self.CACHE_VERSION_VAR, "")
+    #     c_remote = root_json.get(self.REMOTE_NAME_VAR, "")
+    #     if not c_ver == self.tool_cache_version or not c_remote == self.registry_name:
+    #         self.tool_cache.unlink()
+    #         return {}
+    #     else:
+    #         # These keys make reading hard, ignore them at this point
+    #         del root_json[self.CACHE_VERSION_VAR]
+    #         del root_json[self.REMOTE_NAME_VAR]
+    #     try:
+    #         if tool_name:
+    #             d = root_json.get(tool_name, {})
+    #             return ToolInfo.from_dict(d) if d else {}
+    #         for name, j in root_json.items():
+    #             r[name] = ToolInfo.from_dict(j)
+    #     # If cache is modified to contain extra variables
+    #     except TypeError:
+    #         self.tool_cache.unlink()
+    #         return {}
+    # return r

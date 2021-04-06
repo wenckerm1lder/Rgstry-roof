@@ -121,6 +121,7 @@ class ToolRegistry(RegistryBase):
     ):
         maintainer = VersionMaintainer(
             self.config,
+            db=self.db,
             force_refresh=force_refresh,
         )
         versions = {}

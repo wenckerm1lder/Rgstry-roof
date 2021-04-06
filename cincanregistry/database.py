@@ -49,7 +49,7 @@ c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     meta_id INTEGER,
     version TEXT,
     version_type TEXT,
-    source TEXT NOT NULL,
+    source TEXT NOT NULL, -- upstream provider, local, remote
     tags TEXT NOT NULL, -- comma separated string
     updated TEXT NOT NULL,
     origin INTEGER NOT NULL,
@@ -85,8 +85,7 @@ class ToolDatabase:
             self.configure()
             self.create_tables_if_not_exist()
         self.create_custom_functions()
-
-        # self.create_tables_if_not_exist()
+        self.create_tables_if_not_exist()
 
     def execute(self, command: str, params: Any = None):
         """Wrapper for cursor execute"""
@@ -173,11 +172,13 @@ class ToolDatabase:
 
     def get_single_tool(self, tool_name: str, remote_name: str = "") -> Union[ToolInfo, None]:
         """Get tool by name"""
+        params = [tool_name]
         command = f"SELECT name, updated, location, description from {TABLE_TOOLS} " \
-                  f"WHERE {TABLE_TOOLS}.name = '{tool_name}'"
+                  f"WHERE {TABLE_TOOLS}.name = ?"
         if remote_name:
-            command += f" AND {TABLE_TOOLS}.location = '{remote_name}'"
-        self.execute(command)
+            command += f" AND {TABLE_TOOLS}.location = ?"
+            params.append(remote_name)
+        self.execute(command, tuple(params))
         t = self.cursor.fetchone()
         return self.row_into_tool_info_obj(t) if t else None
 
@@ -187,22 +188,27 @@ class ToolDatabase:
         Only remote tool information is stored into database
         """
         command = f"SELECT name, updated, location, description from {TABLE_TOOLS}"
+        params = []
         if remote_name:
-            command += f" WHERE {TABLE_TOOLS}.location = '{remote_name}'"
-        self.execute(command)
+            command += f" WHERE {TABLE_TOOLS}.location = ?"
+            params.append(remote_name)
+        self.execute(command, tuple(params))
         rows = self.cursor.fetchall()
         return [self.row_into_tool_info_obj(i) for i in rows]
 
-    def get_versions_by_tool(self, tool_name: str, version_type: VersionType = None):
+    def get_versions_by_tool(self, tool_name: str, version_type: VersionType = None, provider: str = ""):
         """Get all versions by tool name, or by version_type if set"""
+        s_get_versions = f"SELECT * FROM {TABLE_VERSION_DATA} WHERE tool_id = ?"
+        params = [tool_name]
         if version_type:
             self.logger.debug(f"getting versions by type : {version_type}")
-            s_get_versions = f"SELECT * FROM {TABLE_VERSION_DATA} WHERE tool_id = '{tool_name}'" \
-                             f" AND version_type = '{version_type.value}';"
-        else:
-            s_get_versions = f"SELECT * FROM {TABLE_VERSION_DATA} WHERE tool_id = '{tool_name}';"
+            s_get_versions += f" AND version_type = ?"
+            params.append(version_type.value)
+        if provider:
+            s_get_versions += f" AND source = ?"
+            params.append(provider)
 
-        self.execute(s_get_versions)
+        self.execute(s_get_versions, tuple(params))
         rows = self.cursor.fetchall()
         return [self.row_into_version_info_obj(r) for r in rows]
 

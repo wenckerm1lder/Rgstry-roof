@@ -8,4 +8,4 @@ def test_cache_metafile_by_path():
     path = pathlib.Path("testt/meta.json")
     gl_client = GitLabUtils(namespace="cincan", project="tools")
     config = Configuration()
-    ver_man = VersionMaintainer(config)
+    # ver_man = VersionMaintainer(config)

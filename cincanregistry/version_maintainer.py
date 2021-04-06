@@ -1,17 +1,19 @@
-from typing import Dict, List, Tuple, Union
+import asyncio
+import json
+import logging
+import pathlib
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 from os.path import basename
+from typing import Dict, List, Tuple, Union
+
 from cincanregistry.models.tool_info import ToolInfo
 from cincanregistry.models.version_info import VersionInfo, VersionType
 from .checkers import classmap
-from .utils import parse_file_time, format_time
 from .configuration import Configuration
-from concurrent.futures import ThreadPoolExecutor
-import pathlib
-import json
-from datetime import datetime, timedelta
-import logging
-import asyncio
+from .database import ToolDatabase
 from .metafiles import MetaHandler
+from .utils import parse_file_time
 
 
 class VersionMaintainer:
@@ -23,9 +25,11 @@ class VersionMaintainer:
     def __init__(
             self,
             configuration: Configuration,
+            db: ToolDatabase,
             force_refresh: bool = False,
     ):
         self.config = configuration
+        self.db = db
         self.logger = logging.getLogger("versions")
         self.tokens = self.config.tokens
         # Use local 'tools' path if provided
@@ -173,33 +177,29 @@ class VersionMaintainer:
                     origin=upstream_info.origin,
                 )
 
-                self._write_checker_cache(
-                    tool_path.parent.stem,
-                    provider,
-                    {
-                        "version": ver_obj.version,
-                        "provider": provider,
-                        "updated": format_time(updated),
-                        "extra_info": upstream_info.extra_info,
-                    },
+                self._write_upstream_cache_data(
+                    tool,
+                    ver_obj
                 )
                 tool.versions.append(ver_obj)
 
     def _read_checker_cache(self, tool_name: str, provider: str) -> dict:
+        """Read version data of tool by provider from db"""
+        self.db.get_versions_by_tool(tool_name, VersionType.UPSTREAM)
 
-        path = self.config.cache_location / tool_name / f"{provider}_cache.json"
-        if path.is_file():
-            with open(path, "r") as f:
-                try:
-                    cache_obj = json.load(f)
-                    return cache_obj
-                except json.JSONDecodeError:
-                    self.logger.error(
-                        f"Failed to read checker cache of tool '{tool_name}' of provider '{provider}'"
-                    )
-                    return {}
-        else:
-            return {}
+        # path = self.config.cache_location / tool_name / f"{provider}_cache.json"
+        # if path.is_file():
+        #     with open(path, "r") as f:
+        #         try:
+        #             cache_obj = json.load(f)
+        #             return cache_obj
+        #         except json.JSONDecodeError:
+        #             self.logger.error(
+        #                 f"Failed to read checker cache of tool '{tool_name}' of provider '{provider}'"
+        #             )
+        #             return {}
+        # else:
+        #     return {}
 
     def _handle_checker_cache_data(self, data: dict, tool_info: dict) -> Union[VersionInfo, None]:
         now = datetime.now()
@@ -222,14 +222,17 @@ class VersionMaintainer:
             return ver_obj
         return None
 
-    def _write_checker_cache(self, tool_name: str, provider: str, data: dict):
-        path = self.config.cache_location / tool_name / f"{provider}_cache.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
-            json.dump(data, f)
-            self.logger.debug(
-                f"Writing checker cache of tool {tool_name} for provider {provider} into {path}"
-            )
+    def _write_upstream_cache_data(self, tool: ToolInfo, data: VersionInfo):
+        """Cache data of single provider of single tool"""
+        self.db.insert_version_info(tool, data)
+
+        # path = self.config.cache_location / tool_name / f"{provider}_cache.json"
+        # path.parent.mkdir(parents=True, exist_ok=True)
+        # with open(path, "w") as f:
+        #     json.dump(data, f)
+        #     self.logger.debug(
+        #         f"Writing checker cache of tool {tool_name} for provider {provider} into {path}"
+        #     )
 
     async def check_upstream_versions(self, tools: Dict[str, ToolInfo]):
         """

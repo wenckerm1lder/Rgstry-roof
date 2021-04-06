@@ -66,18 +66,18 @@ class RegistryBase(metaclass=ABCMeta):
         #     tools[self.REMOTE_NAME_VAR] = self.registry_name
         #     json.dump(tools, f, cls=ToolInfoEncoder)
 
-    def read_tool_cache(
-            self, tool_name: str = ""
-    ) -> Union[Dict[str, ToolInfo], ToolInfo]:
-        """
-        Read the local tool cache file
-        Returns all as dictionary, or single tool as ToolInfo object
-        """
-        r = {}
-        if tool_name:
-            return self.db.get_tool_by_name(tool_name=tool_name)
-        else:
-            tools = self.db.get_tools()
+    # def read_remote_versions_from_db(
+    #         self, tool_name: str = ""
+    # ) -> Union[Dict[str, ToolInfo], ToolInfo]:
+    #     """
+    #     Read the local tool cache file
+    #     Returns all as dictionary, or single tool as ToolInfo object
+    #     """
+    #     r = {}
+    #     if tool_name:
+    #         return self.db.get_single_tool(tool_name=tool_name)
+    #     else:
+    #         tools = self.db.get_tools()
         # json.decoder.JSONDecodeError
         # if not self.tool_cache.exists():
         #     return {}

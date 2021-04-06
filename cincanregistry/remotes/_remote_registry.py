@@ -1,12 +1,13 @@
 import asyncio
-from urllib.parse import urlparse
-import docker
-import json
 import base64
+import json
 import re
 from abc import abstractmethod
 from concurrent.futures.thread import ThreadPoolExecutor
 from typing import List, Dict, Callable, Union
+from urllib.parse import urlparse
+
+import docker
 import requests
 
 from cincanregistry import ToolInfo, VersionInfo, VersionType
@@ -173,6 +174,19 @@ class RemoteRegistry(RegistryBase):
                 return version
         return ""
 
+    def read_remote_versions_from_db(self, tool_name: str = "") -> Union[Dict[str, ToolInfo], ToolInfo]:
+        """Get dict of tools which have remote versions"""
+        r = {}
+        if tool_name:
+            return self.db.get_single_tool(tool_name=tool_name, remote_name=self.registry_name)
+        else:
+            tools = self.db.get_tools(remote_name=self.registry_name)
+
+        # Generate dict accessible by name from list
+        for t in tools:
+            r[t.name] = t
+        return r
+
     def fetch_manifest(
             self, name: str, tag: str, token: str = ""
     ) -> Union[ManifestV2, None]:
@@ -232,7 +246,7 @@ class RemoteRegistry(RegistryBase):
         Updates information of tools based on given list by querying all manifests for available tags
         """
 
-        old_tools = self.read_tool_cache()
+        old_tools = self.read_remote_versions_from_db()
 
         updated = 0
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -258,7 +272,7 @@ class RemoteRegistry(RegistryBase):
         # save the tool list
         if updated > 0:
             self.update_cache(tools)
-        return self.read_tool_cache()
+        return self.read_remote_versions_from_db()
 
     def update_versions_from_manifest_by_tags(self, tool_name: str, tag_names: List[str]) -> List[VersionInfo]:
         """

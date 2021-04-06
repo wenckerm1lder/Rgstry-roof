@@ -30,7 +30,7 @@ class ToolInfo:
             raise ValueError("Tool must have name in string format.")
         self._name: str = name
         self._updated: datetime = updated
-        self.location: str = location
+        self.location: str = location  # local daemon, remote name
         self.versions: List[VersionInfo] = versions or []  # Local, Remote, Upstream see class VersionType
         self.description = description
 

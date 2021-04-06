@@ -2,10 +2,11 @@ import logging
 import pathlib
 import shutil
 from copy import deepcopy
+from datetime import datetime
 
 import pytest
 
-from cincanregistry import VersionInfo, ToolInfo
+from cincanregistry import VersionInfo, ToolInfo, VersionType
 from cincanregistry.configuration import Configuration
 from cincanregistry.database import ToolDatabase
 from .fake_instances import (
@@ -17,7 +18,8 @@ from .fake_instances import (
 
 
 @pytest.fixture(scope='function')
-def base_db(request, tmp_path):
+def base_db(caplog, tmp_path):
+    caplog.set_level(logging.DEBUG)
     # Make sample database for other tests
     db_path = tmp_path / "test_db.sqlite"
     config = Configuration()
@@ -28,8 +30,23 @@ def base_db(request, tmp_path):
     tool_obj = ToolInfo(**FAKE_TOOL_INFO)
     tool_obj.versions.append(ver1)
     tool_obj.versions.append(ver2)
-    test_db.insert_tool_info(tool_obj)
+    with test_db.transaction():
+        test_db.insert_tool_info(tool_obj)
+        tool_obj2 = ToolInfo(**FAKE_TOOL_INFO2)
+        tool_obj2.versions.append(ver1)
+        tool_obj2.versions.append(ver2)
+        test_db.insert_tool_info(tool_obj2)
     yield test_db
+
+
+def test_base_db(caplog, base_db):
+    tools = base_db.get_tools()
+    assert len(tools) == 2
+    assert len(tools[0].versions) == 2
+    assert len(tools[1].versions) == 2
+
+    assert tools[0].name == FAKE_TOOL_INFO.get("name")
+    assert tools[1].name == FAKE_TOOL_INFO2.get("name")
 
 
 def test_configure(tmp_path, caplog):
@@ -108,13 +125,14 @@ def test_db_tool_data_insert_with_versions(tmp_path, caplog):
         assert n_versions[0].version_type == FAKE_VERSION_INFO_NO_CHECKER.get("version_type")
         assert n_versions[0].source == FAKE_VERSION_INFO_NO_CHECKER.get("source")
         assert n_versions[0].tags == FAKE_VERSION_INFO_NO_CHECKER.get("tags")
-        # DB insert updates time
-        assert n_versions[0].updated != FAKE_VERSION_INFO_NO_CHECKER.get("updated")
+        # DB insert should not update time - should tell information of origin update time
+        assert n_versions[0].updated == FAKE_VERSION_INFO_NO_CHECKER.get("updated")
         assert n_versions[0].raw_size() == FAKE_VERSION_INFO_NO_CHECKER.get("size")
         # Duplicate insert, should be handled gracefully
         test_db.insert_tool_info(tool_obj)
         n_tools = test_db.get_tools()
-        assert len(n_tools[0].versions) == 4
+        # Should be three different versions, one updated when called
+        assert len(n_tools[0].versions) == 3
 
 
 def test_db_insert_duplicate_version(caplog, tmp_path):
@@ -141,10 +159,30 @@ def test_db_insert_duplicate_version(caplog, tmp_path):
 def test_get_tool_by_name(tmp_path, caplog, base_db):
     """Tool by name, uses default db"""
     caplog.set_level(logging.DEBUG)
-    tool = base_db.get_tool_by_name(FAKE_TOOL_INFO.get("name"))
+    tool = base_db.get_single_tool(FAKE_TOOL_INFO.get("name"))
     assert tool.name == FAKE_TOOL_INFO.get("name")
-    tool = base_db.get_tool_by_name("non-existing")
+    tool = base_db.get_single_tool("non-existing")
     assert not tool
+
+
+def test_get_tool_by_name_and_version_type(base_db, caplog):
+    caplog.set_level(logging.DEBUG)
+    versions = base_db.get_versions_by_tool(FAKE_TOOL_INFO.get("name"), VersionType.REMOTE)
+    assert len(versions) == 1
+    assert versions[0].version == "0.9"
+    assert versions[0].version_type == VersionType.REMOTE
+
+
+def test_get_tool_by_remote(base_db):
+    tmp_tool = {
+        "name": "test_tool_temp",
+        "updated": datetime(2021, 3, 13, 13, 37),
+        "location": "test_location",
+        "description": "test_description",
+    }
+    base_db.insert_tool_info(ToolInfo(**tmp_tool))
+    tool = base_db.get_single_tool(tool_name=FAKE_TOOL_INFO.get("name"), remote_name=FAKE_TOOL_INFO.get("location"))
+    assert tool.name == FAKE_TOOL_INFO.get("name")
 
 
 def test_invalid_types():

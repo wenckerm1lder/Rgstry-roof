@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from typing import List, Union, Any, Tuple
 
 from . import ToolInfo
-from . import VersionInfo
+from . import VersionInfo, VersionType
 from .checkers import classmap
 from .configuration import Configuration
 from .utils import format_time, parse_file_time
@@ -16,16 +16,19 @@ TABLE_METADATA = "metadata"
 TABLE_VERSION_DATA = "version_data"
 
 c_tool = f'''CREATE TABLE if not exists {TABLE_TOOLS}(
-    name TEXT PRIMARY KEY, -- must be unique, we don't have tools with same names
+    -- id INTEGER PRIMARY KEY, -- autoincrement could prevent reuse of deleted rows
+    name TEXT NOT NULL, -- must be unique with location, we don't have tools with same names
     updated TEXT NOT NULL,
     location TEXT NOT NULL,
-    description TEXT
+    description TEXT,
+    UNIQUE (name, location)
 );
 '''
 # For meta_id, refer for available options file cincanregistry.checkers._init_ and classmap
 c_metadata = f'''CREATE TABLE if not exists {TABLE_METADATA}(
     meta_id INTEGER PRIMARY KEY,
     tool_id TEXT NOT NULL,
+    tool_location TEXT NOT NULL,
     uri TEXT UNIQUE, -- It should be impossible to be two identical uris for different providers
     repository TEXT NOT NULL,
     tool TEXT NOT NULL,
@@ -34,14 +37,15 @@ c_metadata = f'''CREATE TABLE if not exists {TABLE_METADATA}(
     method TEXT NOT NULL, 
     origin INTEGER NOT NULL, 
     docker_origin INTEGER NOT NULL,
-    FOREIGN KEY (tool_id)
-        REFERENCES {TABLE_TOOLS} (name),
+    FOREIGN KEY (tool_id, tool_location)
+        REFERENCES {TABLE_TOOLS} (name, location),
     UNIQUE (uri, repository, tool, provider) ON CONFLICT REPLACE 
 );'''
 
 c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     id INTEGER PRIMARY KEY,
     tool_id TEXT NOT NULL,
+    tool_location TEXT NOT NULL,
     meta_id INTEGER,
     version TEXT,
     version_type TEXT,
@@ -50,13 +54,14 @@ c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     updated TEXT NOT NULL,
     origin INTEGER NOT NULL,
     size TEXT NOT NULL,
+    -- when created in database
     created TEXT NOT NULL,
     FOREIGN KEY (meta_id)
-        REFERENCES {TABLE_METADATA} (meta_id)
-    FOREIGN KEY (tool_id)
-        REFERENCES {TABLE_TOOLS} (name),
+        REFERENCES {TABLE_METADATA} (meta_id),
+    FOREIGN KEY (tool_id, tool_location)
+        REFERENCES {TABLE_TOOLS} (name, location),
     -- We should not have duplicate versions from same origin - no use
-    UNIQUE (version, version_type, source) ON CONFLICT REPLACE
+    UNIQUE (tool_id, version, version_type, source) ON CONFLICT REPLACE
 );'''
 
 
@@ -115,35 +120,38 @@ class ToolDatabase:
         """Create functions e.g. date time conversion"""
         self.db_conn.create_function("s_date", 1, format_time)
 
-    def insert_version_info(self, tool_name: str, version_info: Union[VersionInfo, List[VersionInfo]]):
+    def insert_version_info(self, tool: ToolInfo, version_info: Union[VersionInfo, List[VersionInfo]]):
         """Insert list or single version info of specific tool, referenced by name"""
         if not version_info:
             self.logger.debug("Empty version list provided...nothing to add.")
             return
         v_time = format_time(datetime.datetime.now())
-        s_command = f"INSERT INTO {TABLE_VERSION_DATA}(tool_id, meta_id, version, version_type, source, " \
-                    f"tags, updated, origin, size, created) VALUES (?,?,?,?,?,?,?,?,?,?)"
+        s_command = f"INSERT INTO {TABLE_VERSION_DATA}(tool_id, tool_location, meta_id, version, version_type, source, " \
+                    f"tags, updated, origin, size, created) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
         if isinstance(version_info, VersionInfo):
             # Insert raw size, meta_id by checking existing upstream checkers, created time last param
             meta_id = str(version_info.source) if str(version_info.source) in classmap else None
+            u_time = format_time(version_info.updated) if version_info.updated else v_time
             self.execute(s_command,
-                         (tool_name, meta_id, version_info.version, version_info.version_type.value,
+                         (tool.name, tool.location, meta_id, version_info.version, version_info.version_type.value,
                           str(version_info.source),
-                          ",".join(list(version_info.tags)), v_time, version_info.origin, version_info.raw_size(),
+                          ",".join(list(version_info.tags)), u_time, version_info.origin, version_info.raw_size(),
                           v_time))
         elif isinstance(version_info, List):
             self.logger.debug("Running executemany for insert, NOT logged precisely...")
             # Insert raw size, meta_id by checking existing upstream checkers
-            version_list = [(tool_name, str(i.source) if str(i.source) in classmap else None, i.version,
+            version_list = [(tool.name, tool.location, str(i.source) if str(i.source) in classmap else None, i.version,
                              i.version_type.value, str(i.source),
-                             ",".join(list(i.tags)), v_time, i.origin, i.raw_size(), v_time) for
+                             ",".join(list(i.tags)), format_time(i.updated) if i.updated else v_time, i.origin,
+                             i.raw_size(), v_time)
+                            for
                             i in version_info]
             self.cursor.executemany(s_command, version_list)
 
     def insert_tool_info(self, tool_info: Union[ToolInfo, List[ToolInfo]]):
         """Insert ToolInfo object or list of objects with upsert into Database"""
         s_command = f"INSERT INTO {TABLE_TOOLS}(name, updated, location, description) " \
-                    f"VALUES (?,?,?,?) ON CONFLICT(name) DO UPDATE SET " \
+                    f"VALUES (?,?,?,?) ON CONFLICT(name, location) DO UPDATE SET " \
                     f"updated=excluded.updated, " \
                     f"location=excluded.location, " \
                     f"description=excluded.description " \
@@ -153,7 +161,7 @@ class ToolDatabase:
                                      format_time(tool_info.updated), tool_info.location,
                                      tool_info.description))
             # Local, remote or upstream versions
-            self.insert_version_info(tool_info.name, tool_info.versions)
+            self.insert_version_info(tool_info, tool_info.versions)
         else:
             self.logger.debug("Running executemany for insert, NOT logged precisely...")
             tool_list = [(i.name, format_time(i.updated), i.location, i.description) for i in tool_info]
@@ -161,30 +169,42 @@ class ToolDatabase:
             # All versions from all tools
             # Local, remote or upstream versions
             for t in tool_info:
-                self.insert_version_info(t.name, t.versions)
+                self.insert_version_info(t, t.versions)
 
-    def get_tool_by_name(self, tool_name: str) -> Union[ToolInfo, None]:
+    def get_single_tool(self, tool_name: str, remote_name: str = "") -> Union[ToolInfo, None]:
         """Get tool by name"""
-        self.execute(
-            f"SELECT name, updated, location, description from {TABLE_TOOLS} WHERE {TABLE_TOOLS}.name = '{tool_name}'")
+        command = f"SELECT name, updated, location, description from {TABLE_TOOLS} " \
+                  f"WHERE {TABLE_TOOLS}.name = '{tool_name}'"
+        if remote_name:
+            command += f" AND {TABLE_TOOLS}.location = '{remote_name}'"
+        self.execute(command)
         t = self.cursor.fetchone()
         return self.row_into_tool_info_obj(t) if t else None
 
-    def get_tools(self) -> List[ToolInfo]:
-        self.execute(f"SELECT name, updated, location, description from {TABLE_TOOLS}")
+    def get_tools(self, remote_name: str = "", by_time: datetime.datetime = None) -> List[ToolInfo]:
+        """Get tools, filter by remote name or updated time
+        TODO implement time filter
+        Only remote tool information is stored into database
+        """
+        command = f"SELECT name, updated, location, description from {TABLE_TOOLS}"
+        if remote_name:
+            command += f" AND {TABLE_TOOLS}.location = '{remote_name}'"
+        self.execute(command)
         rows = self.cursor.fetchall()
         return [self.row_into_tool_info_obj(i) for i in rows]
 
-    def get_versions_by_tool(self, tool_name: str):
-        """Get all versions by tool name"""
-        s_get_versions = f"SELECT * FROM {TABLE_VERSION_DATA} WHERE tool_id = '{tool_name}';"
+    def get_versions_by_tool(self, tool_name: str, version_type: VersionType = None):
+        """Get all versions by tool name, or by version_type if set"""
+        if version_type:
+            self.logger.debug(f"getting versions by type : {version_type}")
+            s_get_versions = f"SELECT * FROM {TABLE_VERSION_DATA} WHERE tool_id = '{tool_name}'" \
+                             f" AND version_type = '{version_type.value}';"
+        else:
+            s_get_versions = f"SELECT * FROM {TABLE_VERSION_DATA} WHERE tool_id = '{tool_name}';"
+
         self.execute(s_get_versions)
         rows = self.cursor.fetchall()
         return [self.row_into_version_info_obj(r) for r in rows]
-
-    def get_versions_by_tool_and_source(self, tool_name: str, source: str) -> List[VersionInfo]:
-        """Get versions of tool by name and source of the versions"""
-        pass
 
     def row_into_version_info_obj(self, row: sqlite3.Row) -> VersionInfo:
         """Convert Row object into VersionInfo object"""

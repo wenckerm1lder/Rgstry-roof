@@ -7,6 +7,7 @@ from datetime import datetime
 import pytest
 
 from cincanregistry import VersionInfo, ToolInfo, VersionType
+from cincanregistry.checkers import UpstreamChecker
 from cincanregistry.configuration import Configuration
 from cincanregistry.database import ToolDatabase
 from .fake_instances import (
@@ -14,6 +15,7 @@ from .fake_instances import (
     FAKE_VERSION_INFO_WITH_CHECKER,
     FAKE_TOOL_INFO,
     FAKE_TOOL_INFO2,
+    FAKE_CHECKER_CONF
 )
 
 
@@ -209,6 +211,26 @@ def test_get_latest_version_by_provider(base_db):
                                                latest=True)
         assert version.version == "0.9"
 
+
+def test_insert_meta_data(caplog, tmp_path):
+    """Insert metadata of checker"""
+    caplog.set_level(logging.DEBUG)
+    db_path = tmp_path / "test_db.sqlite"
+    config = Configuration()
+    config.tool_db = db_path
+    test_db = ToolDatabase(config)
+    ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
+    ver2 = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
+    assert isinstance(ver2.source, UpstreamChecker)
+
+    tool_obj = ToolInfo(**FAKE_TOOL_INFO)
+    tool_obj.versions.append(ver1)
+    tool_obj.versions.append(ver2)
+    with test_db.transaction():
+        test_db.insert_tool_info(tool_obj)
+        test_db.insert_meta_info(tool_obj.name, tool_obj.location, FAKE_CHECKER_CONF)
+
+        assert test_db.get_meta_information(tool_obj.name, FAKE_CHECKER_CONF.get("provider")) == "test_provider"
 
 def test_invalid_types():
     # TODO add tests with invalid data type inserts, handle them gracefully on the code

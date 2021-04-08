@@ -38,6 +38,7 @@ c_metadata = f'''CREATE TABLE if not exists {TABLE_METADATA}(
     method TEXT NOT NULL, 
     origin INTEGER NOT NULL, 
     docker_origin INTEGER NOT NULL,
+    updated TEXT NOT NULL, -- not in provided meta file which is parsed from external source
     FOREIGN KEY (tool_id, tool_location)
         REFERENCES {TABLE_TOOLS} (name, location),
     UNIQUE (uri, repository, tool, provider) ON CONFLICT REPLACE 
@@ -129,6 +130,16 @@ class ToolDatabase:
     def create_custom_functions(self):
         """Create functions e.g. date time conversion"""
         self.db_conn.create_function("s_date", 1, format_time)
+
+    def insert_meta_info(self, tool_name: str, tool_location: str, meta_data: dict):
+        v_time = format_time(datetime.datetime.now())
+        s_insert_meta = f"INSERT INTO {TABLE_METADATA}(tool_id, tool_location, uri, repository, tool, provider, " \
+                        f"suite, method, origin, docker_origin , updated) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+        params = [tool_name, tool_location, meta_data.get("url"), meta_data.get("repository"), meta_data.get("tool"),
+                  meta_data.get("provider"), meta_data.get("suite"), meta_data.get("method"), meta_data.get("origin"),
+                  meta_data.get("docker_origin"), v_time]
+        # Lastrowid could be used on following VersionInfo insert to set
+        self.execute(s_insert_meta, tuple(params))
 
     def insert_version_info(self, tool: ToolInfo, version_info: Union[VersionInfo, List[VersionInfo]]):
         """Insert list or single version info of specific tool, referenced by name"""

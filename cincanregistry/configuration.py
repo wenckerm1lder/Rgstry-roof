@@ -38,6 +38,8 @@ class Configuration:
         self.max_workers: int = 30
         # Tokens for different platforms used in version checking and meta file download
         self.tokens: Dict = self.values.get("tokens", {})
+        # Lowercase keys to mach upstream checkers
+        self.tokens = dict((k.lower(), v) for k, v in self.tokens.items())
         # Location for cached meta files
         self.cache_location: pathlib.Path = pathlib.Path(self.values.get("cache_path")) \
             if self.values.get("cache_path") \

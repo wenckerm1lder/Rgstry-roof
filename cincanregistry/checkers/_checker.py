@@ -42,6 +42,8 @@ class UpstreamChecker(metaclass=ABCMeta):
         """Return provider name in lowercase, in case called as string format"""
         return self.provider.lower()
 
+    __repr__ = __str__
+
     def __iter__(self):
         yield "uri", self.uri,
         yield "repository", self.repository,

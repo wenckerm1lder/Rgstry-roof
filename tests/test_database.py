@@ -204,6 +204,9 @@ def test_get_latest_version_by_provider(base_db):
         version = base_db.get_versions_by_tool(FAKE_TOOL_INFO.get("name"), provider=tmp_checker.get("source"),
                                                latest=True)
         assert version.version == "1.9"
+        versions = base_db.get_versions_by_tool(FAKE_TOOL_INFO.get("name"), provider=tmp_checker.get("source"),
+                                               latest=False)
+        assert len(versions) == 2
         # Replace existing record with identical data but different date
         tmp_checker["updated"] = datetime(2018, 3, 3, 13, 37, )
         base_db.insert_version_info(ToolInfo(**FAKE_TOOL_INFO), VersionInfo(**tmp_checker))
@@ -229,8 +232,17 @@ def test_insert_meta_data(caplog, tmp_path):
     with test_db.transaction():
         test_db.insert_tool_info(tool_obj)
         test_db.insert_meta_info(tool_obj.name, tool_obj.location, FAKE_CHECKER_CONF)
+        meta_data = test_db.get_meta_information(tool_obj.name, FAKE_CHECKER_CONF.get("provider"))
+        assert meta_data.get("uri") == FAKE_CHECKER_CONF.get("uri")
+        assert meta_data.get("repository") == FAKE_CHECKER_CONF.get("repository")
+        assert meta_data.get("tool") == FAKE_CHECKER_CONF.get("tool")
+        assert meta_data.get("provider") == FAKE_CHECKER_CONF.get("provider")
+        assert meta_data.get("method") == FAKE_CHECKER_CONF.get("method")
+        assert meta_data.get("suite") == FAKE_CHECKER_CONF.get("suite")
+        assert meta_data.get("origin") == FAKE_CHECKER_CONF.get("origin")
+        assert meta_data.get("docker_origin") == FAKE_CHECKER_CONF.get("docker_origin")
 
-        assert test_db.get_meta_information(tool_obj.name, FAKE_CHECKER_CONF.get("provider")) == "test_provider"
+
 
 def test_invalid_types():
     # TODO add tests with invalid data type inserts, handle them gracefully on the code

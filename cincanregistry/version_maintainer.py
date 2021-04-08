@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import pathlib
+import queue
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from os.path import basename
@@ -9,7 +10,7 @@ from typing import Dict, List, Tuple, Union
 
 from cincanregistry.models.tool_info import ToolInfo
 from cincanregistry.models.version_info import VersionInfo, VersionType
-from .checkers import classmap
+from .checkers import classmap, UpstreamChecker
 from .configuration import Configuration
 from .database import ToolDatabase
 from .metafiles import MetaHandler
@@ -47,6 +48,7 @@ class VersionMaintainer:
         self.force_refresh = force_refresh
         self.able_to_check = {}
         self.tool_dirs = []
+        self.cache_write_queue = queue.Queue()
 
     def _set_available_checkers(self):
         """
@@ -133,7 +135,13 @@ class VersionMaintainer:
 
         return local_tool, remote_tool
 
-    def _set_single_tool_upstream_versions(self, tool_path: pathlib.Path, tool: ToolInfo):
+    def _set_single_tool_upstream_versions(self, tool_path: pathlib.Path, tool: ToolInfo, in_thread=False):
+
+        if in_thread:
+            # New db connection inside thread
+            db = ToolDatabase(self.config)
+        else:
+            db = self.db
 
         with tool_path.open() as f:
             conf = json.load(f)
@@ -150,15 +158,15 @@ class VersionMaintainer:
                         f"JSON configuration. "
                     )
                     continue
-                cache_d = self._read_checker_cache(tool_path.parent.name, provider)
+                cache_d = self._read_checker_cache(tool_path.parent.name, provider, db)
                 if cache_d and not self.force_refresh:
-                    ver_obj = self._handle_checker_cache_data(cache_d, upstream_info)
-                    if ver_obj:
-                        tool.versions.append(ver_obj)
-                        self.logger.debug(
-                            f"Using cached upstream version info for tool {tool.name:<{40}}"
-                        )
-                        continue
+                    # ver_obj = self._handle_checker_cache_data(cache_d, upstream_info)
+                    # if ver_obj:
+                    tool.versions.append(cache_d)
+                    self.logger.debug(
+                        f"Using cached upstream version info for tool {tool.name:<{40}}"
+                    )
+                    continue
 
                 self.logger.info(
                     f"Fetching origin version information from provider {upstream_info.get('provider')}"
@@ -176,31 +184,22 @@ class VersionMaintainer:
                     updated,
                     origin=upstream_info.origin,
                 )
-
-                self._write_upstream_cache_data(
-                    tool,
-                    ver_obj
-                )
+                if in_thread:
+                    self.cache_write_queue.put((tool, ver_obj))
+                else:
+                    print("NOO")
+                    self._write_upstream_cache_data(
+                        tool,
+                        ver_obj
+                    )
                 tool.versions.append(ver_obj)
 
-    def _read_checker_cache(self, tool_name: str, provider: str) -> VersionInfo:
+    def _read_checker_cache(self, tool_name: str, provider: str, db: ToolDatabase = None) -> VersionInfo:
         """Read version data of tool by provider from db"""
-        version = self.db.get_versions_by_tool(tool_name, VersionType.UPSTREAM, provider=provider.lower(), latest=True)
+        if not db:
+            db = self.db
+        version = db.get_versions_by_tool(tool_name, VersionType.UPSTREAM, provider=provider.lower(), latest=True)
         return version
-
-        # path = self.config.cache_location / tool_name / f"{provider}_cache.json"
-        # if path.is_file():
-        #     with open(path, "r") as f:
-        #         try:
-        #             cache_obj = json.load(f)
-        #             return cache_obj
-        #         except json.JSONDecodeError:
-        #             self.logger.error(
-        #                 f"Failed to read checker cache of tool '{tool_name}' of provider '{provider}'"
-        #             )
-        #             return {}
-        # else:
-        #     return {}
 
     def _handle_checker_cache_data(self, data: dict, tool_info: dict) -> Union[VersionInfo, None]:
         now = datetime.now()
@@ -225,15 +224,8 @@ class VersionMaintainer:
 
     def _write_upstream_cache_data(self, tool: ToolInfo, data: VersionInfo):
         """Cache data of single provider of single tool"""
-        self.db.insert_version_info(tool, data)
-
-        # path = self.config.cache_location / tool_name / f"{provider}_cache.json"
-        # path.parent.mkdir(parents=True, exist_ok=True)
-        # with open(path, "w") as f:
-        #     json.dump(data, f)
-        #     self.logger.debug(
-        #         f"Writing checker cache of tool {tool_name} for provider {provider} into {path}"
-        #     )
+        with self.db.transaction():
+            self.db.insert_version_info(tool, data)
 
     async def check_upstream_versions(self, tools: Dict[str, ToolInfo]):
         """
@@ -252,7 +244,7 @@ class VersionMaintainer:
                         loop.run_in_executor(
                             executor,
                             self._set_single_tool_upstream_versions,
-                            *(tool_path, tool),
+                            *(tool_path, tool, True),
                         )
                     )
                 else:
@@ -260,6 +252,9 @@ class VersionMaintainer:
             if tasks:
                 for _ in await asyncio.gather(*tasks):
                     pass
+            # Sqlite is not good when multi-thread writing - create queue
+            while not self.cache_write_queue.empty():
+                self._write_upstream_cache_data(*self.cache_write_queue.get())
             else:
                 self.logger.warning(
                     "No known methods to get updates for any of the local tools."
@@ -294,7 +289,7 @@ class VersionMaintainer:
         tool_info["versions"]["origin"] = {"version": r_tool_orig.version}
         tool_info["versions"]["origin"]["details"] = (
             dict(r_tool_orig.source)
-            if r_tool_orig.origin or r_tool_orig.docker_origin
+            if (r_tool_orig.origin or r_tool_orig.docker_origin) and isinstance(r_tool_orig.source, UpstreamChecker)
             else ""
         )
 

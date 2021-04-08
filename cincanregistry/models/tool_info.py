@@ -1,8 +1,9 @@
 from datetime import datetime
+from json import JSONEncoder
 from typing import List
+
 from cincanregistry.models.version_info import VersionInfo, VersionType
 from cincanregistry.utils import format_time, parse_file_time
-from json import JSONEncoder
 
 
 def _map_sub_versions(ver: VersionInfo):
@@ -51,15 +52,15 @@ class ToolInfo:
     def _get_origin_version(self, for_docker: bool = False) -> VersionInfo:
         """Method for finding either origin or docker origin version"""
         v_origin = None
+        versions = []
         if self.versions:
             for v in self.versions:
                 if v.version_type == VersionType.UPSTREAM:
                     if v.origin:
-                        v_origin = v
-                        break
+                        versions.append(v)
                     elif for_docker and v.docker_origin:
-                        v_origin = v
-                        break
+                        versions.append(v)
+        v_origin = self._latest_by_time(versions)
         if v_origin:
             return v_origin
         else:
@@ -78,6 +79,19 @@ class ToolInfo:
          as install source for Dockerfile.
          """
         return self._get_origin_version(for_docker=True)
+
+    def _latest_by_time(self, versions: List[VersionInfo]):
+        """Return latest version by time from given list"""
+        return next(
+            iter(
+                sorted(
+                    versions,
+                    reverse=True,
+                    key=lambda s: s.updated,
+                )
+            ),
+            None,
+        )
 
     def get_latest(self, in_upstream: bool = False) -> VersionInfo:
         """

@@ -254,7 +254,7 @@ class VersionMaintainer:
                 "tags": list(l_latest.tags),
             }
         if r_tool:
-            r_latest = r_tool.get_latest()
+            r_latest = r_tool.get_latest(in_remote=True)
             tool_info["versions"]["remote"] = {
                 "version": r_latest.version,
                 "tags": list(r_latest.tags),
@@ -287,13 +287,13 @@ class VersionMaintainer:
 
         # Compare local to remote at first
         if l_tool:
-            if l_tool.get_latest() == r_tool.get_latest():
+            if l_tool.get_latest() == r_tool.get_latest(in_remote=True):
                 tool_info["updates"]["local"] = False
             else:
                 tool_info["updates"]["local"] = True
 
         # Remote to upstream
-        r_latest = r_tool.get_latest()
+        r_latest = r_tool.get_latest(in_remote=True)
         r_up_latest = r_tool.get_latest(in_upstream=True)
         tool_info["updates"]["remote"] = False
 

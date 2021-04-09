@@ -58,6 +58,9 @@ class Configuration:
             if self.values.get("tools_repo_path")
             else None
         )
+        # Default tag representing latest image
+        # self.tag = self.values.get("latest-tag", "latest")
+
         # Default branch in GitLab
         self.branch: str = self.values.get("branch", "master")
         # Name for meta files in GitLab
@@ -88,6 +91,7 @@ class Configuration:
                       f"(no version information)", file=f)
                 print(f"tools_repo__path: {self.tools_repo_path} # Path for local 'tools'"
                       f" repository (Use metafiles from there)", file=f)
+                # print(f"latest-tag: {self.tag}# Default tag representing latest image", file=f)
 
                 print(f"\n# Configuration related to tool metafiles.", file=f)
                 print(f"\nbranch: {self.branch} # Branch in GitLab for acquiring metafiles", file=f)

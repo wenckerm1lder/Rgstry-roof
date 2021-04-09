@@ -5,6 +5,8 @@ from typing import List
 from cincanregistry.models.version_info import VersionInfo, VersionType
 from cincanregistry.utils import format_time, parse_file_time
 
+LATEST_TAG = "latest"
+
 
 def _map_sub_versions(ver: VersionInfo):
     norm_ver = ver.get_normalized_ver()
@@ -93,13 +95,24 @@ class ToolInfo:
             None,
         )
 
-    def get_latest(self, in_upstream: bool = False) -> VersionInfo:
+    def get_latest(self, in_upstream: bool = False, in_remote: bool = False) -> VersionInfo:
         """
          Attempts to return latest version from available versions.
          By default, not checking upstream
          """
-        to_include = self.versions if in_upstream else [i for i in self.versions if
-                                                        i.version_type != VersionType.UPSTREAM]
+        if in_upstream and not in_remote:
+            to_include = [i for i in self.versions if i.version_type == VersionType.UPSTREAM]
+        elif in_remote and not in_upstream:
+            # Return version with 'latest' tag
+            to_include = [i for i in self.versions if i.version_type == VersionType.REMOTE and LATEST_TAG in i.tags]
+            if to_include:
+                return next(iter(to_include))
+            else:
+                return VersionInfo("undefined", VersionType.UNDEFINED, "", set(), datetime.min)
+
+        else:
+            to_include = self.versions
+
         latest = next(
             iter(
                 sorted(

@@ -1,8 +1,9 @@
-import yaml
-import pathlib
 import logging
-from typing import Dict
+import pathlib
 from enum import Enum
+from typing import Dict
+
+import yaml
 
 
 class Remotes(Enum):

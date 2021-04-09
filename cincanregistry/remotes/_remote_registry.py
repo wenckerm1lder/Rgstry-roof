@@ -234,7 +234,7 @@ class RemoteRegistry(RegistryBase):
                     self.db.insert_meta_info(name, location, u)
 
     def _parse_meta_file(self, resp: requests.Response, tool_name: str) -> Dict:
-        """Parse meta file from downloaded layer blob of Docker image"""
+        """Parse metafile from downloaded single layer blob of Docker image"""
         if len(resp.content) > self.config.meta_max_size:
             self.logger.error(
                 f"Meta.json from {tool_name} Docker image is larger than {self.config.meta_max_size / 1000}MB, not used.")
@@ -245,7 +245,10 @@ class RemoteRegistry(RegistryBase):
             for member in tar.getmembers():
                 if basename(member.name) == self.config.meta_filename:
                     f = tar.extractfile(member)
-                    return json.load(f)
+                    try:
+                        return json.load(f)
+                    except json.JSONDecodeError:
+                        self.logger.debug(f"Metafile not JSON for tool {tool_name}")
         except tarfile.TarError:
             self.logger.warning(f"Invalid tar format from blob of tool {tool_name}")
         return None
@@ -258,13 +261,13 @@ class RemoteRegistry(RegistryBase):
                 f"{self.registry_root}/{self.schema_version}/{tool_name}/blobs/{digest}",
                 headers={
                     "Authorization": f"{self.auth_digest_type} {token}",
-                    "Accept": f"application/vnd.docker.container.image.v1+json",
+                    "Accept": f"application/vnd.docker.image.rootfs.diff.tar.gzip",
                 }
             )
             if blob_res and blob_res.status_code == 200:
                 return blob_res
             else:
-                self.logger.warning(f"Unable to get container configuration for tool {tool_name} with digest {digest}"
+                self.logger.warning(f"Unable to get blob for tool {tool_name} with digest {digest}"
                                     f"response code: {blob_res.status_code}")
 
         except requests.ConnectionError as e:
@@ -332,7 +335,8 @@ class RemoteRegistry(RegistryBase):
             if manifest:
                 version = self._get_version_from_image_config(container_config)
                 updated = parse_file_time(container_config.created)
-                # Get meta data from latest image for upstream checking, skip big files (1MB+)
+                # Get meta data from latest image for upstream checking, skip big files (1MB+). Should be only file
+                # on final layer
                 if t == self.config.tag and manifest.layers[-1].size < self.config.meta_max_size:
                     meta_blob_resp = self.fetch_blob(tool_name, manifest.layers[-1].digest, token)
                     meta_parsed = self._parse_meta_file(meta_blob_resp, tool_name)

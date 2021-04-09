@@ -15,6 +15,8 @@ from .configuration import Configuration
 from .database import ToolDatabase
 from .metafiles import MetaHandler
 
+UPSTREAM_TAG = "upstream"
+
 
 class VersionMaintainer:
     """
@@ -180,7 +182,7 @@ class VersionMaintainer:
                     upstream_info.get_version(),
                     VersionType.UPSTREAM,
                     upstream_info,
-                    {"latest"},
+                    {UPSTREAM_TAG},
                     updated,
                     origin=upstream_info.origin,
                 )

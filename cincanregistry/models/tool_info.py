@@ -117,10 +117,10 @@ class ToolInfo:
         if in_upstream and not in_remote:
             to_include = [i for i in self.versions if i.version_type == VersionType.UPSTREAM]
         elif in_remote and not in_upstream:
-            # Return version with 'latest' tag
+            # Return version with 'latest' tag, if multiple, latest by time
             to_include = [i for i in self.versions if i.version_type == VersionType.REMOTE and LATEST_TAG in i.tags]
             if to_include:
-                return next(iter(to_include))
+                return self._latest_by_time(to_include)
             else:
                 return VersionInfo("undefined", VersionType.UNDEFINED, "", set(), datetime.min)
 

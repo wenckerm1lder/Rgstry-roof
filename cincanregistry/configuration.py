@@ -65,6 +65,7 @@ class Configuration:
         self.branch: str = self.values.get("branch", "master")
         # Name for meta files in GitLab
         self.meta_filename: str = self.values.get("metadata_filename", "meta.json")
+        self.meta_max_size: int = 1000 * 5  # In bytes, metafile max size
         # Index file in GitLab
         self.index_file: str = self.values.get("index_filename", "index.yml")
         # Disable meta file download from GitLab

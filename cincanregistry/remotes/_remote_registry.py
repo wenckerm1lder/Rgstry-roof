@@ -235,8 +235,9 @@ class RemoteRegistry(RegistryBase):
 
     def _parse_meta_file(self, resp: requests.Response, tool_name: str) -> Dict:
         """Parse meta file from downloaded layer blob of Docker image"""
-        if len(resp.content) > 1000 * 1000:
-            self.logger.error(f"Meta.json from {tool_name} Docker image is larger than 1MB, not used.")
+        if len(resp.content) > self.config.meta_max_size:
+            self.logger.error(
+                f"Meta.json from {tool_name} Docker image is larger than {self.config.meta_max_size / 1000}MB, not used.")
             return None
         file_like_object = io.BytesIO(resp.content)
         try:
@@ -246,7 +247,7 @@ class RemoteRegistry(RegistryBase):
                     f = tar.extractfile(member)
                     return json.load(f)
         except tarfile.TarError:
-            self.logger.error(f"Invalid tar format from blob of tool {tool_name}")
+            self.logger.warning(f"Invalid tar format from blob of tool {tool_name}")
         return None
 
     def fetch_blob(self, tool_name: str, digest: str, token: str = ""):
@@ -331,8 +332,8 @@ class RemoteRegistry(RegistryBase):
             if manifest:
                 version = self._get_version_from_image_config(container_config)
                 updated = parse_file_time(container_config.created)
-                # Get meta data from latest image for upstream checking
-                if t == self.config.tag:
+                # Get meta data from latest image for upstream checking, skip big files (1MB+)
+                if t == self.config.tag and manifest.layers[-1].size < self.config.meta_max_size:
                     meta_blob_resp = self.fetch_blob(tool_name, manifest.layers[-1].digest, token)
                     meta_parsed = self._parse_meta_file(meta_blob_resp, tool_name)
                     if meta_parsed and isinstance(meta_parsed, Dict):

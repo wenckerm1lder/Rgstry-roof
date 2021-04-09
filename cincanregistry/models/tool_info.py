@@ -82,7 +82,7 @@ class ToolInfo:
          """
         return self._get_origin_version(for_docker=True)
 
-    def _latest_by_time(self, versions: List[VersionInfo]):
+    def _latest_by_time(self, versions: List[VersionInfo]) -> VersionInfo:
         """Return latest version by time from given list"""
         return next(
             iter(

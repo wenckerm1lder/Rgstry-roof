@@ -1,3 +1,4 @@
+from os.path import basename
 from requests.exceptions import ConnectionError
 from datetime import datetime
 from typing import Dict, Union
@@ -121,20 +122,21 @@ class DaemonRegistry(RegistryBase):
                 if name.startswith(prefix):
                     if not defined_tag or tag == defined_tag:
                         version = self._get_version_from_container_config_env(i.attrs)
-                        if name in ret:
-                            for j, v in enumerate(ret[name].versions):
+                        name_no_prefix = basename(name)
+                        if name_no_prefix in ret:
+                            for j, v in enumerate(ret[name_no_prefix].versions):
                                 if v.version == version:
                                     existing_ver = True
                                     self.logger.debug(
-                                        f"same version found for tool {name} with version {version} as tag {tag} "
+                                        f"same version found for tool {name_no_prefix} with version {version} as tag {tag} "
                                     )
-                                    ret[name].versions[j].tags.union(set(stripped_tags))
+                                    ret[name_no_prefix].versions[j].tags.union(set(stripped_tags))
                                     break
                             if not existing_ver:
                                 self.logger.debug(
-                                    f"Appending new version {version} to existing entry {name} with tag {tag}."
+                                    f"Appending new version {version} to existing entry {name_no_prefix} with tag {tag}."
                                 )
-                                ret[name].versions.append(
+                                ret[name_no_prefix].versions.append(
                                     VersionInfo(
                                         version,
                                         VersionType.LOCAL,
@@ -153,11 +155,11 @@ class DaemonRegistry(RegistryBase):
                                 updated,
                                 size=i.attrs.get("Size"),
                             )
-                            ret[name] = ToolInfo(
-                                name, updated, "local", versions=[ver_info]
+                            ret[name_no_prefix] = ToolInfo(
+                                name_no_prefix, updated, "local", versions=[ver_info]
                             )
                             self.logger.debug(
-                                f"Added local tool {name} based on tag {t} with version {version}"
+                                f"Added local tool {name_no_prefix} based on tag {t} with version {version}"
                             )
                             continue
                     else:

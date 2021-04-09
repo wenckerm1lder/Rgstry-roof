@@ -59,7 +59,7 @@ class Configuration:
             else None
         )
         # Default tag representing latest image
-        # self.tag = self.values.get("latest-tag", "latest")
+        self.tag = self.values.get("latest-tag", "latest")
 
         # Default branch in GitLab
         self.branch: str = self.values.get("branch", "master")

@@ -1,9 +1,13 @@
 import asyncio
 import base64
+import io
 import json
+import queue
 import re
+import tarfile
 from abc import abstractmethod
 from concurrent.futures.thread import ThreadPoolExecutor
+from os.path import basename
 from typing import List, Dict, Callable, Union
 from urllib.parse import urlparse
 
@@ -40,6 +44,8 @@ class RemoteRegistry(RegistryBase):
         # Adapter allows more simultaneous connections
         adapter = requests.adapters.HTTPAdapter(pool_maxsize=self.max_workers)
         self.session.mount("https://", adapter)
+        # Queue used to hold data among threads, write into db in the end
+        self.cache_meta_data = queue.Queue()
 
     @abstractmethod
     def fetch_tags(self, tool: ToolInfo, update_cache: bool = False):
@@ -216,29 +222,61 @@ class RemoteRegistry(RegistryBase):
             return None
         return ManifestV2(manifest_req.json())
 
-    def fetch_image_config(self, name: str, config_digest: str, token: str = "") -> Union[ImageConfig, None]:
+    def _handle_cache_queue(self):
         """
-        Fetches image configuration JSON for tool by given config digest
+        Meta file format: upstreams: [{}]
+        Write queue into db until empty
         """
+        while not self.cache_meta_data.empty():
+            name, location, meta_data = self.cache_meta_data.get()
+            with self.db.transaction():
+                for u in meta_data.get("upstreams"):
+                    self.db.insert_meta_info(name, location, u)
 
-        if not token:
-            token = self._get_registry_service_token(name)
+    def _parse_meta_file(self, resp: requests.Response, tool_name: str) -> Dict:
+        """Parse meta file from downloaded layer blob of Docker image"""
+        if len(resp.content) > 1000 * 1000:
+            self.logger.error(f"Meta.json from {tool_name} Docker image is larger than 1MB, not used.")
+            return None
+        file_like_object = io.BytesIO(resp.content)
         try:
-            config_res = self.session.get(
-                f"{self.registry_root}/{self.schema_version}/{name}/blobs/{config_digest}",
+            tar = tarfile.open(fileobj=file_like_object)
+            for member in tar.getmembers():
+                if basename(member.name) == self.config.meta_filename:
+                    f = tar.extractfile(member)
+                    return json.load(f)
+        except tarfile.TarError:
+            self.logger.error(f"Invalid tar format from blob of tool {tool_name}")
+        return None
+
+    def fetch_blob(self, tool_name: str, digest: str, token: str = ""):
+        if not token:
+            token = self._get_registry_service_token(tool_name)
+        try:
+            blob_res = self.session.get(
+                f"{self.registry_root}/{self.schema_version}/{tool_name}/blobs/{digest}",
                 headers={
                     "Authorization": f"{self.auth_digest_type} {token}",
                     "Accept": f"application/vnd.docker.container.image.v1+json",
                 }
             )
-            if config_res and config_res.status_code == 200:
-                return ImageConfig(config_res.json())
+            if blob_res and blob_res.status_code == 200:
+                return blob_res
             else:
-                self.logger.warning(f"Unable to get container configuration for tool {name} with digest {config_digest}"
-                                    f"response code: {config_res.status_code}")
+                self.logger.warning(f"Unable to get container configuration for tool {tool_name} with digest {digest}"
+                                    f"response code: {blob_res.status_code}")
 
         except requests.ConnectionError as e:
             self.logger.error(e)
+        return None
+
+    def fetch_image_config(self, name: str, config_digest: str, token: str = "") -> Union[ImageConfig, None]:
+        """
+        Fetches image configuration JSON for tool by given config digest
+        """
+        config_res = self.fetch_blob(name, config_digest, token)
+        if config_res:
+            return ImageConfig(config_res.json())
         return None
 
     async def update_tools_in_parallel(self, tools: Dict[str, ToolInfo], fetch_function: Callable):
@@ -272,6 +310,7 @@ class RemoteRegistry(RegistryBase):
         # save the tool list
         if updated > 0:
             self.update_cache(tools)
+            self._handle_cache_queue()
         return self.read_remote_versions_from_db()
 
     def update_versions_from_manifest_by_tags(self, tool_name: str, tag_names: List[str]) -> List[VersionInfo]:
@@ -292,6 +331,12 @@ class RemoteRegistry(RegistryBase):
             if manifest:
                 version = self._get_version_from_image_config(container_config)
                 updated = parse_file_time(container_config.created)
+                # Get meta data from latest image for upstream checking
+                if t == self.config.tag:
+                    meta_blob_resp = self.fetch_blob(tool_name, manifest.layers[-1].digest, token)
+                    meta_parsed = self._parse_meta_file(meta_blob_resp, tool_name)
+                    if meta_parsed and isinstance(meta_parsed, Dict):
+                        self.cache_meta_data.put((basename(tool_name), self.registry_name, meta_parsed))
                 if not version:
                     version = self.VER_UNDEFINED
                 match = [v for v in available_versions if version == v.version]

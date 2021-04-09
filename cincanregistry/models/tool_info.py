@@ -27,6 +27,7 @@ class ToolInfo:
             location: str,
             description: str = "",
             versions: List[VersionInfo] = None,
+            meta_hash: str = ""
     ):
 
         if not name or not isinstance(name, str):
@@ -36,6 +37,9 @@ class ToolInfo:
         self.location: str = location  # local daemon, remote name
         self.versions: List[VersionInfo] = versions or []  # Local, Remote, Upstream see class VersionType
         self.description = description
+        if meta_hash and not meta_hash.startswith("sha256:") and len(meta_hash) != 71:
+            raise ValueError("Hash must start with 'sha256:' and length must be 71")
+        self._meta_hash = meta_hash  # Hash value of blob containing meta information for fetching upstream info
 
     @property
     def name(self) -> str:
@@ -50,6 +54,16 @@ class ToolInfo:
         if not isinstance(dt, datetime):
             raise ValueError("Given time is not 'datetime' object.")
         self._updated = dt
+
+    @property
+    def meta_hash(self) -> str:
+        return self._meta_hash
+
+    @meta_hash.setter
+    def meta_hash(self, m_hash: str):
+        if not m_hash.startswith("sha256:") and len(m_hash) != 71:
+            raise ValueError("Meta hash must start with 'sha256:' and length must be 71")
+        self._meta_hash = m_hash
 
     def _get_origin_version(self, for_docker: bool = False) -> VersionInfo:
         """Method for finding either origin or docker origin version"""
@@ -136,6 +150,7 @@ class ToolInfo:
         # if self.upstream_v:
         #     yield "upstream_v", [dict(v) for v in self.upstream_v],
         yield "description", self.description
+        yield "meta_hash", self.meta_hash
 
     def __str__(self):
         return f"{self.name} {self.description}"

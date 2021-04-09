@@ -1,13 +1,15 @@
-from os.path import basename
-from requests.exceptions import ConnectionError
+import logging
 from datetime import datetime
+from os.path import basename
 from typing import Dict, Union
+
+import docker
+from requests.exceptions import ConnectionError
+
 from cincanregistry.models.tool_info import ToolInfo
 from cincanregistry.models.version_info import VersionInfo, VersionType
 from cincanregistry.utils import parse_file_time, split_tool_tag
 from ._registry import RegistryBase
-import logging
-import docker
 
 
 class DaemonRegistry(RegistryBase):

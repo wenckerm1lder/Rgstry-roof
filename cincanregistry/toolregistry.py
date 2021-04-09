@@ -76,13 +76,12 @@ class ToolRegistry(RegistryBase):
                     if not l_version:
                         f"Provided tag '{defined_tag}' not found for local image {i}."
                 if r_tool:
-                    for ver in r_tool.versions:
-                        if defined_tag in ver.tags:
-                            r_version = ver.version
-                            # Add size based on remote version
-                            # compressed
-                            size = ver.size
-                            break
+                    ver = r_tool.get_latest(in_remote=True)
+                    if ver:
+                        r_version = ver.version
+                        # Add size based on remote version
+                        # compressed
+                        size = ver.size
                     if not r_version:
                         f"Provided tag '{defined_tag}' not found for remote image {i}."
                 if not r_version and not l_version:

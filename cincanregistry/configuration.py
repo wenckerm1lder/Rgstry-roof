@@ -97,5 +97,5 @@ class Configuration:
                 print(f"\ntokens: # Possible authentication tokens to Quay, GitLab, GitHub and so on. Quay token is"
                       f" used for README updating.",
                       file=f)
-                print("    Quay: ''", file=f)
+                print("    quay: ''", file=f)
                 print(file=f)

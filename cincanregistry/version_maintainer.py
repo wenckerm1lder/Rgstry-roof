@@ -6,7 +6,7 @@ import queue
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from os.path import basename
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple
 
 from cincanregistry.models.tool_info import ToolInfo
 from cincanregistry.models.version_info import VersionInfo, VersionType
@@ -14,7 +14,6 @@ from .checkers import classmap, UpstreamChecker
 from .configuration import Configuration
 from .database import ToolDatabase
 from .metafiles import MetaHandler
-from .utils import parse_file_time
 
 
 class VersionMaintainer:
@@ -136,6 +135,7 @@ class VersionMaintainer:
         return local_tool, remote_tool
 
     def _set_single_tool_upstream_versions(self, tool_path: pathlib.Path, tool: ToolInfo, in_thread=False):
+        """Update upstream information of given tool"""
 
         if in_thread:
             # New db connection inside thread
@@ -160,13 +160,13 @@ class VersionMaintainer:
                     continue
                 cache_d = self._read_checker_cache(tool_path.parent.name, provider, db)
                 if cache_d and not self.force_refresh:
-                    # ver_obj = self._handle_checker_cache_data(cache_d, upstream_info)
-                    # if ver_obj:
-                    tool.versions.append(cache_d)
-                    self.logger.debug(
-                        f"Using cached upstream version info for tool {tool.name:<{40}}"
-                    )
-                    continue
+                    now = datetime.now()
+                    if now - timedelta(hours=self.config.cache_lifetime) <= cache_d.updated <= now:
+                        tool.versions.append(cache_d)
+                        self.logger.debug(
+                            f"Using cached upstream version info for tool {tool.name:<{40}}"
+                        )
+                        continue
 
                 self.logger.info(
                     f"Fetching origin version information from provider {upstream_info.get('provider')}"
@@ -187,7 +187,6 @@ class VersionMaintainer:
                 if in_thread:
                     self.cache_write_queue.put((tool, ver_obj))
                 else:
-                    print("NOO")
                     self._write_upstream_cache_data(
                         tool,
                         ver_obj
@@ -200,27 +199,6 @@ class VersionMaintainer:
             db = self.db
         version = db.get_versions_by_tool(tool_name, VersionType.UPSTREAM, provider=provider.lower(), latest=True)
         return version
-
-    def _handle_checker_cache_data(self, data: dict, tool_info: dict) -> Union[VersionInfo, None]:
-        now = datetime.now()
-        timestamp = parse_file_time(data.get("updated"))
-        if now - timedelta(hours=self.config.cache_lifetime) <= timestamp <= now:
-            # Use cache file if in time range
-            dummy_checker = classmap.get(tool_info.get("provider").lower())(
-                tool_info,
-                version=data.get("version"),
-                extra_info=data.get("extra_info"),
-            )
-            ver_obj = VersionInfo(
-                data.get("version"),
-                VersionType.UPSTREAM,
-                dummy_checker,
-                {"latest"},
-                timestamp,
-                tool_info.get("origin"),
-            )
-            return ver_obj
-        return None
 
     def _write_upstream_cache_data(self, tool: ToolInfo, data: VersionInfo):
         """Cache data of single provider of single tool"""
@@ -290,7 +268,7 @@ class VersionMaintainer:
         tool_info["versions"]["origin"]["details"] = (
             dict(r_tool_orig.source)
             if (r_tool_orig.origin or r_tool_orig.docker_origin) and isinstance(r_tool_orig.source, UpstreamChecker)
-            else ""
+            else {"provider": r_tool_orig.source}
         )
 
         tool_info["versions"]["other"] = [

@@ -1,11 +1,12 @@
-from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, QuayReadmeHandler, ToolInfo, Remotes
-from os.path import basename
 import argparse
-import sys
-import logging
 import asyncio
 import json
+import logging
+import sys
+from os.path import basename
 from typing import Dict
+
+from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, QuayReadmeHandler, ToolInfo, Remotes
 
 DEFAULT_IMAGE_FILTER_TAG = "latest"
 
@@ -57,7 +58,7 @@ def print_single_tool_version_check(tool, show_tags: bool = False):
     MAX_WN = 25
     MAX_WV = 40
     print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.GREEN}  {tool.get('name')}{ANSIEscape.END}")
-    # pre-space and text format
+    # pre-space and text formahttps://soundcharts.com/blog/music-streaming-rates-payoutst
     print(f"\n{' ':<{PRE_SPACE}}", end="")
     # Location
     underlined_loc = f"{ANSIEscape.UNDERLINE}Location{ANSIEscape.END}"
@@ -90,9 +91,11 @@ def print_single_tool_version_check(tool, show_tags: bool = False):
         print()
     # other
     if tool.get("versions").get("origin"):
+        provider = tool.get('versions').get('origin').get('details').get('provider') if tool.get('versions').get(
+            'origin').get('details').get('provider') else "Unknown"
         print(
             f"{' ':<{PRE_SPACE}}| Origin ("
-            f"{tool.get('versions').get('origin').get('details').get('provider') + ')':<{MAX_WN - 8}}",
+            f"{provider + ')':<{MAX_WN - 8}}",
             end="",
         )
         print(f"{tool.get('versions').get('origin').get('version'):<{MAX_WV}}")

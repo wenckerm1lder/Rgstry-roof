@@ -14,6 +14,7 @@ from .utils import format_time, parse_file_time
 TABLE_TOOLS = "tools"
 TABLE_METADATA = "metadata"
 TABLE_VERSION_DATA = "version_data"
+TABLE_META_CONF = "metaconf"
 # TABLE_CHECKER = "checker_extra"
 
 c_tool = f'''CREATE TABLE if not exists {TABLE_TOOLS}(
@@ -294,7 +295,7 @@ class ToolDatabase:
                            origin=origin, size=size)
 
     def row_into_tool_info_obj(self, row: sqlite3.Row) -> ToolInfo:
-        """Convert Row object into ToolInfo object. Get related versions, only latest from upstream"""
+        """Convert Row object into ToolInfo object. Get related versions"""
         if len(row) < 4:
             raise ValueError(f"Row in {TABLE_TOOLS} table should have 4 values.")
         name, updated, location, description = row

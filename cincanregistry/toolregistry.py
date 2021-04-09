@@ -131,20 +131,20 @@ class ToolRegistry(RegistryBase):
                                   f" Tool must be in default registry: {self.default_remote}.")
                 sys.exit(1)
             tool_name = basename(tool)
-            tool_with_namespace = f"{self.remote_registry.full_prefix}/{tool_name}"
-            l_tool = self.local_registry.create_local_tool_info_by_name(tool_with_namespace)
-            r_tool = self.remote_registry.read_remote_versions_from_db(tool_with_namespace) if not force_refresh else {}
+            # tool_with_namespace = f"{self.remote_registry.full_prefix}/{tool_name}"
+            l_tool = self.local_registry.create_local_tool_info_by_name(tool_name)
+            r_tool = self.remote_registry.read_remote_versions_from_db(tool_name) if not force_refresh else {}
 
             now = datetime.now()
             if not r_tool:
-                r_tool = ToolInfo(tool_with_namespace, datetime.min, self.remote_registry.registry_name)
+                r_tool = ToolInfo(tool_name, datetime.min, self.remote_registry.registry_name)
             if not r_tool.updated or not (
                     now - timedelta(hours=self.config.cache_lifetime) <= r_tool.updated <= now
             ):
                 self.remote_registry.fetch_tags(r_tool, update_cache=True)
             if l_tool or (r_tool and not r_tool.updated == datetime.min):
                 l_tool, r_tool = maintainer.get_versions_single_tool(
-                    tool_with_namespace, l_tool, r_tool
+                    tool_name, l_tool, r_tool
                 )
                 versions = await maintainer.list_versions_single(
                     l_tool, r_tool, only_updates

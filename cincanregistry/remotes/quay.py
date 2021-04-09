@@ -98,11 +98,13 @@ class QuayRegistry(RemoteRegistry):
         return tools_list
 
     async def get_tools(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
+        """Get tools from remote registry. Name set without repository prefixes"""
         self._set_auth_and_service_location()
         available_tools = self.__fetch_available_tools()
         tool_list = {}
         for t in available_tools:
-            name = f"{self.image_prefix}/{t.get('namespace')}/{t.get('name')}"
+            # name = f"{self.image_prefix}/{t.get('namespace')}/{t.get('name')}"
+            name = t.get('name')
             timestamp = t.get("last_modified")
             description = t.get("description")
             tool_list[name] = ToolInfo(name, datetime.datetime.fromtimestamp(timestamp),
@@ -120,7 +122,8 @@ class QuayRegistry(RemoteRegistry):
         self.logger.info("fetch %s...", tool.name)
         tool_name, tool_tag = split_tool_tag(tool.name)
         # Use name without registry prefix e.g. quay.io
-        name_without_prefix = "/".join(tool_name.split("/")[-2:])
+        # name_without_prefix = "/".join(tool_name.split("/")[-2:])
+        name_without_prefix = f"{self.cincan_namespace}/{tool_name}"
         endpoint = f"{self.registry_root}/api/v1/repository/{name_without_prefix}"
         params = {
             "includeTags": True,

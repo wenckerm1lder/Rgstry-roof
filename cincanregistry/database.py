@@ -199,8 +199,9 @@ class ToolDatabase:
             for t in tool_info:
                 self.insert_version_info(t, t.versions)
 
-    def get_single_tool(self, tool_name: str, remote_name: str = "") -> Union[ToolInfo, None]:
-        """Get tool by name"""
+    def get_single_tool(self, tool_name: str, remote_name: str = "", filter_by: [VersionType] = None) -> Union[
+            ToolInfo, None]:
+        """Get tool by name, filter by included versions"""
         params = [tool_name]
         command = f"SELECT name, updated, location, description from {TABLE_TOOLS} " \
                   f"WHERE {TABLE_TOOLS}.name = ?"
@@ -209,7 +210,7 @@ class ToolDatabase:
             params.append(remote_name)
         self.execute(command, tuple(params))
         t = self.cursor.fetchone()
-        return self.row_into_tool_info_obj(t) if t else None
+        return self.row_into_tool_info_obj(t, filter_by) if t else None
 
     def get_tools(self, remote_name: str = "", by_time: datetime.datetime = None) -> List[ToolInfo]:
         """Get tools, filter by remote name or updated time
@@ -225,7 +226,7 @@ class ToolDatabase:
         rows = self.cursor.fetchall()
         return [self.row_into_tool_info_obj(i) for i in rows]
 
-    def get_versions_by_tool(self, tool_name: str, version_type: VersionType = None, provider: str = "",
+    def get_versions_by_tool(self, tool_name: str, version_type: [VersionType] = None, provider: str = "",
                              latest: bool = False) -> Union[List[VersionInfo], VersionInfo]:
         """Get all versions by tool name, by version_type, provider if set
         return single VersionInfo object if latest set
@@ -233,9 +234,19 @@ class ToolDatabase:
         s_get_versions = f"SELECT * FROM {TABLE_VERSION_DATA} WHERE tool_id = ?"
         params = [tool_name]
         if version_type:
-            self.logger.debug(f"getting versions by type : {version_type}")
-            s_get_versions += f" AND version_type = ?"
-            params.append(version_type.value)
+            if not isinstance(version_type, List):
+                self.logger.error(
+                    "Wrong format for parameter 'version_type' when getting versions by tool. Should be list.")
+                return []
+            self.logger.debug(f"getting versions by type(s) : {version_type}")
+            # Dynamically generate sql for all version types
+            for i, v_t in enumerate(version_type):
+                if i == 0:
+                    s_get_versions += f" AND (version_type = ?"
+                else:
+                    s_get_versions += f" OR version_type = ?"
+                params.append(v_t.value)
+            s_get_versions += ")"
         if provider:
             s_get_versions += f" AND source = ?"
             params.append(provider)
@@ -294,13 +305,13 @@ class ToolDatabase:
                            tags=set(row["tags"].split(',')), updated=parse_file_time(row["updated"]),
                            origin=origin, size=size)
 
-    def row_into_tool_info_obj(self, row: sqlite3.Row) -> ToolInfo:
-        """Convert Row object into ToolInfo object. Get related versions"""
+    def row_into_tool_info_obj(self, row: sqlite3.Row, filter_by: [VersionType] = None) -> ToolInfo:
+        """Convert Row object into ToolInfo object. Get related versions which can be filtered by VersionType"""
         if len(row) < 4:
             raise ValueError(f"Row in {TABLE_TOOLS} table should have 4 values.")
         name, updated, location, description = row
         return ToolInfo(name=name, updated=parse_file_time(updated), location=location, description=description,
-                        versions=self.get_versions_by_tool(name))
+                        versions=self.get_versions_by_tool(name, version_type=filter_by))
 
     @contextmanager
     def transaction(self):

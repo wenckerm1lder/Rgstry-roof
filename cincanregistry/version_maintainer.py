@@ -78,7 +78,6 @@ class VersionMaintainer:
         tools_list = [
             basename(i)
             for i in tools
-            if f"{self.config.namespace}/" in i
         ]
         meta_handler = MetaHandler(self.config, self.force_refresh)
 
@@ -199,7 +198,7 @@ class VersionMaintainer:
         """Read version data of tool by provider from db"""
         if not db:
             db = self.db
-        version = db.get_versions_by_tool(tool_name, VersionType.UPSTREAM, provider=provider.lower(), latest=True)
+        version = db.get_versions_by_tool(tool_name, [VersionType.UPSTREAM], provider=provider.lower(), latest=True)
         return version
 
     def _write_upstream_cache_data(self, tool: ToolInfo, data: VersionInfo):
@@ -232,7 +231,7 @@ class VersionMaintainer:
             if tasks:
                 for _ in await asyncio.gather(*tasks):
                     pass
-            # Sqlite is not good when multi-thread writing - create queue
+            # Sqlite is not good when multi-thread writing - use queue
             while not self.cache_write_queue.empty():
                 self._write_upstream_cache_data(*self.cache_write_queue.get())
             else:

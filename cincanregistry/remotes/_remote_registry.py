@@ -184,7 +184,8 @@ class RemoteRegistry(RegistryBase):
         """Get dict of tools which have remote versions"""
         r = {}
         if tool_name:
-            return self.db.get_single_tool(tool_name=tool_name, remote_name=self.registry_name)
+            return self.db.get_single_tool(tool_name=tool_name, remote_name=self.registry_name,
+                                           filter_by=[VersionType.REMOTE])
         else:
             tools = self.db.get_tools(remote_name=self.registry_name)
 

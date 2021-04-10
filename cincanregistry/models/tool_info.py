@@ -116,6 +116,10 @@ class ToolInfo:
          """
         if in_upstream and not in_remote:
             to_include = [i for i in self.versions if i.version_type == VersionType.UPSTREAM]
+            # Iterate only versions which are marked as origin if exist
+            origin_v = [i for i in to_include if i.origin]
+            if origin_v:
+                to_include = origin_v
         elif in_remote and not in_upstream:
             # Return version with 'latest' tag, if multiple, latest by time
             to_include = [i for i in self.versions if i.version_type == VersionType.REMOTE and LATEST_TAG in i.tags]

@@ -169,22 +169,40 @@ def test_get_tool_by_name(tmp_path, caplog, base_db):
 
 def test_get_tool_by_name_and_version_type(base_db, caplog):
     caplog.set_level(logging.DEBUG)
-    versions = base_db.get_versions_by_tool(FAKE_TOOL_INFO.get("name"), VersionType.REMOTE)
+    versions = base_db.get_versions_by_tool(FAKE_TOOL_INFO.get("name"), [VersionType.REMOTE])
     assert len(versions) == 1
     assert versions[0].version == "0.9"
     assert versions[0].version_type == VersionType.REMOTE
 
 
-def test_get_tool_by_remote(base_db):
+def test_get_tool_by_remote(base_db, caplog):
+    caplog.set_level(logging.DEBUG)
     tmp_tool = {
         "name": "test_tool_temp",
         "updated": datetime(2021, 3, 13, 13, 37),
         "location": "test_location",
         "description": "test_description",
     }
-    base_db.insert_tool_info(ToolInfo(**tmp_tool))
+    with base_db.transaction():
+        base_db.insert_tool_info(ToolInfo(**tmp_tool))
     tool = base_db.get_single_tool(tool_name=FAKE_TOOL_INFO.get("name"), remote_name=FAKE_TOOL_INFO.get("location"))
     assert tool.name == FAKE_TOOL_INFO.get("name")
+    tool = base_db.get_single_tool(tool_name=FAKE_TOOL_INFO.get("name"), remote_name=FAKE_TOOL_INFO.get("location"),
+                                   filter_by=[VersionType.UPSTREAM])
+    assert len(tool.versions) == 1
+    assert tool.versions[0].version_type == VersionType.UPSTREAM
+    tool = base_db.get_single_tool(tool_name=FAKE_TOOL_INFO.get("name"), remote_name=FAKE_TOOL_INFO.get("location"),
+                                   filter_by=[VersionType.REMOTE])
+    assert len(tool.versions) == 1
+    assert tool.versions[0].version_type == VersionType.REMOTE
+    tmp_version = deepcopy(FAKE_VERSION_INFO_NO_CHECKER)
+    tmp_version["version_type"] = VersionType.LOCAL
+    with base_db.transaction():
+        base_db.insert_version_info(tool, tmp_version)
+    tool = base_db.get_single_tool(tool_name=FAKE_TOOL_INFO.get("name"), remote_name=FAKE_TOOL_INFO.get("location"),
+                                   filter_by=[VersionType.REMOTE, VersionType.UPSTREAM])
+    assert len(tool.versions) == 2
+    assert VersionType.LOCAL not in [i.version_type for i in tool.versions]
 
     tools = base_db.get_tools(remote_name=FAKE_TOOL_INFO.get("location"))
     assert len(tools) == 2
@@ -205,7 +223,7 @@ def test_get_latest_version_by_provider(base_db):
                                                latest=True)
         assert version.version == "1.9"
         versions = base_db.get_versions_by_tool(FAKE_TOOL_INFO.get("name"), provider=tmp_checker.get("source"),
-                                               latest=False)
+                                                latest=False)
         assert len(versions) == 2
         # Replace existing record with identical data but different date
         tmp_checker["updated"] = datetime(2018, 3, 3, 13, 37, )
@@ -241,7 +259,6 @@ def test_insert_meta_data(caplog, tmp_path):
         assert meta_data.get("suite") == FAKE_CHECKER_CONF.get("suite")
         assert meta_data.get("origin") == FAKE_CHECKER_CONF.get("origin")
         assert meta_data.get("docker_origin") == FAKE_CHECKER_CONF.get("docker_origin")
-
 
 
 def test_invalid_types():

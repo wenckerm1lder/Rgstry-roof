@@ -19,8 +19,9 @@ class Configuration:
 
     def __init__(self, config_path: str = "", tools_repo_path: str = ""):
         self.logger = logging.getLogger("configuration")
+        self.home = pathlib.Path.home() / '.cincan'
         self.file: pathlib.Path = pathlib.Path(
-            config_path) if config_path else pathlib.Path.home() / '.cincan' / 'registry.yaml'
+            config_path) if config_path else self.home / 'registry.yaml'
         if self.file.is_file():
             with self.file.open() as f:
                 try:
@@ -44,7 +45,7 @@ class Configuration:
         # Location for cached meta files
         self.cache_location: pathlib.Path = pathlib.Path(self.values.get("cache_path")) \
             if self.values.get("cache_path") \
-            else pathlib.Path.home() / ".cincan" / "cache"
+            else self.home / "cache"
         self.tool_db = self.cache_location / "tooldb.sqlite"
         self.cache_lifetime: int = 24  # Cache validity in hours
         # Location for cached Docker Hub manifest information
@@ -77,7 +78,9 @@ class Configuration:
             self.namespace = self.namespace.lower()
         # GitLab repository
         self.project: str = "tools"
-
+        # Create default folders
+        self.home.mkdir(parents=True, exist_ok=True)
+        self.cache_location.mkdir(parents=True, exist_ok=True)
         # Generate config file with default values, using yaml format to enable comments
         if not self.values:
             self.logger.debug("Generating configuration file with default values.")

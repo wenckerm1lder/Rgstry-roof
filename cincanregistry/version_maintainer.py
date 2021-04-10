@@ -277,7 +277,7 @@ class VersionMaintainer:
                 "version": v.version,
                 "details": dict(v.source)
                 if not isinstance(v.source, str)
-                else v.source,
+                else {"provider": v.source},
             }
             for v in r_tool.versions
             if not v.origin and v.source and v.version_type == VersionType.UPSTREAM

@@ -55,6 +55,7 @@ class ANSIEscape:
 
 def print_single_tool_version_check(tool, show_tags: bool = False):
     # Provider name length
+    PROVIDER_UNDEFINED = "undefined"
     MAX_WN = 25
     MAX_WV = 40
     print(f"\n{' ':<{PRE_SPACE}}{ANSIEscape.GREEN}  {tool.get('name')}{ANSIEscape.END}")
@@ -92,7 +93,7 @@ def print_single_tool_version_check(tool, show_tags: bool = False):
     # other
     if tool.get("versions").get("origin"):
         provider = tool.get('versions').get('origin').get('details').get('provider') if tool.get('versions').get(
-            'origin').get('details').get('provider') else "Unknown"
+            'origin').get('details').get('provider') else PROVIDER_UNDEFINED
         print(
             f"{' ':<{PRE_SPACE}}| Origin ("
             f"{provider + ')':<{MAX_WN - 8}}",
@@ -102,8 +103,9 @@ def print_single_tool_version_check(tool, show_tags: bool = False):
 
     if tool.get("versions").get("other"):
         for other in tool.get("versions").get("other"):
+            provider = other.get('details').get('provider') if other.get('details') else PROVIDER_UNDEFINED
             print(
-                f"{' ':<{PRE_SPACE}}| {other.get('details').get('provider'):<{MAX_WN}}",
+                f"{' ':<{PRE_SPACE}}| {provider:<{MAX_WN}}",
                 end="",
             )
             print(f"{other.get('version'):<{MAX_WV}}")

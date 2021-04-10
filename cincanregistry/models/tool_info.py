@@ -111,7 +111,7 @@ class ToolInfo:
 
     def get_latest(self, in_upstream: bool = False, in_remote: bool = False) -> VersionInfo:
         """
-         Attempts to return latest version from available versions.
+         Attempts to return latest version from available versions. Excluding upstream by default
          By default, not checking upstream
          """
         if in_upstream and not in_remote:
@@ -129,7 +129,7 @@ class ToolInfo:
                 return VersionInfo("undefined", VersionType.UNDEFINED, "", set(), datetime.min)
 
         else:
-            to_include = self.versions
+            to_include = [v for v in self.versions if v.version_type != VersionType.UPSTREAM]
 
         latest = next(
             iter(

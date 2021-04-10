@@ -132,6 +132,8 @@ class VersionMaintainer:
             self._set_single_tool_upstream_versions(tool_path, remote_tool)
         else:
             self._set_single_tool_upstream_versions(tool_path, local_tool)
+        # Write changes of upstream versions into db at once
+        self._write_cache_queue_into_db()
 
         return local_tool, remote_tool
 
@@ -147,52 +149,43 @@ class VersionMaintainer:
         with tool_path.open() as f:
             conf = json.load(f)
             # Expect list or single object in "upstreams" value
-            for upstream_info in (
-                    conf.get("upstreams")
-                    if isinstance(conf.get("upstreams"), List)
-                    else [conf.get("upstreams")]
-            ):
-                provider = upstream_info.get("provider").lower()
-                if provider not in classmap.keys():
-                    self.logger.error(
-                        f"No upstream checker implemented for tool '{tool.name}' with provider '{provider}'. Check "
-                        f"JSON configuration. "
+            upstreams = conf.get("upstreams") if isinstance(conf.get("upstreams"), List) else [conf.get("upstreams")]
+        for upstream_info in upstreams:
+            provider = upstream_info.get("provider").lower()
+            if provider not in classmap.keys():
+                self.logger.error(
+                    f"No upstream checker implemented for tool '{tool.name}' with provider '{provider}'. Check "
+                    f"JSON configuration. "
+                )
+                continue
+            cache_d = self._read_checker_cache(tool_path.parent.name, provider, db)
+            if cache_d and not self.force_refresh:
+                now = datetime.now()
+                if now - timedelta(hours=self.config.cache_lifetime) <= cache_d.updated <= now:
+                    tool.versions.append(cache_d)
+                    self.logger.debug(
+                        f"Using cached upstream version info for tool {tool.name:<{40}}"
                     )
                     continue
-                cache_d = self._read_checker_cache(tool_path.parent.name, provider, db)
-                if cache_d and not self.force_refresh:
-                    now = datetime.now()
-                    if now - timedelta(hours=self.config.cache_lifetime) <= cache_d.updated <= now:
-                        tool.versions.append(cache_d)
-                        self.logger.debug(
-                            f"Using cached upstream version info for tool {tool.name:<{40}}"
-                        )
-                        continue
 
-                self.logger.info(
-                    f"Fetching origin version information from provider {upstream_info.get('provider')}"
-                    f" for tool {tool.name:<{40}}"
-                )
-                token_provider = upstream_info.get("token_provider") or provider
-                token = self.tokens.get(token_provider) if self.tokens else ""
-                upstream_info = classmap.get(provider)(upstream_info, token=token)
-                updated = datetime.now()
-                ver_obj = VersionInfo(
-                    upstream_info.get_version(),
-                    VersionType.UPSTREAM,
-                    upstream_info,
-                    {UPSTREAM_TAG},
-                    updated,
-                    origin=upstream_info.origin,
-                )
-                if in_thread:
-                    self.cache_write_queue.put((tool, ver_obj))
-                else:
-                    self._write_upstream_cache_data(
-                        tool,
-                        ver_obj
-                    )
-                tool.versions.append(ver_obj)
+            self.logger.info(
+                f"Fetching origin version information from provider {upstream_info.get('provider')}"
+                f" for tool {tool.name:<{40}}"
+            )
+            token_provider = upstream_info.get("token_provider") or provider
+            token = self.tokens.get(token_provider) if self.tokens else ""
+            upstream_info = classmap.get(provider)(upstream_info, token=token)
+            updated = datetime.now()
+            ver_obj = VersionInfo(
+                upstream_info.get_version(),
+                VersionType.UPSTREAM,
+                upstream_info,
+                {UPSTREAM_TAG},
+                updated,
+                origin=upstream_info.origin,
+            )
+            self.cache_write_queue.put((tool, ver_obj))
+            tool.versions.append(ver_obj)
 
     def _read_checker_cache(self, tool_name: str, provider: str, db: ToolDatabase = None) -> VersionInfo:
         """Read version data of tool by provider from db"""
@@ -201,10 +194,21 @@ class VersionMaintainer:
         version = db.get_versions_by_tool(tool_name, [VersionType.UPSTREAM], provider=provider.lower(), latest=True)
         return version
 
-    def _write_upstream_cache_data(self, tool: ToolInfo, data: VersionInfo):
+    def _write_upstream_version_data(self, tool: ToolInfo, data: VersionInfo, as_transaction: bool = True):
         """Cache data of single provider of single tool"""
-        with self.db.transaction():
+        if as_transaction:
+            with self.db.transaction():
+                self.db.insert_version_info(tool, data)
+        else:
             self.db.insert_version_info(tool, data)
+
+    def _write_cache_queue_into_db(self):
+        """Unable to write from multiple threads, write from here at once"""
+        # Rollback if any item from queue fails
+        with self.db.transaction():
+            while not self.cache_write_queue.empty():
+                tool, version = self.cache_write_queue.get()
+                self._write_upstream_version_data(tool, version, False)
 
     async def check_upstream_versions(self, tools: Dict[str, ToolInfo]):
         """
@@ -231,9 +235,8 @@ class VersionMaintainer:
             if tasks:
                 for _ in await asyncio.gather(*tasks):
                     pass
-            # Sqlite is not good when multi-thread writing - use queue
-            while not self.cache_write_queue.empty():
-                self._write_upstream_cache_data(*self.cache_write_queue.get())
+                # Sqlite is not good when multi-thread writing - use queue
+                self._write_cache_queue_into_db()
             else:
                 self.logger.warning(
                     "No known methods to get updates for any of the local tools."

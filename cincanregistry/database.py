@@ -6,7 +6,7 @@ from typing import List, Union, Any, Tuple, Dict
 
 from . import ToolInfo
 from . import VersionInfo, VersionType
-from .checkers import classmap
+from .checkers import classmap, UpstreamChecker
 from .configuration import Configuration
 from .utils import format_time, parse_file_time
 
@@ -32,13 +32,13 @@ c_metadata = f'''CREATE TABLE if not exists {TABLE_METADATA}(
     tool_id TEXT NOT NULL,
     tool_location TEXT NOT NULL,
     uri TEXT UNIQUE, -- It should be impossible to be two identical uris for different providers
-    repository TEXT NOT NULL,
+    repository TEXT, -- can be null when debian used for example
     tool TEXT NOT NULL,
     provider TEXT NOT NULL, 
     suite TEXT,
     method TEXT NOT NULL, 
-    origin INTEGER NOT NULL, 
-    docker_origin INTEGER NOT NULL,
+    origin INTEGER DEFAULT 0, 
+    docker_origin INTEGER DEFAULT 0,
     updated TEXT NOT NULL, -- not in provided meta file which is parsed from external source
     FOREIGN KEY (tool_id, tool_location)
         REFERENCES {TABLE_TOOLS} (name, location),
@@ -158,7 +158,10 @@ class ToolDatabase:
                     f"tags, updated, origin, size, created) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
         if isinstance(version_info, VersionInfo):
             # Insert raw size, meta_id by checking existing upstream checkers, created time last param
-            meta_id = str(version_info.source) if str(version_info.source) in classmap else None
+            if isinstance(version_info.source, UpstreamChecker):
+                meta_id = self.get_meta_id(tool.name, version_info.source)
+            else:
+                meta_id = None
             u_time = format_time(version_info.updated) if version_info.updated else v_time
             self.execute(s_command,
                          (tool.name, tool.location, meta_id, version_info.version, version_info.version_type.value,
@@ -199,8 +202,28 @@ class ToolDatabase:
             for t in tool_info:
                 self.insert_version_info(t, t.versions)
 
+    def get_meta_id(self, tool_name: str, checker: UpstreamChecker):
+        """Get meta id for matching Checker configuration"""
+        params = [tool_name, checker.uri, checker.repository, checker.tool, checker.provider]
+        s_get_meta = f"SELECT meta_id FROM {TABLE_METADATA} WHERE tool_id = ? AND uri = ?" \
+                     " AND repository = ? AND tool = ? AND provider = ? "
+        self.execute(s_get_meta, tuple(params))
+        meta_id = self.cursor.fetchone()
+        if meta_id:
+            return meta_id["meta_id"]
+        else:
+            # Less accurate match
+            s_get_meta = f"SELECT meta_id FROM {TABLE_METADATA} WHERE tool_id = ? AND tool = ? AND provider = ? "
+            params = [tool_name, checker.tool, checker.provider]
+            self.execute(s_get_meta, tuple(params))
+            meta_id = self.cursor.fetchone()
+            if meta_id:
+                return meta_id["meta_id"]
+            else:
+                return None
+
     def get_single_tool(self, tool_name: str, remote_name: str = "", filter_by: [VersionType] = None) -> Union[
-            ToolInfo, None]:
+        ToolInfo, None]:
         """Get tool by name, filter by included versions"""
         params = [tool_name]
         command = f"SELECT name, updated, location, description from {TABLE_TOOLS} " \

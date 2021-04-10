@@ -226,13 +226,13 @@ class RemoteRegistry(RegistryBase):
     def _handle_cache_queue(self):
         """
         Meta file format: upstreams: [{}]
-        Write queue into db until empty
+        Write from queue into db until empty
+        Should be used under db.transaction
         """
         while not self.cache_meta_data.empty():
             name, location, meta_data = self.cache_meta_data.get()
-            with self.db.transaction():
-                for u in meta_data.get("upstreams"):
-                    self.db.insert_meta_info(name, location, u)
+            for u in meta_data.get("upstreams"):
+                self.db.insert_meta_info(name, location, u)
 
     def _parse_meta_file(self, resp: requests.Response, tool_name: str) -> Dict:
         """Parse metafile from downloaded single layer blob of Docker image"""
@@ -253,6 +253,19 @@ class RemoteRegistry(RegistryBase):
         except tarfile.TarError:
             self.logger.warning(f"Invalid tar format from blob of tool {tool_name}")
         return None
+
+    def update_cache_by_tool(self, tool: ToolInfo):
+        """All changes here are roll-backed on sqlite error. Update tool info related to remote and meta files"""
+        with self.db.transaction():
+            self.db.insert_tool_info(tool)
+            self._handle_cache_queue()
+
+    def update_cache(self, tools: Dict[str, Union[ToolInfo, str]]):
+        """
+        Update tool cache by dict of ToolInfo objects. SQLite database used
+        """
+        with self.db.transaction():
+            self.db.insert_tool_info([tools.get(i) for i in tools.keys()])
 
     def fetch_blob(self, tool_name: str, digest: str, token: str = ""):
         if not token:
@@ -315,7 +328,6 @@ class RemoteRegistry(RegistryBase):
         # save the tool list
         if updated > 0:
             self.update_cache(tools)
-            self._handle_cache_queue()
         return self.read_remote_versions_from_db()
 
     def update_versions_from_manifest_by_tags(self, tool_name: str, tag_names: List[str]) -> List[VersionInfo]:

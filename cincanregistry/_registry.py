@@ -1,7 +1,7 @@
 import logging
 import pathlib
 from abc import ABCMeta, abstractmethod
-from typing import Dict, Union
+from typing import Dict
 
 from cincanregistry import ToolInfo
 from cincanregistry.configuration import Configuration
@@ -36,17 +36,6 @@ class RegistryBase(metaclass=ABCMeta):
     @abstractmethod
     async def get_tools(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
         pass
-
-    def update_cache_by_tool(self, tool: ToolInfo):
-        with self.db.transaction():
-            self.db.insert_tool_info(tool)
-
-    def update_cache(self, tools: Dict[str, Union[ToolInfo, str]]):
-        """
-        Update tool cache by dict of ToolInfo objects. SQLite database used
-        """
-        with self.db.transaction():
-            self.db.insert_tool_info([tools.get(i) for i in tools.keys()])
 
     # def read_remote_versions_from_db(
     #         self, tool_name: str = ""

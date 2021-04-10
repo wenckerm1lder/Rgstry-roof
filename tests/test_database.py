@@ -1,6 +1,7 @@
 import logging
 import pathlib
 import shutil
+import sqlite3
 from copy import deepcopy
 from datetime import datetime
 
@@ -259,6 +260,31 @@ def test_insert_meta_data(caplog, tmp_path):
         assert meta_data.get("suite") == FAKE_CHECKER_CONF.get("suite")
         assert meta_data.get("origin") == FAKE_CHECKER_CONF.get("origin")
         assert meta_data.get("docker_origin") == FAKE_CHECKER_CONF.get("docker_origin")
+
+
+def test_failed_constraints_meta_data(caplog, base_db):
+    caplog.set_level(logging.DEBUG)
+    # Null tool data
+    tmp_conf = deepcopy(FAKE_CHECKER_CONF)
+    tmp_conf["tool"] = None
+    tmp_checker = {
+        "version": "1.9",
+        "version_type": VersionType.REMOTE,
+        "source": "no_checker_case",
+        "tags": {"latest", "latest-stable"},
+        "updated": datetime(2021, 3, 3, 13, 37, ),
+        "size": 89529754,
+    }
+    with pytest.raises(sqlite3.IntegrityError):
+        with base_db.transaction():
+            base_db.insert_version_info(ToolInfo(**FAKE_TOOL_INFO), VersionInfo(**tmp_checker))
+            base_db.insert_meta_info(FAKE_TOOL_INFO.get("name"), FAKE_TOOL_INFO.get("location"), tmp_conf)
+        # Rollback should happen, inserted version not found
+        version = base_db.get_versions_by_tool(FAKE_TOOL_INFO.get("name"), provider=tmp_checker.get("source"),
+                                               latest=True)
+        assert version.version != "1.9"
+        tools = base_db.get_tools()
+        assert len(tools[0].versions) == 2
 
 
 def test_invalid_types():

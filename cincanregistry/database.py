@@ -202,8 +202,8 @@ class ToolDatabase:
             for t in tool_info:
                 self.insert_version_info(t, t.versions)
 
-    def get_meta_id(self, tool_name: str, checker: UpstreamChecker):
-        """Get meta id for matching Checker configuration"""
+    def get_meta_id(self, tool_name: str, checker: UpstreamChecker) -> int:
+        """Get meta id for matching Checker configuration, based on Unique constraint"""
         params = [tool_name, checker.uri, checker.repository, checker.tool, checker.provider]
         s_get_meta = f"SELECT meta_id FROM {TABLE_METADATA} WHERE tool_id = ? AND uri = ?" \
                      " AND repository = ? AND tool = ? AND provider = ? "

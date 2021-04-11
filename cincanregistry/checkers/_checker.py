@@ -21,11 +21,11 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.method: str = tool_info.get("method", "")
         self.suite: str = tool_info.get("suite", "")
         self.origin: bool = tool_info.get("origin", False)
-        if not isinstance(self.origin, bool) or self.origin not in [0, 1]:
-            raise ValueError("Origin value is not boolean")
+        if not isinstance(self.origin, bool) and (self.origin not in [0, 1]):
+            raise ValueError(f"Origin value is not boolean. Value: {self.origin}")
         self.docker_origin: bool = tool_info.get("docker_origin", False)
-        if not isinstance(self.docker_origin, bool) or self.docker_origin not in [0, 1]:
-            raise ValueError("Docker origin value is not boolean")
+        if not isinstance(self.docker_origin, bool) and (self.docker_origin not in [0, 1]):
+            raise ValueError(f"Docker origin value is not boolean. Value {self.docker_origin}")
         self.version: str = version
         self.extra_info: str = extra_info
         self.token: str = token

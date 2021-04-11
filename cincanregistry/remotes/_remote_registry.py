@@ -266,6 +266,7 @@ class RemoteRegistry(RegistryBase):
         """
         with self.db.transaction():
             self.db.insert_tool_info([tools.get(i) for i in tools.keys()])
+            self._handle_cache_queue()
 
     def fetch_blob(self, tool_name: str, digest: str, token: str = ""):
         if not token:

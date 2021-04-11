@@ -251,7 +251,7 @@ def test_insert_meta_data(caplog, tmp_path):
     with test_db.transaction():
         test_db.insert_tool_info(tool_obj)
         test_db.insert_meta_info(tool_obj.name, tool_obj.location, FAKE_CHECKER_CONF)
-        meta_data = test_db.get_meta_information(tool_obj.name, FAKE_CHECKER_CONF.get("provider"))
+        meta_data = test_db.get_meta_information(tool_obj.name, FAKE_CHECKER_CONF.get("provider"))[0]
         assert meta_data.get("uri") == FAKE_CHECKER_CONF.get("uri")
         assert meta_data.get("repository") == FAKE_CHECKER_CONF.get("repository")
         assert meta_data.get("tool") == FAKE_CHECKER_CONF.get("tool")

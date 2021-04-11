@@ -122,22 +122,23 @@ class VersionMaintainer:
     def get_versions_single_tool(
             self, tool_name: str, local_tool: ToolInfo, remote_tool: ToolInfo
     ) -> Tuple[ToolInfo, ToolInfo]:
-        self._generate_meta_files({tool_name: remote_tool})
+        # self._generate_meta_files({tool_name: remote_tool})
         # Tool name might contain registry root or namespace, include only basename
-        self.logger.debug(f"Looking path for tool {tool_name} with basename {basename(tool_name)}.")
-        tool_path = self.able_to_check.get(basename(tool_name))
-        if not tool_path:
-            raise FileNotFoundError(f"Upstream check not implemented for {tool_name}.")
+        # self.logger.debug(f"Looking path for tool {tool_name} with basename {basename(tool_name)}.")
+        # tool_path = self.able_to_check.get(basename(tool_name))
+        # if not tool_path:
+        #     raise FileNotFoundError(f"Upstream check not implemented for {tool_name}.")
         if remote_tool:
-            self._set_single_tool_upstream_versions(tool_path, remote_tool)
+            self._set_single_tool_upstream_versions(remote_tool)
         else:
-            self._set_single_tool_upstream_versions(tool_path, local_tool)
+            self._set_single_tool_upstream_versions(local_tool)
         # Write changes of upstream versions into db at once
         self._write_cache_queue_into_db()
 
         return local_tool, remote_tool
 
-    def _set_single_tool_upstream_versions(self, tool_path: pathlib.Path, tool: ToolInfo, in_thread=False):
+    # def _set_single_tool_upstream_versions(self, tool_path: pathlib.Path, tool: ToolInfo, in_thread=False):
+    def _set_single_tool_upstream_versions(self, tool: ToolInfo, in_thread=False):
         """Update upstream information of given tool"""
 
         if in_thread:
@@ -146,10 +147,13 @@ class VersionMaintainer:
         else:
             db = self.db
 
-        with tool_path.open() as f:
-            conf = json.load(f)
-            # Expect list or single object in "upstreams" value
-            upstreams = conf.get("upstreams") if isinstance(conf.get("upstreams"), List) else [conf.get("upstreams")]
+        # conf = json.load(f)
+        # Expect list or single object in "upstreams" value
+        upstreams = db.get_meta_information(tool.name)
+        if not upstreams:
+            self.logger.debug(f"Upstream check not implemented for tool {tool.name}")
+            return
+        # upstreams = conf.get("upstreams") if isinstance(conf.get("upstreams"), List) else [conf.get("upstreams")]
         for upstream_info in upstreams:
             provider = upstream_info.get("provider").lower()
             if provider not in classmap.keys():
@@ -158,10 +162,14 @@ class VersionMaintainer:
                     f"JSON configuration. "
                 )
                 continue
-            cache_d = self._read_checker_cache(tool_path.parent.name, provider, db)
+            cache_d = self._read_checker_cache(tool.name, provider, db)
+            token_provider = upstream_info.get("token_provider") or provider
+            token = self.tokens.get(token_provider) if self.tokens else ""
             if cache_d and not self.force_refresh:
                 now = datetime.now()
                 if now - timedelta(hours=self.config.cache_lifetime) <= cache_d.updated <= now:
+                    cache_d.source = classmap.get(provider)(upstream_info, token=token)
+                    cache_d.updated = now
                     tool.versions.append(cache_d)
                     self.logger.debug(
                         f"Using cached upstream version info for tool {tool.name:<{40}}"
@@ -172,8 +180,6 @@ class VersionMaintainer:
                 f"Fetching origin version information from provider {upstream_info.get('provider')}"
                 f" for tool {tool.name:<{40}}"
             )
-            token_provider = upstream_info.get("token_provider") or provider
-            token = self.tokens.get(token_provider) if self.tokens else ""
             upstream_info = classmap.get(provider)(upstream_info, token=token)
             updated = datetime.now()
             ver_obj = VersionInfo(
@@ -215,23 +221,23 @@ class VersionMaintainer:
         Checks for available versions in upstream
         """
         tasks = []
-        self._generate_meta_files(tools)
+        # self._generate_meta_files(tools)
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
             for t in tools:
                 # Basename is needed - version check works with different registries
-                tool_path = self.able_to_check.get(basename(t))
-                if tool_path:
-                    tool = tools.get(t)
-                    loop = asyncio.get_event_loop()
-                    tasks.append(
-                        loop.run_in_executor(
-                            executor,
-                            self._set_single_tool_upstream_versions,
-                            *(tool_path, tool, True),
-                        )
+                # tool_path = self.able_to_check.get(basename(t))
+                # if tool_path:
+                tool = tools.get(t)
+                loop = asyncio.get_event_loop()
+                tasks.append(
+                    loop.run_in_executor(
+                        executor,
+                        self._set_single_tool_upstream_versions,
+                        *(tool, True),
                     )
-                else:
-                    self.logger.debug(f"Upstream check not implemented for tool {t}")
+                )
+                # else:
+                #     self.logger.debug(f"Upstream check not implemented for tool {t}")
             if tasks:
                 for _ in await asyncio.gather(*tasks):
                     pass

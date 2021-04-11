@@ -22,7 +22,7 @@ c_tool = f'''CREATE TABLE if not exists {TABLE_TOOLS}(
     name TEXT NOT NULL, -- must be unique with location, we don't have tools with same names
     updated TEXT NOT NULL,
     location TEXT NOT NULL,
-    description TEXT,
+    description TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '',
     UNIQUE (name, location)
 );
 '''
@@ -31,14 +31,14 @@ c_metadata = f'''CREATE TABLE if not exists {TABLE_METADATA}(
     meta_id INTEGER PRIMARY KEY,
     tool_id TEXT NOT NULL,
     tool_location TEXT NOT NULL,
-    uri TEXT UNIQUE, -- It should be impossible to be two identical uris for different providers
-    repository TEXT, -- can be null when debian used for example
+    uri TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '', -- sometimes multiple tools are found from e.g. same GitHub repository
+    repository TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '', -- can be empty when debian used for example
     tool TEXT NOT NULL,
     provider TEXT NOT NULL, 
-    suite TEXT,
+    suite TEXT NOT NULL ON CONFLICT REPLACE DEFAULT '',
     method TEXT NOT NULL, 
-    origin INTEGER DEFAULT 0, 
-    docker_origin INTEGER DEFAULT 0,
+    origin INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0, 
+    docker_origin INTEGER NOT NULL ON CONFLICT REPLACE DEFAULT 0,
     updated TEXT NOT NULL, -- not in provided meta file which is parsed from external source
     FOREIGN KEY (tool_id, tool_location)
         REFERENCES {TABLE_TOOLS} (name, location),
@@ -52,7 +52,7 @@ c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     meta_id INTEGER,
     version TEXT,
     version_type TEXT,
-    source TEXT NOT NULL, -- upstream provider, local, remote
+    source TEXT NOT NULL, -- upstream provider, local or remote
     tags TEXT NOT NULL, -- comma separated string
     updated TEXT NOT NULL,
     origin INTEGER NOT NULL,
@@ -288,18 +288,21 @@ class ToolDatabase:
             return []
         return [self.row_into_version_info_obj(r) for r in rows]
 
-    def get_meta_information(self, tool_name: str, provider: str) -> Dict:
-        params = [tool_name, provider]
-        s_get_meta = f"SELECT * FROM {TABLE_METADATA} WHERE tool_id = ? AND provider = ?"
+    def get_meta_information(self, tool_name: str, provider: str = "") -> List[Dict]:
+        params = [tool_name]
+        s_get_meta = f"SELECT * FROM {TABLE_METADATA} WHERE tool_id = ?"
+        if provider:
+            s_get_meta += " AND provider = ?"
+            params.append(provider)
         self.execute(s_get_meta, tuple(params))
         rows = self.cursor.fetchall()
-        if len(rows) > 1:
+        if len(rows) > 1 and provider:
             self.logger.error(
                 f"Possible duplicates for meta data for tool {tool_name} with provider {provider}. Report bug.")
-        if rows:
-            return dict(rows[0])
+        if len(rows) >= 1:
+            return [dict(i) for i in rows]
         else:
-            return {}
+            return []
 
     def row_into_version_info_obj(self, row: sqlite3.Row) -> VersionInfo:
         """Convert Row object into VersionInfo object"""
@@ -311,10 +314,11 @@ class ToolDatabase:
         # No booleans in SQLite, convert integer back
         origin = bool(row["origin"])
         if row["source"] and (row["source"].lower() in classmap.keys()):
+            # TODO implement query by meta_id
             upstream_info = self.get_meta_information(row["tool_id"], row["source"].lower())
             if upstream_info:
                 dummy_checker = classmap.get(row["source"].lower())(
-                    upstream_info,
+                    upstream_info[0],
                     version=row["version"],
                     extra_info=row["extra_info"]
                 )

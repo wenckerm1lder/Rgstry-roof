@@ -1,10 +1,10 @@
 import logging
-import requests
 import re
 from abc import ABCMeta, abstractmethod
 from typing import List, Dict
+
+import requests
 from requests.exceptions import Timeout, ConnectionError
-import json
 
 NO_VERSION = "Not found"
 __name__ = "checker"
@@ -21,10 +21,10 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.method: str = tool_info.get("method", "")
         self.suite: str = tool_info.get("suite", "")
         self.origin: bool = tool_info.get("origin", False)
-        if not isinstance(self.origin, bool):
+        if not isinstance(self.origin, bool) or self.origin not in [0, 1]:
             raise ValueError("Origin value is not boolean")
         self.docker_origin: bool = tool_info.get("docker_origin", False)
-        if not isinstance(self.docker_origin, bool):
+        if not isinstance(self.docker_origin, bool) or self.docker_origin not in [0, 1]:
             raise ValueError("Docker origin value is not boolean")
         self.version: str = version
         self.extra_info: str = extra_info

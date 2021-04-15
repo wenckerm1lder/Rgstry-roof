@@ -298,7 +298,8 @@ class RemoteRegistry(RegistryBase):
             return ImageConfig(config_res.json())
         return None
 
-    async def update_tools_in_parallel(self, tools: Dict[str, ToolInfo], fetch_function: Callable):
+    async def update_tools_in_parallel(self, tools: Dict[str, ToolInfo], fetch_function: Callable,
+                                       force_update: bool = False):
         """
         Updates information of tools based on given list by querying all manifests for available tags
         """
@@ -312,7 +313,7 @@ class RemoteRegistry(RegistryBase):
             for t in tools.values():
                 if (
                         t.name not in old_tools
-                        or t.updated > old_tools[t.name].updated
+                        or (t.updated > old_tools[t.name].updated if not force_update else True)
                 ):
                     tasks.append(
                         loop.run_in_executor(

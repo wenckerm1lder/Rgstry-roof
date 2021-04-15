@@ -34,7 +34,7 @@ class RegistryBase(metaclass=ABCMeta):
         self.db = ToolDatabase(self.config)
 
     @abstractmethod
-    async def get_tools(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
+    async def get_tools(self, defined_tag: str = "", force_update: bool = False) -> Dict[str, ToolInfo]:
         pass
 
     # def read_remote_versions_from_db(

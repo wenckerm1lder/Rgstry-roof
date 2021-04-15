@@ -1,14 +1,15 @@
-import sys
 import asyncio
 import json
 import logging
+import sys
+from datetime import datetime, timedelta
 from os.path import basename
 from typing import Tuple, Dict
-from ._registry import RegistryBase
-from datetime import datetime, timedelta
+
 from cincanregistry import ToolInfo, VersionMaintainer, Remotes
-from .daemon import DaemonRegistry
 from cincanregistry.remotes import DockerHubRegistry, QuayRegistry
+from ._registry import RegistryBase
+from .daemon import DaemonRegistry
 
 
 class ToolRegistry(RegistryBase):
@@ -154,7 +155,7 @@ class ToolRegistry(RegistryBase):
                     f"without prefixes."
                 )
         else:
-            remote_tools = await self.remote_registry.get_tools()
+            remote_tools = await self.remote_registry.get_tools(force_update=force_refresh)
             # Remote tools, with included upstream version information
             remote_tools_with_origin_version = await maintainer.check_upstream_versions(
                 remote_tools

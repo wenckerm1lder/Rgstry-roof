@@ -10,7 +10,7 @@ from typing import Dict, List, Tuple
 
 from cincanregistry.models.tool_info import ToolInfo
 from cincanregistry.models.version_info import VersionInfo, VersionType
-from .checkers import classmap, UpstreamChecker
+from .checkers import classmap, UpstreamChecker, NO_VERSION
 from .configuration import Configuration
 from .database import ToolDatabase
 from .metafiles import MetaHandler
@@ -165,7 +165,8 @@ class VersionMaintainer:
             cache_d = self._read_checker_cache(tool.name, provider, db)
             token_provider = upstream_info.get("token_provider") or provider
             token = self.tokens.get(token_provider) if self.tokens else ""
-            if cache_d and not self.force_refresh:
+            # Don't use cached version if was not found last time - instead try to fetch again
+            if cache_d and not self.force_refresh and cache_d.version != NO_VERSION:
                 now = datetime.now()
                 if now - timedelta(hours=self.config.cache_lifetime) <= cache_d.updated <= now:
                     cache_d.source = classmap.get(provider)(upstream_info, token=token)

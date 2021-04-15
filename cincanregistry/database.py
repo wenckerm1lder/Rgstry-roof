@@ -61,7 +61,7 @@ c_version_data = f'''CREATE TABLE if not exists {TABLE_VERSION_DATA}(
     created TEXT NOT NULL,
     extra_info TEXT,
     FOREIGN KEY (meta_id)
-        REFERENCES {TABLE_METADATA} (meta_id),
+        REFERENCES {TABLE_METADATA} (meta_id) ON DELETE CASCADE ,
     FOREIGN KEY (tool_id, tool_location) 
         REFERENCES {TABLE_TOOLS} (name, location) ON DELETE CASCADE ,
     -- We should not have duplicate versions from same origin - no use
@@ -261,7 +261,7 @@ class ToolDatabase:
                 self.logger.error(
                     "Wrong format for parameter 'version_type' when getting versions by tool. Should be list.")
                 return []
-            self.logger.debug(f"getting versions by type(s) : {version_type}")
+            self.logger.debug(f"getting versions by type(s) : {[v for v in version_type]}")
             # Dynamically generate sql for all version types
             for i, v_t in enumerate(version_type):
                 if i == 0:
@@ -288,12 +288,20 @@ class ToolDatabase:
             return []
         return [self.row_into_version_info_obj(r) for r in rows]
 
-    def get_meta_information(self, tool_name: str, provider: str = "") -> List[Dict]:
+    def get_meta_information(self, tool_name: str, provider: str = "", meta_id: str = "") -> List[Dict]:
         params = [tool_name]
         s_get_meta = f"SELECT * FROM {TABLE_METADATA} WHERE tool_id = ?"
-        if provider:
+        if meta_id and provider:
+            self.logger.debug("Both provider and meta_id supplied for meta information query, ignoring provider...")
+            self.logger.debug(f"Provider: {provider} Meta id: {meta_id}")
+        if provider and not meta_id:
             s_get_meta += " AND provider = ?"
             params.append(provider)
+        if meta_id:
+            s_get_meta += " AND meta_id = ?"
+            params.append(meta_id)
+        # Ignore case
+        s_get_meta += " COLLATE NOCASE;"
         self.execute(s_get_meta, tuple(params))
         rows = self.cursor.fetchall()
         if len(rows) > 1 and provider:
@@ -314,13 +322,13 @@ class ToolDatabase:
         # No booleans in SQLite, convert integer back
         origin = bool(row["origin"])
         if row["source"] and (row["source"].lower() in classmap.keys()):
-            # TODO implement query by meta_id
-            upstream_info = self.get_meta_information(row["tool_id"], row["source"].lower())
+            # If meta_id exist, query prioritizes it.
+            upstream_info = self.get_meta_information(row["tool_id"], row["source"], row["meta_id"])
             if upstream_info:
                 dummy_checker = classmap.get(row["source"].lower())(
                     upstream_info[0],
                     version=row["version"],
-                    extra_info=row["extra_info"]
+                    extra_info=row["extra_info"],
                 )
             else:
                 self.logger.debug(f"No meta information for tool {row['tool_id']} found.")

@@ -97,7 +97,7 @@ class QuayRegistry(RemoteRegistry):
 
         return tools_list
 
-    async def get_tools(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
+    async def get_tools(self, defined_tag: str = "", force_update: bool = False) -> Dict[str, ToolInfo]:
         """Get tools from remote registry. Name set without repository prefixes"""
         self._set_auth_and_service_location()
         available_tools = self.__fetch_available_tools()
@@ -109,7 +109,7 @@ class QuayRegistry(RemoteRegistry):
             description = t.get("description")
             tool_list[name] = ToolInfo(name, datetime.datetime.fromtimestamp(timestamp),
                                        self.registry_name, description=description)
-        return await self.update_tools_in_parallel(tool_list, self.fetch_tags)
+        return await self.update_tools_in_parallel(tool_list, self.fetch_tags, force_update)
 
     def fetch_tags(self, tool: ToolInfo, update_cache: bool = False):
         """

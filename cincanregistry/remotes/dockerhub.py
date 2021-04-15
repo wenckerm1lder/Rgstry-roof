@@ -1,10 +1,12 @@
+from datetime import datetime
+from typing import Dict
+
+import requests
+
 from cincanregistry import Remotes
+from cincanregistry.models.tool_info import ToolInfo
 from cincanregistry.remotes._remote_registry import RemoteRegistry
 from cincanregistry.utils import parse_file_time, split_tool_tag
-from cincanregistry.models.tool_info import ToolInfo
-from typing import Dict
-from datetime import datetime
-import requests
 
 
 class DockerHubRegistry(RemoteRegistry):
@@ -93,7 +95,7 @@ class DockerHubRegistry(RemoteRegistry):
         if update_cache:
             self.update_cache_by_tool(tool)
 
-    async def get_tools(self, defined_tag: str = "") -> Dict[str, ToolInfo]:
+    async def get_tools(self, defined_tag: str = "", force_update: bool = False) -> Dict[str, ToolInfo]:
         """List tools from registry with help of local c/ache"""
         # get_fetch_start = timeit.default_timer()
         fresh_resp = None
@@ -132,4 +134,4 @@ class DockerHubRegistry(RemoteRegistry):
                     description=t.get("description", ""),
                 )
 
-            return await self.update_tools_in_parallel(tool_list, self.fetch_tags)
+            return await self.update_tools_in_parallel(tool_list, self.fetch_tags, force_update)

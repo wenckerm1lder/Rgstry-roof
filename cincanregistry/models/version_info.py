@@ -57,7 +57,8 @@ class VersionInfo:
                 self._updated = now
                 return self._version
             else:
-                self._version = self._source.version
+                if (not self._version and self._source.version) or (self._version and self._source.version):
+                    self._version = self._source.version
         return self._version
 
     @version.setter

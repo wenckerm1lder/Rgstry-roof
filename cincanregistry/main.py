@@ -141,7 +141,7 @@ def print_version_check(
     # local ver
     print(f"{f'Local Version':{MAX_WV}}", end="")
     # registry ver
-    print(f"{f'DockerHub Version':{MAX_WV}}", end="")
+    print(f"{f'Registry Version':{MAX_WV}}", end="")
     # origin ver
     print(f"{f'Origin Version':{MAX_WV}}", end="")
     # origin provider

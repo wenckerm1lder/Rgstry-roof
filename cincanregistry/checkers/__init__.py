@@ -3,7 +3,7 @@
 # import pkgutil
 # from pathlib import Path
 # from importlib import import_module
-from ._checker import UpstreamChecker
+from ._checker import UpstreamChecker, NO_VERSION
 from .github import GitHubChecker
 from .gitlab import GitLabChecker
 from .bitbucket import BitbucketChecker
@@ -32,6 +32,7 @@ __all__ = [
     "DidierStevensChecker",
     "UpstreamChecker",
     "classmap",
+    "NO_VERSION"
 ]
 
 # for (_, name, _) in pkgutil.iter_modules([Path(__file__).parent]):

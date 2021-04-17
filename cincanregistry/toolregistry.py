@@ -1,14 +1,15 @@
-import sys
 import asyncio
 import json
 import logging
+import sys
+from datetime import datetime, timedelta
 from os.path import basename
 from typing import Tuple, Dict
-from ._registry import RegistryBase
-from datetime import datetime, timedelta
+
 from cincanregistry import ToolInfo, VersionMaintainer, Remotes
-from .daemon import DaemonRegistry
 from cincanregistry.remotes import DockerHubRegistry, QuayRegistry
+from ._registry import RegistryBase
+from .daemon import DaemonRegistry
 
 
 class ToolRegistry(RegistryBase):
@@ -76,13 +77,12 @@ class ToolRegistry(RegistryBase):
                     if not l_version:
                         f"Provided tag '{defined_tag}' not found for local image {i}."
                 if r_tool:
-                    for ver in r_tool.versions:
-                        if defined_tag in ver.tags:
-                            r_version = ver.version
-                            # Add size based on remote version
-                            # compressed
-                            size = ver.size
-                            break
+                    ver = r_tool.get_latest(in_remote=True)
+                    if ver:
+                        r_version = ver.version
+                        # Add size based on remote version
+                        # compressed
+                        size = ver.size
                     if not r_version:
                         f"Provided tag '{defined_tag}' not found for remote image {i}."
                 if not r_version and not l_version:
@@ -93,7 +93,7 @@ class ToolRegistry(RegistryBase):
                 l_version = (
                     local_tools.get(i).get_latest().version if local_tools.get(i) else ""
                 )
-                r_obj = remote_tools.get(i).get_latest() if remote_tools.get(i) else None
+                r_obj = remote_tools.get(i).get_latest(in_remote=True) if remote_tools.get(i) else None
                 if r_obj:
                     r_version = r_obj.version
                     size = r_obj.size
@@ -121,6 +121,7 @@ class ToolRegistry(RegistryBase):
     ):
         maintainer = VersionMaintainer(
             self.config,
+            db=self.db,
             force_refresh=force_refresh,
         )
         versions = {}
@@ -130,20 +131,20 @@ class ToolRegistry(RegistryBase):
                                   f" Tool must be in default registry: {self.default_remote}.")
                 sys.exit(1)
             tool_name = basename(tool)
-            tool_with_namespace = f"{self.remote_registry.full_prefix}/{tool_name}"
-            l_tool = self.local_registry.create_local_tool_info_by_name(tool_with_namespace)
-            r_tool = self.remote_registry.read_tool_cache(tool_with_namespace) if not force_refresh else {}
+            # tool_with_namespace = f"{self.remote_registry.full_prefix}/{tool_name}"
+            l_tool = self.local_registry.create_local_tool_info_by_name(tool_name)
+            r_tool = self.remote_registry.read_remote_versions_from_db(tool_name) if not force_refresh else {}
 
             now = datetime.now()
             if not r_tool:
-                r_tool = ToolInfo(tool_with_namespace, datetime.min, self.remote_registry.registry_name)
+                r_tool = ToolInfo(tool_name, datetime.min, self.remote_registry.registry_name)
             if not r_tool.updated or not (
                     now - timedelta(hours=self.config.cache_lifetime) <= r_tool.updated <= now
             ):
                 self.remote_registry.fetch_tags(r_tool, update_cache=True)
             if l_tool or (r_tool and not r_tool.updated == datetime.min):
                 l_tool, r_tool = maintainer.get_versions_single_tool(
-                    tool_with_namespace, l_tool, r_tool
+                    tool_name, l_tool, r_tool
                 )
                 versions = await maintainer.list_versions_single(
                     l_tool, r_tool, only_updates
@@ -154,7 +155,7 @@ class ToolRegistry(RegistryBase):
                     f"without prefixes."
                 )
         else:
-            remote_tools = await self.remote_registry.get_tools()
+            remote_tools = await self.remote_registry.get_tools(force_update=force_refresh)
             # Remote tools, with included upstream version information
             remote_tools_with_origin_version = await maintainer.check_upstream_versions(
                 remote_tools

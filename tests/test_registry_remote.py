@@ -9,8 +9,8 @@ from cincanregistry.utils import parse_file_time
 from .fake_instances import FAKE_DOCKER_REGISTRY_ERROR, FAKE_MANIFEST, TEST_REPOSITORY
 
 
-def test_docker_registry_api_error(mocker, caplog):
-    reg = DockerHubRegistry()
+def test_docker_registry_api_error(mocker, caplog, config):
+    reg = DockerHubRegistry(configuration=config)
     caplog.set_level(logging.DEBUG)
     response = mock.Mock(ok=True)
     response.json.return_value = FAKE_DOCKER_REGISTRY_ERROR
@@ -27,8 +27,8 @@ def test_docker_registry_api_error(mocker, caplog):
 
 
 @pytest.mark.external_api
-def test_get_service_token(mocker):
-    reg = DockerHubRegistry()
+def test_get_service_token(mocker, config):
+    reg = DockerHubRegistry(configuration=config)
     assert reg._get_registry_service_token(TEST_REPOSITORY)
     ret = mock.Mock(ok=True)
     ret.status_code = 404
@@ -38,8 +38,8 @@ def test_get_service_token(mocker):
 
 
 @pytest.mark.external_api
-def test_fetch_manifest(mocker):
-    reg = DockerHubRegistry()
+def test_fetch_manifest(mocker, config):
+    reg = DockerHubRegistry(configuration=config)
     # Test against real API
     manifest = reg.fetch_manifest(TEST_REPOSITORY, "dev")
     assert manifest.schemaVersion == 2
@@ -54,9 +54,9 @@ def test_fetch_manifest(mocker):
 
 
 @pytest.mark.external_api
-def test_get_version_from_manifest(mocker, caplog):
+def test_get_version_from_manifest(mocker, caplog, config):
     """Test for deprecated v1 manifest"""
-    reg = DockerHubRegistry()
+    reg = DockerHubRegistry(configuration=config)
     assert "1.0", parse_file_time(
         "2020-05-23T19:43:14.106177342Z"
     ) == reg._get_version_from_manifest(FAKE_MANIFEST)
@@ -97,8 +97,8 @@ def test_get_version_from_manifest(mocker, caplog):
 
 
 @pytest.mark.external_api
-def test_fetch_tags(mocker, caplog):
-    reg = DockerHubRegistry()
+def test_fetch_tags(mocker, caplog, config):
+    reg = DockerHubRegistry(configuration=config)
     caplog.set_level(logging.INFO)
     tool_info = ToolInfo(TEST_REPOSITORY, datetime.datetime.now(), "remote")
     reg.fetch_tags(tool_info, update_cache=False)

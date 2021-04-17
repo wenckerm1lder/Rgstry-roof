@@ -1,4 +1,4 @@
-from cincanregistry import VersionInfo, ToolInfo, ToolInfoEncoder
+from cincanregistry import VersionInfo, VersionType, ToolInfo, ToolInfoEncoder
 from cincanregistry.utils import format_time
 from datetime import datetime
 import pytest
@@ -16,18 +16,17 @@ def test_create_tool_info():
     ver2 = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
     tool_obj = ToolInfo(**FAKE_TOOL_INFO)
     tool_obj.versions.append(ver1)
-    tool_obj.upstream_v.append(ver2)
+    tool_obj.versions.append(ver2)
 
     assert tool_obj.name == "test_tool"
     assert tool_obj.updated == datetime(2020, 3, 13, 13, 37)
     assert tool_obj.location == "test_location"
     assert tool_obj.description == "test_description"
 
-    assert next(iter(tool_obj.versions)).version == "0.9"
-    assert next(iter(tool_obj.upstream_v)).version == "1.2"
+    assert tool_obj.versions[0].version == "0.9"
+    assert tool_obj.versions[1].version == "1.1"
 
-    assert len(tool_obj.versions) == 1
-    assert len(tool_obj.upstream_v) == 1
+    assert len(tool_obj.versions) == 2
 
     with pytest.raises(ValueError):
         ToolInfo("", datetime.now(), "test-location")
@@ -57,15 +56,15 @@ def test_tool_info_origin_version():
     tool_obj.versions.append(ver1)
 
     assert tool_obj.get_origin_version() == VersionInfo(
-        "Not implemented", "", set(), datetime.min
+        "Not implemented", VersionType.UNDEFINED, "", set(), datetime.min
     )
     assert tool_obj.get_docker_origin_version() == VersionInfo(
-        "Not implemented", "", set(), datetime.min
+        "Not implemented", VersionType.UNDEFINED, "", set(), datetime.min
     )
 
-    tool_obj.upstream_v.append(ver2)
+    tool_obj.versions.append(ver2)
 
-    assert tool_obj.get_origin_version() == "1.2"
+    assert tool_obj.get_origin_version() == "1.1"
     # Above fetch updated timestamp when getting 1.2 version with 'get_version' method, because
     # timestamp was older than 1 hour
     # However, this is mock object, and does not update original object as real UpstreamCheck
@@ -79,15 +78,14 @@ def test_tool_info_latest_version():
     ver2 = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
     tool_obj = ToolInfo(**FAKE_TOOL_INFO)
     tool_obj.versions.append(ver1)
-    tool_obj.upstream_v.append(ver2)
+    tool_obj.versions.append(ver2)
 
     assert tool_obj.get_latest() == "0.9"
     assert tool_obj.get_latest(in_upstream=True) == "1.1"
-    assert ver2.source.get_version.called
 
     # No versions at all
     tool_obj = ToolInfo(**FAKE_TOOL_INFO)
-    tool_obj.get_latest() == VersionInfo("undefined", "", set(), datetime.min)
+    assert tool_obj.get_latest() == VersionInfo("undefined", VersionType.UNDEFINED, "", set(), datetime.min)
 
 
 def test_tool_info_to_str():
@@ -122,7 +120,7 @@ def test_tool_info_eq():
 def test_tool_info_iter():
     t_info = ToolInfo(**FAKE_TOOL_INFO)
     t_info.versions.append(VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER))
-    t_info.upstream_v.append(VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER))
+    t_info.versions.append(VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER))
     t_info_dict = dict(t_info)
 
     assert t_info_dict.get("name") == "test_tool"
@@ -131,6 +129,7 @@ def test_tool_info_iter():
     assert t_info_dict.get("description") == "test_description"
     assert t_info_dict.get("versions")[0] == {
         "version": "0.9",
+        "version_type": VersionType.REMOTE.value,
         "source": "no_checker_case",
         "tags": ["latest", "latest-stable"],
         "updated": format_time(datetime(2020, 3, 3, 13, 37,)),
@@ -142,19 +141,14 @@ def test_tool_info_iter():
 def test_tool_info_from_dict():
     t_info = ToolInfo(**FAKE_TOOL_INFO)
     t_info.versions.append(VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER))
-    t_info.upstream_v.append(VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER))
+    t_info.versions.append(VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER))
     t_info_dict = dict(t_info)
     t_info_from_dict = ToolInfo.from_dict(t_info_dict)
     assert t_info.name == t_info_from_dict.name
     assert t_info.updated == t_info_from_dict.updated
     assert t_info.location == t_info_from_dict.location
-    assert t_info.versions == t_info_from_dict.versions
-    # Too hard to mock this object, values are correct when 1.1 vs 1.2
-    # There is side effect in .version which should change values to same, but
-    # mock implementation missing
-    assert t_info.upstream_v[0].version != t_info_from_dict.upstream_v[0].version
-    assert t_info.upstream_v[0].version == "1.1"
-    assert t_info_from_dict.upstream_v[0].version == "1.2"
+    assert t_info.versions[1].version == t_info_from_dict.versions[1].version
+    assert t_info.versions[1].version == "1.1"
 
     with pytest.raises(TypeError):
         ToolInfo.from_dict("not_dict")

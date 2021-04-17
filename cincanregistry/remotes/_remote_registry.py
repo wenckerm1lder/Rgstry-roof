@@ -1,15 +1,20 @@
 import asyncio
-from urllib.parse import urlparse
-import docker
-import json
 import base64
+import io
+import json
+import queue
 import re
+import tarfile
 from abc import abstractmethod
 from concurrent.futures.thread import ThreadPoolExecutor
+from os.path import basename
 from typing import List, Dict, Callable, Union
+from urllib.parse import urlparse
+
+import docker
 import requests
 
-from cincanregistry import ToolInfo, VersionInfo
+from cincanregistry import ToolInfo, VersionInfo, VersionType
 from cincanregistry._registry import RegistryBase
 from cincanregistry.models.manifest import ImageConfig, ManifestV2
 from cincanregistry.utils import parse_file_time
@@ -39,6 +44,8 @@ class RemoteRegistry(RegistryBase):
         # Adapter allows more simultaneous connections
         adapter = requests.adapters.HTTPAdapter(pool_maxsize=self.max_workers)
         self.session.mount("https://", adapter)
+        # Queue used to hold data among threads, write into db in the end
+        self.cache_meta_data = queue.Queue()
 
     @abstractmethod
     def fetch_tags(self, tool: ToolInfo, update_cache: bool = False):
@@ -173,6 +180,20 @@ class RemoteRegistry(RegistryBase):
                 return version
         return ""
 
+    def read_remote_versions_from_db(self, tool_name: str = "") -> Union[Dict[str, ToolInfo], ToolInfo]:
+        """Get dict of tools which have remote versions (no upstream)"""
+        r = {}
+        if tool_name:
+            return self.db.get_single_tool(tool_name=tool_name, remote_name=self.registry_name,
+                                           filter_by=[VersionType.REMOTE])
+        else:
+            tools = self.db.get_tools(remote_name=self.registry_name, filter_by=[VersionType.REMOTE])
+
+        # Generate dict accessible by name from list
+        for t in tools:
+            r[t.name] = t
+        return r
+
     def fetch_manifest(
             self, name: str, tag: str, token: str = ""
     ) -> Union[ManifestV2, None]:
@@ -202,37 +223,88 @@ class RemoteRegistry(RegistryBase):
             return None
         return ManifestV2(manifest_req.json())
 
-    def fetch_image_config(self, name: str, config_digest: str, token: str = "") -> Union[ImageConfig, None]:
+    def _handle_cache_queue(self):
         """
-        Fetches image configuration JSON for tool by given config digest
+        Meta file format: upstreams: [{}]
+        Write from queue into db until empty
+        Should be used under db.transaction
         """
+        while not self.cache_meta_data.empty():
+            name, location, meta_data = self.cache_meta_data.get()
+            for u in meta_data.get("upstreams"):
+                self.db.insert_meta_info(name, location, u)
 
-        if not token:
-            token = self._get_registry_service_token(name)
+    def _parse_meta_file(self, resp: requests.Response, tool_name: str) -> Dict:
+        """Parse metafile from downloaded single layer blob of Docker image"""
+        if len(resp.content) > self.config.meta_max_size:
+            self.logger.error(
+                f"Meta.json from {tool_name} Docker image is larger than {self.config.meta_max_size / 1000}MB, not used.")
+            return None
+        file_like_object = io.BytesIO(resp.content)
         try:
-            config_res = self.session.get(
-                f"{self.registry_root}/{self.schema_version}/{name}/blobs/{config_digest}",
+            tar = tarfile.open(fileobj=file_like_object)
+            for member in tar.getmembers():
+                if basename(member.name) == self.config.meta_filename:
+                    f = tar.extractfile(member)
+                    try:
+                        return json.load(f)
+                    except json.JSONDecodeError:
+                        self.logger.debug(f"Metafile not JSON for tool {tool_name}")
+        except tarfile.TarError:
+            self.logger.warning(f"Invalid tar format from blob of tool {tool_name}")
+        return None
+
+    def update_cache_by_tool(self, tool: ToolInfo):
+        """All changes here are roll-backed on sqlite error. Update tool info related to remote and meta files"""
+        with self.db.transaction():
+            self.db.insert_tool_info(tool)
+            self._handle_cache_queue()
+
+    def update_cache(self, tools: Dict[str, Union[ToolInfo, str]]):
+        """
+        Update tool cache by dict of ToolInfo objects. SQLite database used
+        """
+        with self.db.transaction():
+            self.db.insert_tool_info([tools.get(i) for i in tools.keys()])
+            self._handle_cache_queue()
+
+    def fetch_blob(self, tool_name: str, digest: str, token: str = ""):
+        if not token:
+            token = self._get_registry_service_token(tool_name)
+        try:
+            blob_res = self.session.get(
+                f"{self.registry_root}/{self.schema_version}/{tool_name}/blobs/{digest}",
                 headers={
                     "Authorization": f"{self.auth_digest_type} {token}",
-                    "Accept": f"application/vnd.docker.container.image.v1+json",
+                    "Accept": f"application/vnd.docker.image.rootfs.diff.tar.gzip",
                 }
             )
-            if config_res and config_res.status_code == 200:
-                return ImageConfig(config_res.json())
+            if blob_res and blob_res.status_code == 200:
+                return blob_res
             else:
-                self.logger.warning(f"Unable to get container configuration for tool {name} with digest {config_digest}"
-                                    f"response code: {config_res.status_code}")
+                self.logger.warning(f"Unable to get blob for tool {tool_name} with digest {digest}"
+                                    f"response code: {blob_res.status_code}")
 
         except requests.ConnectionError as e:
             self.logger.error(e)
         return None
 
-    async def update_tools_in_parallel(self, tools: Dict[str, ToolInfo], fetch_function: Callable):
+    def fetch_image_config(self, name: str, config_digest: str, token: str = "") -> Union[ImageConfig, None]:
+        """
+        Fetches image configuration JSON for tool by given config digest
+        """
+        config_res = self.fetch_blob(name, config_digest, token)
+        if config_res:
+            return ImageConfig(config_res.json())
+        return None
+
+    async def update_tools_in_parallel(self, tools: Dict[str, ToolInfo], fetch_function: Callable,
+                                       force_update: bool = False):
         """
         Updates information of tools based on given list by querying all manifests for available tags
         """
 
-        old_tools = self.read_tool_cache()
+        old_tools = self.read_remote_versions_from_db()
 
         updated = 0
         with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
@@ -241,7 +313,7 @@ class RemoteRegistry(RegistryBase):
             for t in tools.values():
                 if (
                         t.name not in old_tools
-                        or t.updated > old_tools[t.name].updated
+                        or (t.updated > old_tools[t.name].updated if not force_update else True)
                 ):
                     tasks.append(
                         loop.run_in_executor(
@@ -258,7 +330,7 @@ class RemoteRegistry(RegistryBase):
         # save the tool list
         if updated > 0:
             self.update_cache(tools)
-        return self.read_tool_cache()
+        return self.read_remote_versions_from_db()
 
     def update_versions_from_manifest_by_tags(self, tool_name: str, tag_names: List[str]) -> List[VersionInfo]:
         """
@@ -278,6 +350,13 @@ class RemoteRegistry(RegistryBase):
             if manifest:
                 version = self._get_version_from_image_config(container_config)
                 updated = parse_file_time(container_config.created)
+                # Get meta data from latest image for upstream checking, skip big files (1MB+). Should be only file
+                # on final layer
+                if t == self.config.tag and manifest.layers[-1].size < self.config.meta_max_size:
+                    meta_blob_resp = self.fetch_blob(tool_name, manifest.layers[-1].digest, token)
+                    meta_parsed = self._parse_meta_file(meta_blob_resp, tool_name)
+                    if meta_parsed and isinstance(meta_parsed, Dict):
+                        self.cache_meta_data.put((basename(tool_name), self.registry_name, meta_parsed))
                 if not version:
                     version = self.VER_UNDEFINED
                 match = [v for v in available_versions if version == v.version]
@@ -286,6 +365,7 @@ class RemoteRegistry(RegistryBase):
                 else:
                     ver_info = VersionInfo(
                         version,
+                        VersionType.REMOTE,
                         self.registry_name,
                         {t},
                         updated,

@@ -1,8 +1,9 @@
-import yaml
-import pathlib
 import logging
-from typing import Dict
+import pathlib
 from enum import Enum
+from typing import Dict
+
+import yaml
 
 
 class Remotes(Enum):
@@ -18,8 +19,9 @@ class Configuration:
 
     def __init__(self, config_path: str = "", tools_repo_path: str = ""):
         self.logger = logging.getLogger("configuration")
+        self.home = pathlib.Path.home() / '.cincan'
         self.file: pathlib.Path = pathlib.Path(
-            config_path) if config_path else pathlib.Path.home() / '.cincan' / 'registry.yaml'
+            config_path) if config_path else self.home / 'registry.yaml'
         if self.file.is_file():
             with self.file.open() as f:
                 try:
@@ -38,10 +40,13 @@ class Configuration:
         self.max_workers: int = 30
         # Tokens for different platforms used in version checking and meta file download
         self.tokens: Dict = self.values.get("tokens", {})
+        # Lowercase keys to mach upstream checkers
+        self.tokens = dict((k.lower(), v) for k, v in self.tokens.items())
         # Location for cached meta files
         self.cache_location: pathlib.Path = pathlib.Path(self.values.get("cache_path")) \
             if self.values.get("cache_path") \
-            else pathlib.Path.home() / ".cincan" / "cache"
+            else self.home / "cache"
+        self.tool_db = self.cache_location / "tooldb.sqlite"
         self.cache_lifetime: int = 24  # Cache validity in hours
         # Location for cached Docker Hub manifest information
         self.tool_cache: pathlib.Path = pathlib.Path(self.values.get("registry_cache_path")) if self.values.get(
@@ -55,10 +60,14 @@ class Configuration:
             if self.values.get("tools_repo_path")
             else None
         )
+        # Default tag representing latest image
+        self.tag = self.values.get("latest-tag", "latest")
+
         # Default branch in GitLab
         self.branch: str = self.values.get("branch", "master")
         # Name for meta files in GitLab
         self.meta_filename: str = self.values.get("metadata_filename", "meta.json")
+        self.meta_max_size: int = 1000 * 5  # In bytes, metafile max size
         # Index file in GitLab
         self.index_file: str = self.values.get("index_filename", "index.yml")
         # Disable meta file download from GitLab
@@ -69,7 +78,9 @@ class Configuration:
             self.namespace = self.namespace.lower()
         # GitLab repository
         self.project: str = "tools"
-
+        # Create default folders
+        self.home.mkdir(parents=True, exist_ok=True)
+        self.cache_location.mkdir(parents=True, exist_ok=True)
         # Generate config file with default values, using yaml format to enable comments
         if not self.values:
             self.logger.debug("Generating configuration file with default values.")
@@ -85,6 +96,7 @@ class Configuration:
                       f"(no version information)", file=f)
                 print(f"tools_repo__path: {self.tools_repo_path} # Path for local 'tools'"
                       f" repository (Use metafiles from there)", file=f)
+                # print(f"latest-tag: {self.tag}# Default tag representing latest image", file=f)
 
                 print(f"\n# Configuration related to tool metafiles.", file=f)
                 print(f"\nbranch: {self.branch} # Branch in GitLab for acquiring metafiles", file=f)
@@ -94,5 +106,5 @@ class Configuration:
                 print(f"\ntokens: # Possible authentication tokens to Quay, GitLab, GitHub and so on. Quay token is"
                       f" used for README updating.",
                       file=f)
-                print("    Quay: ''", file=f)
+                print("    quay: ''", file=f)
                 print(file=f)

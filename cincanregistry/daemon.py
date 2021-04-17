@@ -1,13 +1,15 @@
-from requests.exceptions import ConnectionError
+import logging
 from datetime import datetime
+from os.path import basename
 from typing import Dict, Union
-from cincanregistry import Remotes
+
+import docker
+from requests.exceptions import ConnectionError
+
 from cincanregistry.models.tool_info import ToolInfo
-from cincanregistry.models.version_info import VersionInfo
+from cincanregistry.models.version_info import VersionInfo, VersionType
 from cincanregistry.utils import parse_file_time, split_tool_tag
 from ._registry import RegistryBase
-import logging
-import docker
 
 
 class DaemonRegistry(RegistryBase):
@@ -63,9 +65,8 @@ class DaemonRegistry(RegistryBase):
         images = self.client.images.list(name, filters={"dangling": False})
         if not images:
             return None
-        source = "local"
         name, tag = split_tool_tag(name)
-        tool = ToolInfo(name, datetime.now(), source)
+        tool = ToolInfo(name, datetime.now(), self.registry_name)
         images.sort(key=lambda x: parse_file_time(x.attrs["Created"]), reverse=True)
         versions = []
         for i in images:
@@ -76,7 +77,7 @@ class DaemonRegistry(RegistryBase):
             tags = set(i.tags)
             size = i.attrs.get("Size")
             if not versions:
-                versions.append(VersionInfo(version, source, tags, updated, size=size))
+                versions.append(VersionInfo(version, VersionType.LOCAL, self.registry_name, tags, updated, size=size))
                 continue
             for v in versions:
                 if v == version:
@@ -84,7 +85,7 @@ class DaemonRegistry(RegistryBase):
                     break
             else:
                 versions.append(
-                    VersionInfo(version, source, tags, updated, size=size)
+                    VersionInfo(version, VersionType.LOCAL, self.registry_name, tags, updated, size=size)
                 )
         tool.versions = versions
         return tool
@@ -99,6 +100,8 @@ class DaemonRegistry(RegistryBase):
         Only tools with starts with 'prefix' are listed.
         Additionally, if tag is defined, tool must have this tag
         before it is listed.
+
+        TODO seems to be blocking, async useless
         """
         if not self._is_docker_running():
             return {}
@@ -121,22 +124,24 @@ class DaemonRegistry(RegistryBase):
                 if name.startswith(prefix):
                     if not defined_tag or tag == defined_tag:
                         version = self._get_version_from_container_config_env(i.attrs)
-                        if name in ret:
-                            for j, v in enumerate(ret[name].versions):
+                        name_no_prefix = basename(name)
+                        if name_no_prefix in ret:
+                            for j, v in enumerate(ret[name_no_prefix].versions):
                                 if v.version == version:
                                     existing_ver = True
                                     self.logger.debug(
-                                        f"same version found for tool {name} with version {version} as tag {tag} "
+                                        f"same version found for tool {name_no_prefix} with version {version} as tag {tag} "
                                     )
-                                    ret[name].versions[j].tags.union(set(stripped_tags))
+                                    ret[name_no_prefix].versions[j].tags.union(set(stripped_tags))
                                     break
                             if not existing_ver:
                                 self.logger.debug(
-                                    f"Appending new version {version} to existing entry {name} with tag {tag}."
+                                    f"Appending new version {version} to existing entry {name_no_prefix} with tag {tag}."
                                 )
-                                ret[name].versions.append(
+                                ret[name_no_prefix].versions.append(
                                     VersionInfo(
                                         version,
+                                        VersionType.LOCAL,
                                         self.registry_name,
                                         set(stripped_tags),
                                         updated,
@@ -146,16 +151,17 @@ class DaemonRegistry(RegistryBase):
                         else:
                             ver_info = VersionInfo(
                                 version,
+                                VersionType.LOCAL,
                                 self.registry_name,
                                 set(stripped_tags),
                                 updated,
                                 size=i.attrs.get("Size"),
                             )
-                            ret[name] = ToolInfo(
-                                name, updated, "local", versions=[ver_info]
+                            ret[name_no_prefix] = ToolInfo(
+                                name_no_prefix, updated, "local", versions=[ver_info]
                             )
                             self.logger.debug(
-                                f"Added local tool {name} based on tag {t} with version {version}"
+                                f"Added local tool {name_no_prefix} based on tag {t} with version {version}"
                             )
                             continue
                     else:

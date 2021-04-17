@@ -1,14 +1,26 @@
+import re
 from datetime import datetime, timedelta
+from enum import Enum, unique
 from typing import List, Union
+
 from cincanregistry.checkers import UpstreamChecker
 from cincanregistry.utils import format_time, parse_file_time
-import re
+
+
+@unique
+class VersionType(Enum):
+    """There can be following types of different versions"""
+    LOCAL = "local"  # On your machine
+    REMOTE = "remote"  # On remote Docker registry e.g. Quay
+    UPSTREAM = "upstream"  # Origin of the tool, e.g. GitHub
+    UNDEFINED = "undefined"
 
 
 class VersionInfo:
     def __init__(
             self,
             version: str,
+            version_type: VersionType,
             source: Union[str, UpstreamChecker],
             tags: set,
             updated: datetime = None,
@@ -16,6 +28,10 @@ class VersionInfo:
             size: Union[int, float] = None,
     ):
         self._version: str = str(version)
+        if not isinstance(version_type, VersionType):
+            self._version_type = VersionType(value=version_type)
+        else:
+            self._version_type: VersionType = version_type
         self._source: Union[str, UpstreamChecker] = source
         self._origin: bool = origin
         self._tags: set = tags
@@ -28,19 +44,11 @@ class VersionInfo:
     @property
     def version(self) -> str:
         """
-        Returns version of the object. If it's containing information
-        about possible upstream version, updates it if it's older than 1 day.
+        Returns version of the object, also check UpstreamChecker
         """
-        # TODO maybe remove time comparison here
         if isinstance(self._source, UpstreamChecker):
-            now = datetime.now()
-            if not self._updated or not (
-                    now - timedelta(hours=24) <= self._updated <= now
-            ):
-                self._version = self._source.get_version()
-                self._updated = now
-                return self._version
-            else:
+            # Checker might have stored version, prioritize it
+            if (not self._version and self._source.version) or (self._version and self._source.version):
                 self._version = self._source.version
         return self._version
 
@@ -50,6 +58,17 @@ class VersionInfo:
         if not version:
             raise ValueError("Cannot set empty value for version.")
         self._version = str(version)
+
+    @property
+    def version_type(self) -> VersionType:
+        return self._version_type
+
+    @version_type.setter
+    def version_type(self, version_type: VersionType):
+        """Set type of Version (see enum VersionType)"""
+        if not version_type:
+            raise ValueError("Cannot set empty value for type.")
+        self._version_type = version_type
 
     @property
     def provider(self) -> str:
@@ -87,7 +106,7 @@ class VersionInfo:
         self._source = checker
 
     @property
-    def origin(self) -> str:
+    def origin(self) -> bool:
         if isinstance(self._source, UpstreamChecker):
             self._origin = self._source.origin
         return self._origin
@@ -142,7 +161,7 @@ class VersionInfo:
 
     @size.setter
     def size(self, value: Union[int, float]):
-        "Size as integer or float, expected to be in bytes"
+        """Size as integer or float, expected to be in bytes"""
         if isinstance(value, float) or isinstance(value, int):
             self._size = value
         else:
@@ -214,6 +233,7 @@ class VersionInfo:
 
     def __iter__(self):
         yield "version", self.version,
+        yield "version_type", self.version_type.value
         yield "source", self.source if isinstance(self.source, str) else dict(
             self.source
         ),

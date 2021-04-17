@@ -1,10 +1,10 @@
 import logging
-import requests
 import re
 from abc import ABCMeta, abstractmethod
 from typing import List, Dict
+
+import requests
 from requests.exceptions import Timeout, ConnectionError
-import json
 
 NO_VERSION = "Not found"
 __name__ = "checker"
@@ -21,11 +21,11 @@ class UpstreamChecker(metaclass=ABCMeta):
         self.method: str = tool_info.get("method", "")
         self.suite: str = tool_info.get("suite", "")
         self.origin: bool = tool_info.get("origin", False)
-        if not isinstance(self.origin, bool):
-            raise ValueError("Origin value is not boolean")
+        if not isinstance(self.origin, bool) and (self.origin not in [0, 1]):
+            raise ValueError(f"Origin value is not boolean. Value: {self.origin}")
         self.docker_origin: bool = tool_info.get("docker_origin", False)
-        if not isinstance(self.docker_origin, bool):
-            raise ValueError("Docker origin value is not boolean")
+        if not isinstance(self.docker_origin, bool) and (self.docker_origin not in [0, 1]):
+            raise ValueError(f"Docker origin value is not boolean. Value {self.docker_origin}")
         self.version: str = version
         self.extra_info: str = extra_info
         self.token: str = token
@@ -37,6 +37,12 @@ class UpstreamChecker(metaclass=ABCMeta):
                 f"Either URI or repository, tool and provider must be provided for upstream check for tool {self.tool}."
             )
         self.logger.debug(f"Instancing tool {self.tool}")
+
+    def __str__(self) -> str:
+        """Return provider name in lowercase, in case called as string format"""
+        return self.provider.lower()
+
+    __repr__ = __str__
 
     def __iter__(self):
         yield "uri", self.uri,

@@ -1,19 +1,21 @@
-from cincanregistry import Remotes
-from cincanregistry.toolregistry import ToolRegistry
-from cincanregistry.configuration import Configuration
-import pathlib
 import logging
+import pathlib
+
 import requests
 
+from cincanregistry import Remotes
+from cincanregistry.configuration import Configuration
+from cincanregistry.toolregistry import ToolRegistry
 
-def test_create_registry(mocker, caplog):
+
+def test_create_registry(mocker, caplog, config):
     caplog.set_level(logging.DEBUG)
     # Ignore possible configuration file in local filesystem
     mocker.patch("builtins.open", side_effect=IOError())
     mocker.patch.object(pathlib.Path, "is_file", return_value=False)
 
     logging.getLogger("docker").setLevel(logging.WARNING)
-    reg = ToolRegistry(default_remote=Remotes.DOCKERHUB)
+    reg = ToolRegistry(default_remote=Remotes.DOCKERHUB, configuration=config)
     reg.remote_registry._set_auth_and_service_location()
     assert reg.logger
     assert reg.local_registry.client
@@ -28,14 +30,11 @@ def test_create_registry(mocker, caplog):
     assert isinstance(reg.config, Configuration)
 
     logs = [l.message for l in caplog.records]
-    assert logs[:1] == [
-        f"No configuration file found for registry in location: {reg.config.file}"
-    ]
 
 
-def test_is_docker_running(mocker, caplog):
+def test_is_docker_running(mocker, caplog, config):
     caplog.set_level(logging.ERROR)
-    reg = ToolRegistry()
+    reg = ToolRegistry(configuration=config)
     mocker.patch.object(
         reg.local_registry.client,
         "ping",

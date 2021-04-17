@@ -16,14 +16,16 @@ import docker
 from datetime import datetime
 from unittest import mock
 from cincanregistry.checkers import UpstreamChecker
+from cincanregistry import VersionType
 from copy import deepcopy
 
 TEST_REPOSITORY = "cincan/test"
 
 FAKE_VERSION_INFO_NO_CHECKER = {
-    "version": 0.9,
+    "version": "0.9",
+    "version_type": VersionType.REMOTE,
     "source": "no_checker_case",
-    "tags": set(["latest", "latest-stable"]),
+    "tags": {"latest", "latest-stable"},
     "updated": datetime(2020, 3, 3, 13, 37,),
     "size": 39529754,
 }
@@ -49,8 +51,9 @@ FAKE_UPSTREAM_CHECKER.__iter__ = UpstreamChecker.__iter__
 
 FAKE_VERSION_INFO_WITH_CHECKER = {
     "version": 0.9,
+    "version_type": VersionType.UPSTREAM,
     "source": FAKE_UPSTREAM_CHECKER,
-    "tags": set(["latest", "latest-stable"]),
+    "tags": {"latest", "latest-stable"},
     "updated": datetime(2020, 3, 3, 13, 37,),
     "size": 3952975,
 }
@@ -87,6 +90,7 @@ FAKE_DOCKER_REGISTRY_ERROR = {
     "errors": [{"message": "Big error...", "code": 400, "detail": "This is why!"}]
 }
 
+# Manifest Schema v1
 FAKE_IMAGE_ATTRS = {
     "Architecture": "amd64",
     "Author": "",

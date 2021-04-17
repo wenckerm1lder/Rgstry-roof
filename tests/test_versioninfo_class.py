@@ -1,4 +1,4 @@
-from cincanregistry import VersionInfo
+from cincanregistry import VersionInfo, VersionType
 from cincanregistry.checkers import UpstreamChecker
 from datetime import datetime
 from unittest import mock
@@ -14,6 +14,19 @@ from .fake_instances import (
 @mock.patch.object(
     VersionInfo.__init__, "__defaults__", VersionInfo.__init__.__defaults__
 )
+def test_version_type_obj():
+    """Testing enum of version types"""
+    assert VersionType.LOCAL.value == "local"
+    assert VersionType.REMOTE.value == "remote"
+    assert VersionType.UPSTREAM.value == "upstream"
+    assert VersionType.UNDEFINED.value == "undefined"
+
+    assert isinstance(VersionType.LOCAL, VersionType)
+    assert isinstance(VersionType.REMOTE, VersionType)
+    assert isinstance(VersionType.UPSTREAM, VersionType)
+    assert isinstance(VersionType.UNDEFINED, VersionType)
+
+
 def test_create_version_info_no_checker():
     """
     Test init method and attribute content
@@ -21,17 +34,20 @@ def test_create_version_info_no_checker():
     obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     assert obj._version == "0.9"
     assert obj._source == "no_checker_case"
-    assert obj._tags == set(["latest", "latest-stable"])
+    assert obj._tags == {"latest", "latest-stable"}
     assert obj._updated == datetime(2020, 3, 3, 13, 37)
     assert obj._origin is False
     fake_d = FAKE_VERSION_INFO_NO_CHECKER.copy()
     fake_d["updated"] = "invalid_dateformat"
     with pytest.raises(ValueError):
         VersionInfo(**fake_d)
+    fake_d["updated"] = FAKE_VERSION_INFO_NO_CHECKER.get("updated")
+    with pytest.raises(ValueError):
+        v_obj = VersionInfo(**fake_d)
+        v_obj.version_type = ""
 
 
 def test_getters_version_info_no_checker():
-
     obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
 
     assert obj.version == "0.9"
@@ -47,7 +63,6 @@ def test_getters_version_info_no_checker():
 
 
 def test_setters_version_info_no_checker():
-
     obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     assert obj.source == "no_checker_case"
     obj.source = "new case"
@@ -100,14 +115,6 @@ def test_create_version_info_with_checker():
     assert obj.provider == "test_provider"
     assert obj.docker_origin
     assert obj.extra_info == "Test information"
-    # NOTE 1.1 version used in instansing gets ignored, if there is UpstreamChecker
-    # Note that instanced version in UpstreamChecker is newer (1.1) - get_version returns newer
-    assert obj.version == "1.2"
-    obj._source.get_version.assert_called_once()
-    # New attempt with new time - using stored info from UpstreamChecker
-    # Not checking update
-    obj = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
-    obj.updated = datetime.now()
     assert obj.version == "1.1"
 
 
@@ -128,8 +135,8 @@ def test_version_info_normalization():
     # sha256 test - 64 char
     obj1.version = "f8b09fba9fda9ffebae86611261cf628bd71022fb4348d876974f7c48ddcc6d5"
     assert (
-        obj1.get_normalized_ver()
-        == "f8b09fba9fda9ffebae86611261cf628bd71022fb4348d876974f7c48ddcc6d5"
+            obj1.get_normalized_ver()
+            == "f8b09fba9fda9ffebae86611261cf628bd71022fb4348d876974f7c48ddcc6d5"
     )
     # missing couple characters from sha256 length
     obj1.version = "f809fba9fda9ffebae86611261cf628bd71022fb4348d876974f7c48ddcc65"
@@ -140,13 +147,11 @@ def test_version_info_normalization():
 
 
 def test_version_info_str():
-
     obj = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     assert str(obj) == "0.9"
 
 
 def test_version_info_eq():
-
     obj1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     obj2 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     assert obj1 == obj2
@@ -170,6 +175,7 @@ def test_version_info_iter():
     obj.updated = datetime.now()
     test_dict = {
         "version": "1.1",
+        "version_type": "upstream",
         "source": {
             "uri": "https://test.uri",
             "repository": "test_repository",
@@ -192,6 +198,7 @@ def test_version_info_iter():
     obj.updated = datetime.now()
     test_dict2 = {
         "version": "0.9",
+        "version_type": "remote",
         "source": "no_checker_case",
         "tags": ["latest", "latest-stable"],
         "updated": format_time(obj.updated),

@@ -1,11 +1,12 @@
-from requests import Response
-from cincanregistry.remotes import DockerHubRegistry, QuayRegistry
-from cincanregistry._registry import RegistryBase
-from .metafiles import MetaHandler
-from typing import Union
-from abc import ABCMeta, abstractmethod
-import pathlib
 import logging
+import pathlib
+from abc import ABCMeta, abstractmethod
+from typing import List
+
+import yaml
+from requests import Response
+
+from cincanregistry.remotes import DockerHubRegistry, QuayRegistry
 
 
 class ReadmeHandler(metaclass=ABCMeta):
@@ -19,10 +20,23 @@ class ReadmeHandler(metaclass=ABCMeta):
         if not self.tools_repo_path:
             raise RuntimeError("'Tools' repository path must be defined.'")
         self.index_path = self.tools_repo_path / self.config.index_file
-        self.tool_locations = MetaHandler(self.config).read_index_file(self.index_path)
+        # TODO remove following dependency (MetaHandler)
         # Some numbers
         self.max_size: int = 100000
         self.max_description_size: int = 200
+        # Set available tools
+        self.tool_locations = self.read_index_file(self.index_path)
+
+    @staticmethod
+    def read_index_file(self, index_f: pathlib.Path) -> List:
+        """Get index file, which tells paths for tools"""
+        if isinstance(index_f, pathlib.Path):
+            with index_f.open("r") as f:
+                index_f = f.read()
+        else:
+            raise TypeError("Invalid path format")
+        yaml_obj = yaml.safe_load(index_f)
+        return yaml_obj.get("tools")
 
     def update_readme_all_tools(self, ):
         """
@@ -160,4 +174,3 @@ class QuayReadmeHandler(QuayRegistry, ReadmeHandler):
         }
         resp = self.session.put(repository_uri, json=data)
         return resp
-

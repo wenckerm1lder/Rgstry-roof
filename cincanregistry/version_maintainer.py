@@ -1,19 +1,15 @@
 import asyncio
-import json
 import logging
-import pathlib
 import queue
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
-from os.path import basename
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 from cincanregistry.models.tool_info import ToolInfo
 from cincanregistry.models.version_info import VersionInfo, VersionType
 from .checkers import classmap, UpstreamChecker, NO_VERSION
 from .configuration import Configuration
 from .database import ToolDatabase
-from .metafiles import MetaHandler
 
 UPSTREAM_TAG = "upstream"
 
@@ -34,7 +30,7 @@ class VersionMaintainer:
         self.db = db
         self.logger = logging.getLogger("versions")
         self.tokens = self.config.tokens
-        # Use local 'tools' path if provided
+        # Use local 'tools' path if provided instead of database
         self.meta_files_location = self.config.tools_repo_path or self.config.cache_location
         self.meta_filename = self.config.meta_filename
         # Disable download if local path provided
@@ -47,87 +43,13 @@ class VersionMaintainer:
                 "Remote download disabled for meta files - using local files and they are not updated automatically."
             )
         self.force_refresh = force_refresh
-        self.able_to_check = {}
         self.tool_dirs = []
         self.cache_write_queue = queue.Queue()
-
-    def _set_available_checkers(self):
-        """
-        Gets dictionary of tools, whereas upstream/origin check is supported.
-
-        """
-        for tool_state in self.tool_dirs:
-            tool_state_path = pathlib.Path(self.meta_files_location / tool_state)
-            if tool_state_path.is_dir():
-                for tool_dir in tool_state_path.iterdir():
-                    if tool_dir.is_file():
-                        continue
-                    for tool_path in tool_dir.iterdir():
-                        if tool_path.is_file() and tool_path.name == self.meta_filename:
-                            # Only basename - upstream checking works with different registries
-                            self.able_to_check[f"{tool_path.parent.stem}"] = tool_path
-                if not self.able_to_check:
-                    self.logger.error(
-                        f"No single configuration for upstream check found."
-                        f" Something is wrong in path {self.meta_files_location}"
-                    )
-
-    def _generate_meta_files(self, tools: Dict):
-
-        # TODO might not work with all registries
-        tools_list = [
-            basename(i)
-            for i in tools
-        ]
-        meta_handler = MetaHandler(self.config, self.force_refresh)
-
-        # Let's see if some files exist already. Index file exists if we have downloaded meta files
-
-        if (self.meta_files_location / self.config.index_file).is_file() and not self.force_refresh:
-            if not self.disable_remote_download:
-                self.tool_dirs = meta_handler.read_index_file(self.config.cache_location / self.config.index_file)
-            else:
-                self.logger.debug("Download disabled, nothing to generate.")
-                self.tool_dirs = meta_handler.read_index_file(self.config.tools_repo_path / self.config.index_file)
-            for tool_dir in self.tool_dirs:
-                if (self.meta_files_location / tool_dir).is_dir():
-                    for tool in (self.meta_files_location / tool_dir).iterdir():
-                        if tool.is_file():
-                            continue
-                        for tool_path in tool.iterdir():
-                            if tool_path.is_file() and tool_path.name == self.meta_filename:
-                                mtime = datetime.fromtimestamp(tool_path.stat().st_mtime)
-                                now = datetime.now()
-                                if now - timedelta(hours=self.config.cache_lifetime) <= mtime <= now:
-                                    # Meta file updated recently enough
-                                    # Only basename - upstream checking works with different registries
-                                    self.able_to_check[f"{tool_path.parent.stem}"] = tool_path
-                                    # Remove existing file from list
-                                    # tools_list[:] = [t for t in tools if basename(t) != tool_path.parent.stem]
-                                    try:
-                                        tools_list.remove(tool_path.parent.stem)
-                                    except ValueError:
-                                        # Value not found from list
-                                        continue
-
-        new_files = False
-        if not self.disable_remote_download and tools_list:
-            new_files = meta_handler.get_meta_files_from_gitlab(tools_list, self.config.branch)
-            if not self.tool_dirs:
-                self.tool_dirs = meta_handler.read_index_file(self.config.cache_location / self.config.index_file)
-        if tools_list and new_files:
-            self.logger.debug("Setting available checkers...")
-            self._set_available_checkers()
 
     def get_versions_single_tool(
             self, tool_name: str, local_tool: ToolInfo, remote_tool: ToolInfo
     ) -> Tuple[ToolInfo, ToolInfo]:
-        # self._generate_meta_files({tool_name: remote_tool})
-        # Tool name might contain registry root or namespace, include only basename
-        # self.logger.debug(f"Looking path for tool {tool_name} with basename {basename(tool_name)}.")
-        # tool_path = self.able_to_check.get(basename(tool_name))
-        # if not tool_path:
-        #     raise FileNotFoundError(f"Upstream check not implemented for {tool_name}.")
+
         if remote_tool:
             self._set_single_tool_upstream_versions(remote_tool)
         else:
@@ -137,7 +59,6 @@ class VersionMaintainer:
 
         return local_tool, remote_tool
 
-    # def _set_single_tool_upstream_versions(self, tool_path: pathlib.Path, tool: ToolInfo, in_thread=False):
     def _set_single_tool_upstream_versions(self, tool: ToolInfo, in_thread=False):
         """Update upstream information of given tool"""
 
@@ -147,13 +68,11 @@ class VersionMaintainer:
         else:
             db = self.db
 
-        # conf = json.load(f)
         # Expect list or single object in "upstreams" value
         upstreams = db.get_meta_information(tool.name)
         if not upstreams:
             self.logger.debug(f"Upstream check not implemented for tool {tool.name}")
             return
-        # upstreams = conf.get("upstreams") if isinstance(conf.get("upstreams"), List) else [conf.get("upstreams")]
         for upstream_info in upstreams:
             provider = upstream_info.get("provider").lower()
             if provider not in classmap.keys():

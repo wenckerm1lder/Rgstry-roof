@@ -44,8 +44,7 @@ class VersionInfo:
     @property
     def version(self) -> str:
         """
-        Returns version of the object. If it's containing information
-        about possible upstream version, updates it if it's older than 1 day.
+        Returns version of the object, also check UpstreamChecker
         """
         if isinstance(self._source, UpstreamChecker):
             # Checker might have stored version, prioritize it

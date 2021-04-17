@@ -147,10 +147,6 @@ class QuayRegistry(RemoteRegistry):
             tool.updated = datetime.datetime.now()
             if update_cache:
                 self.update_cache_by_tool(tool)
-                # if self.cache_meta_data.qsize() > 1:
-                #     self.logger.warning("Queue size should not be larger than 1 when meta data updated.")
-                # else:
-                #     self._handle_cache_queue()
 
         else:
             self.logger.error(f"Failed to fetch tags for image {tool.name} - not updated")

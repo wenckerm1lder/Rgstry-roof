@@ -18,7 +18,6 @@ class VersionMaintainer:
     """
     Class for getting possible new versions for tools in ToolRegistry
     """
-    META_TIMESTAMP_VAR = "__metafile_timestamp"
 
     def __init__(
             self,

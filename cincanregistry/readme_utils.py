@@ -1,12 +1,11 @@
 import logging
 import pathlib
 from abc import ABCMeta, abstractmethod
-from typing import List
 
-import yaml
 from requests import Response
 
 from cincanregistry.remotes import DockerHubRegistry, QuayRegistry
+from cincanregistry.utils import read_index_file
 
 
 class ReadmeHandler(metaclass=ABCMeta):
@@ -25,18 +24,7 @@ class ReadmeHandler(metaclass=ABCMeta):
         self.max_size: int = 100000
         self.max_description_size: int = 200
         # Set available tools
-        self.tool_locations = self.read_index_file(self.index_path)
-
-    @staticmethod
-    def read_index_file(self, index_f: pathlib.Path) -> List:
-        """Get index file, which tells paths for tools"""
-        if isinstance(index_f, pathlib.Path):
-            with index_f.open("r") as f:
-                index_f = f.read()
-        else:
-            raise TypeError("Invalid path format")
-        yaml_obj = yaml.safe_load(index_f)
-        return yaml_obj.get("tools")
+        self.tool_locations = read_index_file(self.index_path)
 
     def update_readme_all_tools(self, ):
         """

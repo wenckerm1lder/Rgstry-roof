@@ -115,14 +115,6 @@ def test_create_version_info_with_checker():
     assert obj.provider == "test_provider"
     assert obj.docker_origin
     assert obj.extra_info == "Test information"
-    # NOTE 1.1 version used in instansing gets ignored, if there is UpstreamChecker
-    # Note that instanced version in UpstreamChecker is newer (1.1) - get_version returns newer
-    assert obj.version == "1.2"
-    obj._source.get_version.assert_called_once()
-    # New attempt with new time - using stored info from UpstreamChecker
-    # Not checking update
-    obj = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
-    obj.updated = datetime.now()
     assert obj.version == "1.1"
 
 

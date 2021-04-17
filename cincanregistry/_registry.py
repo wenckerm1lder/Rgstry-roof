@@ -23,10 +23,14 @@ class RegistryBase(metaclass=ABCMeta):
     def __init__(self,
                  config_path: str = "",
                  tools_repo_path: str = "",
-                 version_var: str = "TOOL_VERSION"):
+                 version_var: str = "TOOL_VERSION",
+                 configuration: Configuration = None):
         self.logger: logging.Logger = logging.getLogger("registry")
         self.registry_name: str = ""
-        self.config: Configuration = Configuration(config_path, tools_repo_path)
+        if not configuration:
+            self.config: Configuration = Configuration(config_path, tools_repo_path)
+        else:
+            self.config = configuration
         self.version_var: str = version_var
         self.tool_cache: pathlib.Path = self.config.tool_cache
         self.tool_cache_version: str = self.config.tool_cache_version

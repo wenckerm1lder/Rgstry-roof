@@ -24,7 +24,7 @@ def test_create_tool_info():
     assert tool_obj.description == "test_description"
 
     assert tool_obj.versions[0].version == "0.9"
-    assert tool_obj.versions[1].version == "1.2"
+    assert tool_obj.versions[1].version == "1.1"
 
     assert len(tool_obj.versions) == 2
 
@@ -64,7 +64,7 @@ def test_tool_info_origin_version():
 
     tool_obj.versions.append(ver2)
 
-    assert tool_obj.get_origin_version() == "1.2"
+    assert tool_obj.get_origin_version() == "1.1"
     # Above fetch updated timestamp when getting 1.2 version with 'get_version' method, because
     # timestamp was older than 1 hour
     # However, this is mock object, and does not update original object as real UpstreamCheck
@@ -82,7 +82,6 @@ def test_tool_info_latest_version():
 
     assert tool_obj.get_latest() == "0.9"
     assert tool_obj.get_latest(in_upstream=True) == "1.1"
-    assert ver2.source.get_version.called
 
     # No versions at all
     tool_obj = ToolInfo(**FAKE_TOOL_INFO)
@@ -148,14 +147,8 @@ def test_tool_info_from_dict():
     assert t_info.name == t_info_from_dict.name
     assert t_info.updated == t_info_from_dict.updated
     assert t_info.location == t_info_from_dict.location
-    # Version is updated to 1.2 during transformation, get_version is called
-    assert t_info.versions != t_info_from_dict.versions
-    # Too hard to mock this object, values are correct when 1.1 vs 1.2
-    # There is side effect in .version which should change values to same, but
-    # mock implementation missing
-    assert t_info.versions[1].version != t_info_from_dict.versions[1].version
+    assert t_info.versions[1].version == t_info_from_dict.versions[1].version
     assert t_info.versions[1].version == "1.1"
-    assert t_info_from_dict.versions[1].version == "1.2"
 
     with pytest.raises(TypeError):
         ToolInfo.from_dict("not_dict")

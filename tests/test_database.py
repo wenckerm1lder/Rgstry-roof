@@ -9,7 +9,6 @@ import pytest
 
 from cincanregistry import VersionInfo, ToolInfo, VersionType
 from cincanregistry.checkers import UpstreamChecker
-from cincanregistry.configuration import Configuration
 from cincanregistry.database import ToolDatabase
 from .fake_instances import (
     FAKE_VERSION_INFO_NO_CHECKER,
@@ -21,12 +20,9 @@ from .fake_instances import (
 
 
 @pytest.fixture(scope='function')
-def base_db(caplog, tmp_path):
+def base_db(caplog, config):
     caplog.set_level(logging.DEBUG)
     # Make sample database for other tests
-    db_path = tmp_path / "test_db.sqlite"
-    config = Configuration()
-    config.tool_db = db_path
     test_db = ToolDatabase(config)
     ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     ver2 = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
@@ -52,22 +48,16 @@ def test_base_db(caplog, base_db):
     assert tools[1].name == FAKE_TOOL_INFO2.get("name")
 
 
-def test_configure(tmp_path, caplog):
+def test_configure(config, caplog):
     caplog.set_level(logging.DEBUG)
-    db_path = tmp_path / "test_db.sqlite"
-    config = Configuration()
-    config.tool_db = db_path
     test_db = ToolDatabase(config)
     logs = [l.message for l in caplog.records]
     assert "Creating new database file..." in logs
-    assert db_path.is_file()
+    assert config.tool_db.is_file()
 
 
-def test_db_tool_data_insert(tmp_path, caplog):
+def test_db_tool_data_insert(config, caplog):
     caplog.set_level(logging.DEBUG)
-    db_path = tmp_path / "test_db.sqlite"
-    config = Configuration()
-    config.tool_db = db_path
     test_db = ToolDatabase(config)
     tool_obj = ToolInfo(**FAKE_TOOL_INFO)
     with test_db.transaction():
@@ -84,11 +74,8 @@ def test_db_tool_data_insert(tmp_path, caplog):
     assert tools[0].location == FAKE_TOOL_INFO.get("location")
 
 
-def test_insert_tool_list(tmp_path, caplog):
+def test_insert_tool_list(config, caplog):
     caplog.set_level(logging.DEBUG)
-    db_path = tmp_path / "test_db.sqlite"
-    config = Configuration()
-    config.tool_db = db_path
     test_db = ToolDatabase(config)
     tools = [ToolInfo(**FAKE_TOOL_INFO), ToolInfo(**FAKE_TOOL_INFO2)]
     with test_db.transaction():
@@ -107,11 +94,8 @@ def test_insert_tool_list(tmp_path, caplog):
     assert tools[1].location == FAKE_TOOL_INFO2.get("location")
 
 
-def test_db_tool_data_insert_with_versions(tmp_path, caplog):
+def test_db_tool_data_insert_with_versions(config, caplog):
     caplog.set_level(logging.DEBUG)
-    db_path = tmp_path / "test_db.sqlite"
-    config = Configuration()
-    config.tool_db = db_path
     test_db = ToolDatabase(config)
     ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     ver2 = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)
@@ -134,15 +118,12 @@ def test_db_tool_data_insert_with_versions(tmp_path, caplog):
         # Duplicate insert, should be handled gracefully
         test_db.insert_tool_info(tool_obj)
         n_tools = test_db.get_tools()
-        # Should be three different versions, one updated when called
-        assert len(n_tools[0].versions) == 3
+        # Still two versions
+        assert len(n_tools[0].versions) == 2
 
 
-def test_db_insert_duplicate_version(caplog, tmp_path):
+def test_db_insert_duplicate_version(caplog, config):
     caplog.set_level(logging.DEBUG)
-    db_path = tmp_path / "test_db.sqlite"
-    config = Configuration()
-    config.tool_db = db_path
     test_db = ToolDatabase(config)
     ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     ver2 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
@@ -234,12 +215,9 @@ def test_get_latest_version_by_provider(base_db):
         assert version.version == "0.9"
 
 
-def test_insert_meta_data(caplog, tmp_path):
+def test_insert_meta_data(caplog, config):
     """Insert metadata of checker"""
     caplog.set_level(logging.DEBUG)
-    db_path = tmp_path / "test_db.sqlite"
-    config = Configuration()
-    config.tool_db = db_path
     test_db = ToolDatabase(config)
     ver1 = VersionInfo(**FAKE_VERSION_INFO_NO_CHECKER)
     ver2 = VersionInfo(**FAKE_VERSION_INFO_WITH_CHECKER)

@@ -6,10 +6,10 @@ from unittest import mock
 from .fake_instances import FAKE_IMAGE_ATTRS, TEST_REPOSITORY, FAKE_IMAGE, FAKE_IMAGE2, FAKE_IMAGE3
 
 
-def test_get_version_by_image_id(mocker):
+def test_get_version_by_image_id(mocker, config):
     mock_image = mock.Mock(spec=docker.models.images.Image)
     mock_image.attrs = FAKE_IMAGE_ATTRS
-    reg = DaemonRegistry()
+    reg = DaemonRegistry(configuration=config)
     reg.client = mock.Mock()
     mocker.patch.object(
         reg.client, "ping", return_value=True, autospec=True,
@@ -26,8 +26,8 @@ def test_get_version_by_image_id(mocker):
     assert reg.get_version_by_image_id("test_id") == "1.0"
 
 
-def test_create_local_tool_info_by_name(mocker):
-    reg = DaemonRegistry()
+def test_create_local_tool_info_by_name(mocker, config):
+    reg = DaemonRegistry(configuration=config)
     reg.client = mock.Mock()
     mocker.patch.object(
         reg.client, "ping", return_value=False, side_effect=requests.exceptions.ConnectionError(),

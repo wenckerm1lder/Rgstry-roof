@@ -47,18 +47,10 @@ class VersionInfo:
         Returns version of the object. If it's containing information
         about possible upstream version, updates it if it's older than 1 day.
         """
-        # TODO maybe remove time comparison here
         if isinstance(self._source, UpstreamChecker):
-            now = datetime.now()
-            if not self._updated or not (
-                    now - timedelta(hours=24) <= self._updated <= now
-            ):
-                self._version = self._source.get_version()
-                self._updated = now
-                return self._version
-            else:
-                if (not self._version and self._source.version) or (self._version and self._source.version):
-                    self._version = self._source.version
+            # Checker might have stored version, prioritize it
+            if (not self._version and self._source.version) or (self._version and self._source.version):
+                self._version = self._source.version
         return self._version
 
     @version.setter

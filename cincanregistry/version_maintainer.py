@@ -176,6 +176,9 @@ class VersionMaintainer:
         Generates version information for single tool. Attempts to define if there are
         new versions available.
         """
+        if r_tool.name == "jsunpack-n":
+            print("yay")
+
         tool_info = {"name": r_tool.name if r_tool else l_tool.name, "versions": {}}
         if l_tool:
             l_latest = l_tool.get_latest()

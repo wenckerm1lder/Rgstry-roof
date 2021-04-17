@@ -181,13 +181,13 @@ class RemoteRegistry(RegistryBase):
         return ""
 
     def read_remote_versions_from_db(self, tool_name: str = "") -> Union[Dict[str, ToolInfo], ToolInfo]:
-        """Get dict of tools which have remote versions"""
+        """Get dict of tools which have remote versions (no upstream)"""
         r = {}
         if tool_name:
             return self.db.get_single_tool(tool_name=tool_name, remote_name=self.registry_name,
                                            filter_by=[VersionType.REMOTE])
         else:
-            tools = self.db.get_tools(remote_name=self.registry_name)
+            tools = self.db.get_tools(remote_name=self.registry_name, filter_by=[VersionType.REMOTE])
 
         # Generate dict accessible by name from list
         for t in tools:

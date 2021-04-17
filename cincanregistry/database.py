@@ -235,7 +235,7 @@ class ToolDatabase:
         t = self.cursor.fetchone()
         return self.row_into_tool_info_obj(t, filter_by) if t else None
 
-    def get_tools(self, remote_name: str = "", by_time: datetime.datetime = None) -> List[ToolInfo]:
+    def get_tools(self, remote_name: str = "", filter_by: [VersionType] = None, by_time: datetime.datetime = None) -> List[ToolInfo]:
         """Get tools, filter by remote name or updated time
         TODO implement time filter
         Only remote tool information is stored into database
@@ -247,7 +247,7 @@ class ToolDatabase:
             params.append(remote_name)
         self.execute(command, tuple(params))
         rows = self.cursor.fetchall()
-        return [self.row_into_tool_info_obj(i) for i in rows]
+        return [self.row_into_tool_info_obj(i, filter_by=filter_by) for i in rows]
 
     def get_versions_by_tool(self, tool_name: str, version_type: [VersionType] = None, provider: str = "",
                              latest: bool = False) -> Union[List[VersionInfo], VersionInfo]:

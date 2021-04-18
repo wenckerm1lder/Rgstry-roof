@@ -1,15 +1,17 @@
 import asyncio
+import json
 import logging
 import queue
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List
 
 from cincanregistry.models.tool_info import ToolInfo
 from cincanregistry.models.version_info import VersionInfo, VersionType
 from .checkers import classmap, UpstreamChecker, NO_VERSION
 from .configuration import Configuration
 from .database import ToolDatabase
+from .utils import read_index_file
 
 UPSTREAM_TAG = "upstream"
 
@@ -30,7 +32,7 @@ class VersionMaintainer:
         self.logger = logging.getLogger("versions")
         self.tokens = self.config.tokens
         # Use local 'tools' path if provided instead of database
-        self.meta_files_location = self.config.tools_repo_path or self.config.cache_location
+        self.meta_files_location = self.config.tools_repo_path
         self.meta_filename = self.config.meta_filename
         # Disable download if local path provided
         self.disable_remote_download = (
@@ -45,18 +47,15 @@ class VersionMaintainer:
         self.tool_dirs = []
         self.cache_write_queue = queue.Queue()
 
-    def get_versions_single_tool(
-            self, tool_name: str, local_tool: ToolInfo, remote_tool: ToolInfo
-    ) -> Tuple[ToolInfo, ToolInfo]:
-
-        if remote_tool:
-            self._set_single_tool_upstream_versions(remote_tool)
-        else:
-            self._set_single_tool_upstream_versions(local_tool)
-        # Write changes of upstream versions into db at once
-        self._write_cache_queue_into_db()
-
-        return local_tool, remote_tool
+    def _get_upstreams_local_metafile(self, tool_name: str) -> List[Dict]:
+        """Read local metafile from cloned https://gitlab.com/CinCan/tools """
+        tool_locations = read_index_file(self.meta_files_location / self.config.index_file)
+        for t in tool_locations:
+            # Tool should be only in one place
+            meta_path = self.meta_files_location / t / tool_name / self.meta_filename
+            if meta_path.is_file():
+                with meta_path.open("r") as f:
+                    return json.load(f).get("upstreams")
 
     def _set_single_tool_upstream_versions(self, tool: ToolInfo, in_thread=False):
         """Update upstream information of given tool"""
@@ -67,8 +66,12 @@ class VersionMaintainer:
         else:
             db = self.db
 
-        # Expect list or single object in "upstreams" value
-        upstreams = db.get_meta_information(tool.name)
+        if not self.meta_files_location:
+            # Expect list or single object in "upstreams" value
+            upstreams = db.get_meta_information(tool.name)
+        else:
+            # If path for local files is provided, use them instead of DB
+            upstreams = self._get_upstreams_local_metafile(tool.name)
         if not upstreams:
             self.logger.debug(f"Upstream check not implemented for tool {tool.name}")
             return
@@ -135,17 +138,27 @@ class VersionMaintainer:
                 tool, version = self.cache_write_queue.get()
                 self._write_upstream_version_data(tool, version, False)
 
+    def get_versions_single_tool(
+            self, tool_name: str, local_tool: ToolInfo, remote_tool: ToolInfo
+    ) -> Tuple[ToolInfo, ToolInfo]:
+
+        if remote_tool:
+            self._set_single_tool_upstream_versions(remote_tool)
+        else:
+            self._set_single_tool_upstream_versions(local_tool)
+        # Write changes of upstream versions into db at once
+        self._write_cache_queue_into_db()
+
+        return local_tool, remote_tool
+
     async def check_upstream_versions(self, tools: Dict[str, ToolInfo]):
         """
         Checks for available versions in upstream
         """
         tasks = []
-        # self._generate_meta_files(tools)
         with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
             for t in tools:
                 # Basename is needed - version check works with different registries
-                # tool_path = self.able_to_check.get(basename(t))
-                # if tool_path:
                 tool = tools.get(t)
                 loop = asyncio.get_event_loop()
                 tasks.append(
@@ -155,8 +168,6 @@ class VersionMaintainer:
                         *(tool, True),
                     )
                 )
-                # else:
-                #     self.logger.debug(f"Upstream check not implemented for tool {t}")
             if tasks:
                 for _ in await asyncio.gather(*tasks):
                     pass

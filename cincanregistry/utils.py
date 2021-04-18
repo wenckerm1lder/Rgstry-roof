@@ -21,8 +21,10 @@ def split_tool_tag(tag: str) -> (str, str):
     return tag_split[0], tag_split[1] if len(tag_split) > 1 else "latest"
 
 
-def read_index_file(self, index_f: pathlib.Path) -> List:
-    """Get index file, which tells paths for tools"""
+def read_index_file(index_f: pathlib.Path) -> List:
+    """Get index file, which tells paths for tools
+    Should be in the root of cloned https://gitlab.com/CinCan/tools
+    """
     if isinstance(index_f, pathlib.Path):
         with index_f.open("r") as f:
             index_f = f.read()

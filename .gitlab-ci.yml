@@ -35,8 +35,9 @@ scrape_versions:on-schedule:
     - schedules
   script:
     - cincanregistry list -r versions
+    - ls -la && pwd
   artifacts:
     paths:
-      - .cincan/cache/tooldb.sqlite
+      - $HOME/.cincan/cache/tooldb.sqlite
     expire_in: never
     public: true

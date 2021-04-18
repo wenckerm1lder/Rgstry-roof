@@ -34,6 +34,7 @@ if [[ "$status_code" -eq 200 ]] ; then
 else
     echo "No existing artifact found."
     echo "Status code: $status_code."
+    exit 1
 fi
 
 

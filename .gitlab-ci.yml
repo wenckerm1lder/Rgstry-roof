@@ -36,6 +36,7 @@ scrape_versions:on-schedule:
   script:
     - sh generate_test_config.sh
     - cincanregistry list --config test_registry.yaml -r versions
+    - find .cincan
   artifacts:
     paths:
       - .cincan/cache/tooldb.sqlite

@@ -21,3 +21,4 @@ tokens: # Possible authentication tokens to Quay, GitLab, GitHub and so on. Quay
     github: '$GITHUB_TOKEN'
 EOF
 
+echo "Configuration file created into path: ${CI_BUILDS_DIR}/.cincan/cache"

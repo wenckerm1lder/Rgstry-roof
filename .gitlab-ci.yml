@@ -29,7 +29,7 @@ unittests:
 scrape_versions:on-schedule:
   image: python:3.9-buster
   before_script:
-    #   - apt-get update && apt-get install -y libsqlite3-0
+    - apt-get update && apt-get install -y curl
     - python setup.py install
   only:
     - schedules

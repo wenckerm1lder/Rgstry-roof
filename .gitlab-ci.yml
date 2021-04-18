@@ -24,3 +24,12 @@ unittests:
     # - pytest -sv --cov=cincanregistry --cov-report term-missing   
     - source ~/.bashrc && tox -- --cov=cincanregistry tests
 
+scrape_versions:on-schedule:
+  image: python:3.9-buster
+  before_script:
+    - apt-get update && apt-get install -y libsqlite3-0
+    - python setup.py install
+  only:
+    - schedules
+  script:
+    - cincanregistry list -r versions

@@ -33,7 +33,6 @@ if [[ "$status_code" -e 200 ]] ; then
     curl -L -o "$CACHE_DIR/tooldb.sqlite "$ARTIFACT_LOCATION"
 else
     echo "No existing artifact found."
-if
-
+fi
 
 

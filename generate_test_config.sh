@@ -29,10 +29,11 @@ mkdir -p "$CACHE_DIR"
 ARTIFACT_LOCATION="https://gitlab.com/CinCan/cincan-registry/-/jobs/artifacts/master/raw/.cincan/cache/tooldb.sqlite?job=scrape_versions:on-schedule"
 status_code=$(curl -L --write-out %{http_code} --silent --output /dev/null "$ARTIFACT_LOCATION")
 
-if [[ "$status_code" -e 200 ]] ; then
-    curl -L -o "$CACHE_DIR/tooldb.sqlite "$ARTIFACT_LOCATION"
+if [[ "$status_code" -eq 200 ]] ; then
+    curl -L -o "$CACHE_DIR/tooldb.sqlite" "$ARTIFACT_LOCATION"
 else
     echo "No existing artifact found."
+    echo "Status code: $status_code."
 fi
 
 

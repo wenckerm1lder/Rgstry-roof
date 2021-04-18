@@ -34,7 +34,7 @@ scrape_versions:on-schedule:
   only:
     - schedules
   script:
-    - sh generate_test_config.sh
+    - bash generate_test_config.sh
     - cincanregistry list --config test_registry.yaml -r versions
     - find .cincan
   artifacts:

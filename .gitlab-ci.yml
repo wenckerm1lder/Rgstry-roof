@@ -34,10 +34,10 @@ scrape_versions:on-schedule:
   only:
     - schedules
   script:
-    - cincanregistry list -r versions
-    - ls -la && pwd
+    - sh generate_test_config.sh
+    - cincanregistry list --config test_registry.yaml -r versions
   artifacts:
     paths:
-      - $HOME/.cincan/cache/tooldb.sqlite
+      - .cincan/cache/tooldb.sqlite
     expire_in: never
     public: true

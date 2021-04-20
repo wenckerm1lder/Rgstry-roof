@@ -26,7 +26,8 @@ EOF
 echo "Configuration file created into path: ${CI_PROJECT_DIR}/.cincan/cache"
 mkdir -p "$CACHE_DIR"
 
-ARTIFACT_LOCATION="https://gitlab.com/CinCan/cincan-registry/-/jobs/artifacts/master/raw/.cincan/cache/tooldb.sqlite?job=scrape_versions:on-schedule"
+# ARTIFACT_LOCATION="https://gitlab.com/CinCan/cincan-registry/-/jobs/artifacts/master/raw/.cincan/cache/tooldb.sqlite?job=scrape_versions:on-schedule"
+ARTIFACT_LOCATION="https://gitlab.com/CinCan/cincan-registry/-/jobs/1189807637/artifacts/raw/.cincan/cache/tooldb.sqlite?inline=false"
 status_code=$(curl -L --write-out %{http_code} --silent --output /dev/null "$ARTIFACT_LOCATION")
 
 if [[ "$status_code" -eq 200 ]] ; then

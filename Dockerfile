@@ -1,6 +1,6 @@
 FROM python:3.9-buster
 
-RUN apt-get update && apt-get install -y cron && \
+RUN apt-get update && apt-get install -y cron gosu && \
     groupadd -g 1000 appuser && \
     useradd -m -u 1000 -g appuser -s /sbin/nologin appuser
 
@@ -12,10 +12,11 @@ WORKDIR /home/appuser/cincanregistry
 
 ENV PATH=${PATH}:/home/appuser/.local/bin
 
-RUN echo $PATH && pip3 install . 
+RUN pip3 install . 
 
+USER root
 
-ENTRYPOINT ["cincanregistry"]
+ENTRYPOINT ["bash", "/home/appuser/cincanregistry/entrypoint.sh"]
 CMD ["--help"]
 
 

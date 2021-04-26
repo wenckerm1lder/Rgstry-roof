@@ -22,7 +22,7 @@ Latest release can be installed from PyPi as:
 
 To be able to list information from locally available tools, "Docker" must be running on your machine.
 
-Tool is part of the [cincan-command](https://gitlab.com/CinCan/cincan-command) in the future. Command `cincanregistry` in future examples can be replaced with `cincan` when using in there.
+Tool is part of the [cincan-command](https://gitlab.com/CinCan/cincan-command). Command `cincanregistry` in future examples can be replaced with `cincan` when using in there.
 
 Make sure that your PATH is working as intended, if not installing as 'sudo'.
 
@@ -47,10 +47,10 @@ When running first time, output could look something like this:
 
 
 
-By default, "latest-stable" tag is always used, unless over-written with `--tag` or `-t` argument.
+By default, "latest" tag is always used, unless over-written with `--tag` or `-t` argument.
 
 
-To list only locally available tools with tag "latest-stable", argument `--local` (or `-l`) can be used. Additionally, when listing only tools for specific location, listing will show all viable tags pointing into same image.
+To list only locally available tools with tag "latest", argument `--local` (or `-l`) can be used. Additionally, when listing only tools for specific location, listing will show all viable tags pointing into same image.
 
 For example if version '0.1' of the tool is tagged with 'dev' tag, that specific tag should be used to use version '0.1' of the tool. 
 
@@ -151,7 +151,7 @@ Tool is attempting to always find the latest available version among all tags.
 
 > Only for development purpose
 
-There is available feature to update description and README of the tool(s) in Docker Hub.
+There is available feature to update description and README of the tool(s) in Docker Hub and Quay.
 
 This requires locally cloned CinCan tools repository - READMEs from there are used.
 

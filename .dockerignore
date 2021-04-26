@@ -18,6 +18,7 @@ test*
 tox.ini
 pytest.ini
 *.sh
+!entrypoint.sh
 .gitlab-ci.yml
 
 

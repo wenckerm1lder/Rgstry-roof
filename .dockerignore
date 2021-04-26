@@ -1,0 +1,30 @@
+# IDE specific
+.vscode
+.idea
+
+# Environment
+**/venv
+**/venv3.6
+**/.pytest*
+**/__pycache__
+
+
+# Version control
+.git
+.github
+
+# tests
+test*
+tox.ini
+pytest.ini
+*.sh
+.gitlab-ci.yml
+
+
+# Other
+*.md
+*.txt
+img
+
+!LICENCE.md
+!README.md

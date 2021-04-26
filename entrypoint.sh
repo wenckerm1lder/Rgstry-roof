@@ -17,5 +17,10 @@ if [ "${OWNER_IDS}" != "${USER_UID}:${USER_GID}" ]; then
         exit 1
     fi
 fi
-
-exec gosu "${USER_NAME}" cincanregistry "$@"
+# Initialize cron job and start it
+echo "Adding cron job from $DB_UPDATE_CRON"
+crontab -u appuser "/etc/cron.d/$DB_UPDATE_CRON"
+echo "Starting cron..."
+cron
+# Output cron logs as nonroot user
+exec gosu "${USER_NAME}" tail -f /var/log/cron.log

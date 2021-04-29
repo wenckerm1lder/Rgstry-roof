@@ -28,9 +28,9 @@ class GitLabUtils:
         self.project_name = project.strip("/")
 
         if self.namespace_name and self.project_name:
-            self.id = quote_plus(f"{self.namespace_name}/{self.project_name}")
+            self.id = f"{self.namespace_name}/{self.project_name}"
         elif self.namespace_name or self.project_name:
-            self.id = quote_plus(self.project_name if self.project_name else self.namespace_name)
+            self.id = self.project_name if self.project_name else self.namespace_name
         else:
             raise ValueError("Missing namespace or project name for GitLab API")
         self.project = self.gl.projects.get(self.id, lazy=True)

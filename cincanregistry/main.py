@@ -5,6 +5,7 @@ import logging
 import sys
 from os.path import basename
 from typing import Dict
+from importlib import reload
 
 from . import ToolRegistry, ToolInfoEncoder, HubReadmeHandler, QuayReadmeHandler, ToolInfo, Remotes
 
@@ -405,6 +406,12 @@ def create_list_argparse(subparsers: argparse._SubParsersAction, ):
     )
     version_exclusive_group = version_parser.add_mutually_exclusive_group()
     version_exclusive_group.add_argument(
+        "-s",
+        "--silent",
+        action="store_true",
+        help="Updates database without listing and gives some stats.",
+    )
+    version_exclusive_group.add_argument(
         "-n", "--name", help="Check single tool by the name.",
     )
     version_exclusive_group.add_argument(
@@ -424,20 +431,28 @@ def create_list_argparse(subparsers: argparse._SubParsersAction, ):
     )
 
 
-def list_handler(args):
+def list_handler(args, loglevel: str):
     if (args.list_sub_command or args.sub_command == "versions") and (
             args.all or args.tag != DEFAULT_IMAGE_FILTER_TAG or args.size
     ):
         logging.getLogger(__name__).warning(
             "No effect with size or tag related arguments when used with 'versions' subcommand"
         )
-
+    # Change logging format in silent mode, needs reloading on < 3.8. Python 3.8 would have 'force' parameter
+    if args.silent:
+        reload(logging)
+        date_strftime_format = "%Y-%m-%d %H:%M:%S"
+        logging.basicConfig(
+            format=f"{' ':<{PRE_SPACE}}%(asctime)s %(levelname)s - %(name)s: %(message)s",
+            datefmt=date_strftime_format,
+            level=getattr(logging, loglevel),
+        )
     # If exported as module and parent parser of 'list' not defining
     if not hasattr(args, "tools"):
         args.tools = ""
     if not hasattr(args, "registry"):
         args.registry = None
-    reg = ToolRegistry(args.config, args.tools, default_remote=args.registry)
+    reg = ToolRegistry(args.config, args.tools, default_remote=args.registry, silent=args.silent)
 
     if not args.list_sub_command:
 
@@ -501,6 +516,15 @@ def list_handler(args):
                 force_refresh=args.force_refresh,
             )
         )
+        if args.silent and ret:
+            # On silent mode, use logger instead of printing, mainly used for database updating
+            logger = logging.getLogger("main")
+            logger.info("Database updated.")
+            logger.info(f"Total amount of tools: {len([k for k in ret.keys()])}")
+            logger.info(f"Total amount available updates for remote tools: "
+                        f"{len([k for k in ret.keys() if ret.get(k).get('updates').get('remote')])}")
+            loop.close()
+            sys.exit(0)
         if args.name and not args.json:
             print_single_tool_version_check(ret, args.with_tags)
         elif not args.name and not args.json:
@@ -555,7 +579,7 @@ def main():
         sys.exit(1)
 
     elif sub_command == "list":
-        list_handler(args)
+        list_handler(args, log_level)
 
     elif sub_command == "utils":
         utils_handler(args)

@@ -23,13 +23,15 @@ class ToolRegistry(RegistryBase):
             self,
             *args,
             default_remote: Remotes = None,
+            silent: bool = False,
             **kwargs,
 
     ):
-        super(ToolRegistry, self).__init__(*args, **kwargs)
+        super(ToolRegistry, self).__init__(*args)
         self.logger: logging.Logger = logging.getLogger("registry")
         self.default_remote = default_remote if (
                 default_remote is not None and default_remote != list(Remotes)[0]) else self.config.registry
+        self.local_registry = DaemonRegistry(*args, silent=silent, **kwargs)
         if self.default_remote == Remotes.QUAY:
             self.remote_registry = QuayRegistry(*args, **kwargs)
         elif self.default_remote == Remotes.DOCKERHUB:
@@ -37,7 +39,6 @@ class ToolRegistry(RegistryBase):
         else:
             self.logger.error(f"Unsupported remote registry: {self.default_remote}")
             exit(1)
-        self.local_registry = DaemonRegistry(*args, **kwargs)
         if not self.config.namespace:
             self.config.namespace = self.remote_registry.cincan_namespace
 

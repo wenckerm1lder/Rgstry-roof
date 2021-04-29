@@ -1,1 +1,1 @@
-0 8 * * * /home/appuser/.local/bin/cincanregistry list -r versions >> /var/log/cron.log 2>&1
+0 8 * * * /home/appuser/.local/bin/cincanregistry list -r versions --silent >> /var/log/cron.log 2>&1

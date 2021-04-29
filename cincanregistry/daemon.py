@@ -17,14 +17,16 @@ class DaemonRegistry(RegistryBase):
     Simple wrapper to handle images through local Docker Daemon
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, silent: bool = False, **kwargs):
         super(DaemonRegistry, self).__init__(*args, **kwargs)
         self.registry_name = "Docker Daemon"
         self.logger = logging.getLogger("daemon")
+        self.silent = silent  # Hide errors related to local daemon (is it running) in silent mode
         try:
             self.client: docker.DockerClient = docker.from_env()
         except docker.errors.DockerException as e:
-            self.logger.error(f"Failed to connect to Docker server: {e}")
+            if not silent:
+                self.logger.error(f"Failed to connect to Docker server: {e}")
             self.client = None
 
     def _is_docker_running(self):
@@ -35,8 +37,9 @@ class DaemonRegistry(RegistryBase):
             self.client.ping()
             return True
         except (ConnectionError, AttributeError):
-            self.logger.error("Failed to connect to Docker Server. Is it running?")
-            self.logger.error("Not able to list or use local tools.")
+            if not self.silent:
+                self.logger.error("Failed to connect to Docker Server. Is it running?")
+                self.logger.error("Not able to list or use local tools.")
             return False
 
     def _get_version_from_container_config_env(self, attrs: dict) -> str:

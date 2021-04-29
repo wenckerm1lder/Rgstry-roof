@@ -16,7 +16,7 @@ setup(
     long_description_content_type="text/markdown",
     url="https://gitlab.com/cincan/cincan-registry",
     packages=find_packages(),
-    install_requires=["docker>=4.4.1", "python-gitlab>=2.2.0", "pyyaml", "requests"],
+    install_requires=["docker>=4.4.1", "python-gitlab>=2.7.1", "pyyaml", "requests"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

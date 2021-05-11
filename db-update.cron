@@ -1,1 +1,3 @@
 0 8 * * * /home/appuser/.local/bin/cincanregistry list -r versions --silent >> /var/log/cron.log 2>&1
+# Example job for updating db into Git, ssh keys must have been configured beforehand
+0 9 * * * git -C /home/appuser/.cincan/cache/ add tooldb.sqlite && git -C /home/appuser/.cincan/cache/ commit -m "db update" && git -C /home/appuser/.cincan/cache/ push >> /var/log/cron.log 2>&1

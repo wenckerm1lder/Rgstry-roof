@@ -1,6 +1,6 @@
 import logging
 import pathlib
-
+from unittest import mock
 import requests
 
 from cincanregistry import Remotes
@@ -18,7 +18,8 @@ def test_create_registry(mocker, caplog, config):
     reg = ToolRegistry(default_remote=Remotes.DOCKERHUB, configuration=config)
     reg.remote_registry._set_auth_and_service_location()
     assert reg.logger
-    assert reg.local_registry.client
+    if reg.local_registry._is_docker_running():
+        assert reg.local_registry.client
     assert reg.remote_registry.schema_version == "v2"
     assert reg.remote_registry.registry_root == "https://registry.hub.docker.com"
     assert reg.remote_registry.auth_url == "https://auth.docker.io/token"
@@ -35,6 +36,8 @@ def test_create_registry(mocker, caplog, config):
 def test_is_docker_running(mocker, caplog, config):
     caplog.set_level(logging.ERROR)
     reg = ToolRegistry(configuration=config)
+    if not reg.local_registry.client:
+        reg.local_registry.client = mock.Mock()
     mocker.patch.object(
         reg.local_registry.client,
         "ping",
@@ -43,7 +46,7 @@ def test_is_docker_running(mocker, caplog, config):
     )
     assert not reg.local_registry._is_docker_running()
     logs = [l.message for l in caplog.records]
-    assert logs == [
+    assert logs[1:] == [
         "Failed to connect to Docker Server. Is it running?",
         "Not able to list or use local tools.",
     ]

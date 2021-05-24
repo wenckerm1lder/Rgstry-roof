@@ -46,7 +46,7 @@ def test_is_docker_running(mocker, caplog, config):
     )
     assert not reg.local_registry._is_docker_running()
     logs = [l.message for l in caplog.records]
-    assert logs[1:] == [
+    assert logs[-2:] == [
         "Failed to connect to Docker Server. Is it running?",
         "Not able to list or use local tools.",
     ]

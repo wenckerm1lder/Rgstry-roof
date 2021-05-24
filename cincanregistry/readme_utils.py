@@ -19,7 +19,6 @@ class ReadmeHandler(metaclass=ABCMeta):
         if not self.tools_repo_path:
             raise RuntimeError("'Tools' repository path must be defined.'")
         self.index_path = self.tools_repo_path / self.config.index_file
-        # TODO remove following dependency (MetaHandler)
         # Some numbers
         self.max_size: int = 100000
         self.max_description_size: int = 200

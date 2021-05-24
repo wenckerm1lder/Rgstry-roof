@@ -2,15 +2,17 @@
 
 # CinCan Registry
 
-CinCan registry is  a tool for listing available CinCan tools, their versions, sizes and possible updates as far as into their original source! 
+CinCan registry is  a tool for listing available CinCan tools, their versions, sizes and possible updates as far as into their original source. 
 
  Available tools can be found in the CinCan's [tool repository.](https://gitlab.com/CinCan/tools) Source code for tools' Dockerfiles is available in there.
 
 Currently, no other tools are supported for version information listing or for other details.
 
-Docker images of remote tools are stored in Docker Hub, [under CinCan's profile.](https://hub.docker.com/u/cincan)
+Docker images of the remote tools are stored in [Quay](https://quay.io/organization/cincan), [GitHub's Container Registry](https://github.com/orgs/cincanproject/packages) and [Docker Hub](https://hub.docker.com/u/cincan).
 
-When checking versions beyond remote (Docker Hub), tool is using multiple different APIs such as GitHub's or GitLab's to acquire most recent availabe versions straight from the source. See more in [upstream checking.](#upstream-checker)
+By default, Quay has been used as image registry.
+
+When checking versions beyond remote (remote registry), tool is using multiple different APIs such as GitHub's or GitLab's to acquire most recent availabe versions straight from the source. See more in [upstream checking.](#upstream-checker)
 
 [![pipeline status](https://gitlab.com/CinCan/cincan-registry/badges/master/pipeline.svg)](https://gitlab.com/CinCan/cincan-registry/commits/master)
 
@@ -20,7 +22,7 @@ Latest release can be installed from PyPi as:
 
 `pip install cincan-registry`
 
-To be able to list information from locally available tools, "Docker" must be running on your machine.
+To be able to list information from locally available tools, "Docker Daemon" must be running on your machine.
 
 Tool is part of the [cincan-command](https://gitlab.com/CinCan/cincan-command). Command `cincanregistry` in future examples can be replaced with `cincan` when using in there.
 
@@ -35,7 +37,7 @@ Listing available local or remote CinCan tools with their sizes and versions is 
 We are also able to list upstream versions of tools, for those where this feature is configured. This is handled more thoroughly in [Upstream Checker section.](#upstream-checker)
 
 
-To list both available local and remote tools with tag "latest-stable":
+To list both available local and remote tools with tag "latest":
 ```
 cincanregistry list
 
@@ -65,12 +67,12 @@ To do same for remote, use `--remote` (or `-r`) argument. By adding flag `-a`, t
 cincanregistry list --remote -a 
 ```
 
-All commands are supporting JSON output. Simply add `--json` or `-j` argument. To combine previously mentioned `-t` flag, we can use following arguments to provide JSON output:
+All commands are supporting JSON output. Add `--json` or `-j` argument. To combine previously mentioned `-t` flag, we can use following arguments to provide JSON output:
 
 ```
-cincanregistry list -ljt latest
+cincanregistry list -ljt dev
 ```
-This lists locally available tools with 'latest' tag in JSON format.
+This lists locally available tools with 'dev' tag in JSON format.
 
 JSON will contain also size of the images. 
 
@@ -92,13 +94,13 @@ To see more about versions, we need to use `versions` subcommand. By running
 cincanregistry list versions
 ```
 
-tool will fetch version information from configured upstreams. By default it lists only locally available tools, and compares their versions into remote versions, and further remote versions into upstream versions. 
+tool will fetch version information from configured upstreams. By default, it lists only locally available tools, and compares their versions into remote versions, and further remote versions into upstream versions. 
 
-**With help of this, we should be always acknowledged whether our tool is *really* up-to-date or not!**
+**This helps us to acknowledge whether our tool is *really* up-to-date or not.**
 
 Current implementation lists those tools as red `#AA0000`, where is immediate update available on remote. (local version differs from remote)
 
-If local and remote are equal, but possible upstream of the tool has update, those are listed as grey `#808080`. 
+If local and remote are equal, but possible upstream of the tool has an update, those are listed as grey `#808080`. 
 
 ![Version listing example](https://gitlab.com/CinCan/cincan-registry/-/raw/master/img/version_list.png)
 
@@ -108,7 +110,7 @@ Argument `--name` (or `-n`) can be used to check updates for single tool, and ex
 
 It should be noted, that tool is not able to directly tell, if there is actually newer version available. It only detects deviations. 
 
-They ways how versions are marked in global level, are varying too much. However tool is very good at detecting same versions, even if they are marked bit differently.
+We can mark only deviations, because there is no golden standard for marking version information; it varies a lot among developers. However, tool is able to detect same versions with good accuracy, even if they are marked a bit differently.
 
 Most of the preceding arguments with `list` subcommand will change the behavior of `versions` subcommand as well.
 
@@ -117,7 +119,7 @@ For example command:
 cincanregistry list -rj versions --only-updates
 ```
 
-Will produce JSON output from remote tools; generating their versions and filtering only for onces with available version updates, after checking configured upstreams for those available.
+Will produce JSON output from remote tools; generating their versions and filtering only for ones with available version updates, after checking configured upstreams for those available.
 
 
 ### All available options
@@ -151,7 +153,7 @@ Tool is attempting to always find the latest available version among all tags.
 
 > Only for development purpose
 
-There is available feature to update description and README of the tool(s) in Docker Hub and Quay.
+There is available feature to update description and README of the tool(s) in Quay and Docker Hub.
 
 This requires locally cloned CinCan tools repository - READMEs from there are used.
 
@@ -160,7 +162,7 @@ For example command
 cincanregistry -t ../tools utils update-readme --all
 ```
 
-Uploads every README file for corresponding repository in CinCan's Docker Hub. The first header (# ) of the README is used as *description* of image.
+Uploads every README file for corresponding repository in CinCan's Quay Container Registry or Docker Hub. The first header (# ) of the README is used as *description* of image.
 
 #### Providing credentials
 
@@ -184,9 +186,9 @@ Must be used beforehand to log in for Docker Hub - same credentials will be used
 
 ## Upstream checker
 
-CinCan Registry has feature to check available new versions for tool, if this feature is just configured for selected tool and there is implementation for provider.
+CinCan Registry has a feature to check available new versions for tool, if this feature is just configured for selected tool and there is implementation for provider.
 
-Currently supported providers are:
+Currently, supported providers are:
 
 * `GitHub` - versions by release, tag-release or commit
 * `GitLab` - versions by release or tag-release
@@ -200,7 +202,7 @@ Multiple origins can be configured for every tool, however two should be enough,
 
 ### Configuring tool to be checked for origin version updates
 
-Currently configuration files, so called 'metafiles' are stored into same place as Dockerfiles: [CinCan's tool repository.](https://gitlab.com/CinCan/tools) Every file is named as `meta.json`.
+Currently, configuration files, so called 'metafiles' are stored into same place as Dockerfiles: [CinCan's tool repository.](https://gitlab.com/CinCan/tools) Every file is named as `meta.json`.
 
 Here is [example configuration](https://gitlab.com/CinCan/tools/-/blob/master/binwalk/meta.json) of binwalk. It has two providers where another is *source code* origin, and another is just *upstream for Dockefile*.
 
@@ -230,11 +232,9 @@ Required attributes depends on provider, but usually at least repository, tool, 
 
 (TODO add provider  specific documentation)
 
-Currently tool is looking these files directly from tools' GitLab repository and caching them after first download, so debugging and development might be hard sometimes. **Cache is refreshed every 24 hours.**
+These files are stored into Docker image at build phase as last layer into the image, making it possibly to fetch without pulling the whole image. **Cache is refreshed every 24 hours.**
 
-By default, these files are stored into folder `$HOME/.cincan/version_cache` 
-
-However, there is option make tool to use different local path, and disable remote downloading to help development. Path could be for example place, where you clone `tools` repository.
+However, there is option make tool to use local path, and disable remote downloading to help development. Path could be for example place, where you clone `tools` repository.
 
 See [configuration for more details.](#Additional-configuration)
 
@@ -263,7 +263,7 @@ Different file can be used with `--config` or `-c` option.
 
 Configuration file does not have many options, but some are needed.
 
-Data from DockerHub registry is cached into some specific path with `registry_cache_path` attribute.
+Data from remote registry from upstreams is cached into some specific path with `cache_path` attribute. This contains SQLite 3 database, which is used to manage all information.
 
 `tools_repo_path` attribute can be used to set path for locally cloned [CinCan tools repository](https://gitlab.com/CinCan/tools). Then this local directory is used for meta files instead. Also some utilities are using this path (e.g. syncing README and description information into Docker Hub from tools repository.)
 
@@ -276,24 +276,34 @@ Tokens are helpful in cases, when API limit is needed to be increased for versio
 `disable_remote` when set as `True`, disables downloading of metafiles from GitLab, which are required for upstream checking, if files do not exist yet. Disabling might be helpful when some tool is in development phase and version checking is just to be added.
 
 
-```json
-{
-  "cache_path": "/home/<username>/.cincan/cache",
-  "registry_cache_path": "/home/<username>/.cincan/cache/tools.json",
-  "tools_repo_path": "/home/<username>/Documents/cincan/tools/",
-  "tokens": {
-    "github": "<TOKEN>"
-  },
-  "metadata_filename": "meta.json",
-  "disable_remote": false
-}
+```yaml
+# Configuration file of the cincan-registry Python module
+
+registry: Quay  # Default registry wherefrom tools are used
+cache_path: /home/nicce/.cincan/cache # All cache files are in here
+tools_repo__path: None # Path for local 'tools' repository (Use metafiles from there)
+
+# Configuration related to tool metafiles.
+
+branch: master # Branch in GitLab for acquiring metafiles
+meta_filename: meta.json # Filename of metafile in GitLab
+index_filename: index.yml # Filename of index file in GitLab
+disable_remote: False # Disable fetching metafiles from GitLab
+
+tokens: # Possible authentication tokens to Quay, GitLab, GitHub and so on. Quay token is used for README updating.
+    quay: '<my-token>'
+    github: '<my-token>'
 ```
 
 
-## More in depth
+## Extra information
 
-This tool takes advantage of Docker Hub's Registry API, when listing remote tools and their sizes and versions. Version information is extracted from `manifest` file, which is containing the configuration of Docker Image. More precisely, version information value is acquired for `TOOL_VERSION` environment variable in the configuration.
+This tool takes advantage of [Docker Hub's Registry API](https://github.com/distribution/distribution/blob/main/docs/spec/api.md) from the selected registry, when listing remote tools and their sizes and versions. Version information is extracted from `container config` file, which is containing the configuration of Docker Image. `Manifest` has been used to detect the SHA256 digest for container config to be able to download it, as Manifest Schema v2 requires.
+
+Version information value is acquired for `TOOL_VERSION` environment variable in the configuration.
 
 This same variable is used for acquiring the version information on local as well, however we are using configuration information provided by `Docker Engine`.
 
 Docker Images should have been build by using this variable, so the information is correct.
+
+Manifest is also used to identify final layer from the image, to download `meta.json` file.

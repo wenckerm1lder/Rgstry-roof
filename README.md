@@ -257,13 +257,13 @@ Once this is implemented, everything else should work automatically. Either tool
 
 ##  Additional configuration
 
-By default, configuration file is stored in $HOME/.cincan/registry.json
+By default, configuration file is stored in $HOME/.cincan/registry.yaml
 
 Different file can be used with `--config` or `-c` option.
 
 Configuration file does not have many options, but some are needed.
 
-Data from remote registry from upstreams is cached into some specific path with `cache_path` attribute. This contains SQLite 3 database, which is used to manage all information.
+Data from remote registry and from upstreams is cached into specific path with `cache_path` attribute. This contains SQLite 3 database, which is used to manage all information.
 
 `tools_repo_path` attribute can be used to set path for locally cloned [CinCan tools repository](https://gitlab.com/CinCan/tools). Then this local directory is used for meta files instead. Also some utilities are using this path (e.g. syncing README and description information into Docker Hub from tools repository.)
 

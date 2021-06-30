@@ -8,11 +8,12 @@ name: "CodeQL"
 on:
   repository_dispatch:
   workflow_dispatch:
+   schedule:
+     - cron: '0 0-23/8 * * *'
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [master]
-   schedule:
-     - cron: '0 0-23/8 * * *'
+
 
 jobs:
   analyze:

